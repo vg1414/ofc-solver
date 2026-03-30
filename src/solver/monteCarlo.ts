@@ -56,6 +56,8 @@ export interface MonteCarloOptions {
   maxMs?: number;
   /** Max antal kandidater att utvärdera med MC (default: 50) */
   topCandidates?: number;
+  /** Anropas med 0–100 under beräkning */
+  onProgress?: (percent: number) => void;
 }
 
 export interface PlacementEV {
@@ -99,6 +101,7 @@ export function runMonteCarlo(
     simulations = 1000,
     maxMs = 5000,
     topCandidates = 50,
+    onProgress,
   } = options;
 
   const player   = state.players[playerId];
@@ -141,11 +144,15 @@ export function runMonteCarlo(
   let totalSims = 0;
   let timedOut = false;
 
-  for (const candidate of candidates) {
+  const totalCandidates = candidates.length;
+  for (let ci = 0; ci < candidates.length; ci++) {
+    const candidate = candidates[ci];
     if (Date.now() >= deadline) {
       timedOut = true;
       break;
     }
+
+    onProgress?.(Math.round((ci / totalCandidates) * 100));
 
     const { ev, simCount } = evaluatePlacement(
       candidate,
@@ -160,6 +167,8 @@ export function runMonteCarlo(
     results.push({ placement: candidate, ev, simulations: simCount });
     totalSims += simCount;
   }
+
+  onProgress?.(100);
 
   // Sortera bäst → sämst
   results.sort((a, b) => b.ev - a.ev);
@@ -363,6 +372,7 @@ export function runMonteCarloSinglePlayer(
     simulations = 1000,
     maxMs = 5000,
     topCandidates = 50,
+    onProgress,
   } = options;
 
   const deadline = Date.now() + maxMs;
@@ -391,11 +401,15 @@ export function runMonteCarloSinglePlayer(
   let totalSims = 0;
   let timedOut = false;
 
-  for (const candidate of filtered) {
+  const totalCandidates = filtered.length;
+  for (let ci = 0; ci < filtered.length; ci++) {
+    const candidate = filtered[ci];
     if (Date.now() >= deadline) {
       timedOut = true;
       break;
     }
+
+    onProgress?.(Math.round((ci / totalCandidates) * 100));
 
     const { ev, simCount } = evaluatePlacement(
       candidate,
@@ -411,6 +425,7 @@ export function runMonteCarloSinglePlayer(
     totalSims += simCount;
   }
 
+  onProgress?.(100);
   results.sort((a, b) => b.ev - a.ev);
 
   if (results.length === 0) {

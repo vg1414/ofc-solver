@@ -39,7 +39,7 @@ export default function App() {
     currentCards,
   } = useGameStore();
 
-  const { result, isLoading, error, lastSimulations, runSolver, cancelSolver, clearResult } = useSolver();
+  const { result, isLoading, error, lastSimulations, progress, runSolver, cancelSolver, clearResult } = useSolver();
 
   // --- Hantera slot-klick ---
   const handleSlotClick = (row: RowName, slotIndex: number) => {
@@ -74,7 +74,12 @@ export default function App() {
           cards: [selectedCard],
           deadCards,
           variant,
-          options: { simulations, heuristicOnly: simulations <= 200 },
+          options: {
+            simulations,
+            heuristicOnly: simulations <= 200,
+            topCandidates: 50,
+            maxMs: simulations >= 3000 ? 8000 : 5000,
+          },
         });
         return;
       }
@@ -86,7 +91,12 @@ export default function App() {
           cards: currentCards,
           deadCards,
           variant,
-          options: { simulations, heuristicOnly: simulations <= 200 },
+          options: {
+            simulations,
+            heuristicOnly: simulations <= 200,
+            topCandidates: 50,
+            maxMs: simulations >= 3000 ? 8000 : 5000,
+          },
         });
         return;
       }
@@ -109,7 +119,7 @@ export default function App() {
       <div className="flex border-b border-slate-700/60 bg-[#0d1f2d]">
         <button
           onClick={() => setActiveTab('solver')}
-          className={`px-6 py-3 text-sm font-semibold transition-colors border-b-2 ${
+          className={`flex-1 sm:flex-none px-3 sm:px-6 py-2.5 sm:py-3 text-xs sm:text-sm font-semibold transition-colors border-b-2 ${
             activeTab === 'solver'
               ? 'border-green-500 text-green-400'
               : 'border-transparent text-slate-500 hover:text-slate-300'
@@ -119,17 +129,17 @@ export default function App() {
         </button>
         <button
           onClick={() => setActiveTab('score')}
-          className={`px-6 py-3 text-sm font-semibold transition-colors border-b-2 ${
+          className={`flex-1 sm:flex-none px-3 sm:px-6 py-2.5 sm:py-3 text-xs sm:text-sm font-semibold transition-colors border-b-2 ${
             activeTab === 'score'
               ? 'border-green-500 text-green-400'
               : 'border-transparent text-slate-500 hover:text-slate-300'
           }`}
         >
-          Poangräknare
+          Poängräknare
         </button>
         <button
           onClick={() => setActiveTab('book')}
-          className={`px-6 py-3 text-sm font-semibold transition-colors border-b-2 ${
+          className={`flex-1 sm:flex-none px-3 sm:px-6 py-2.5 sm:py-3 text-xs sm:text-sm font-semibold transition-colors border-b-2 ${
             activeTab === 'book'
               ? 'border-green-500 text-green-400'
               : 'border-transparent text-slate-500 hover:text-slate-300'
@@ -139,13 +149,13 @@ export default function App() {
         </button>
       </div>
 
-      <main className="flex-1 p-4 max-w-5xl mx-auto w-full">
+      <main className="flex-1 p-2 sm:p-4 max-w-5xl mx-auto w-full">
 
         {/* === SOLVER-FLIKEN === */}
         {activeTab === 'solver' && (
-          <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-3 sm:gap-4 animate-fade-in">
             {/* Bräden */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
               <BoardView
                 board={myBoard}
                 label="Ditt bräde"
@@ -229,6 +239,7 @@ export default function App() {
               isLoading={isLoading}
               error={error}
               lastSimulations={lastSimulations}
+              progress={progress}
             />
 
             {/* Kortväljare */}
@@ -243,7 +254,7 @@ export default function App() {
 
         {/* === POÄNGRÄKNARE-FLIKEN === */}
         {activeTab === 'score' && (
-          <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-3 sm:gap-4 animate-fade-in">
             <SessionSummary />
             <ScoreTracker />
             <ScoreHistory />
@@ -251,7 +262,7 @@ export default function App() {
         )}
 
         {/* === BOKFÖRINGS-FLIKEN === */}
-        {activeTab === 'book' && <Bookkeeping />}
+        {activeTab === 'book' && <div className="animate-fade-in"><Bookkeeping /></div>}
       </main>
 
       <Footer />

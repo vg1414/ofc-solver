@@ -110,9 +110,9 @@ export default function SolverControls({
   const canRun = hasCards && !isLoading;
 
   return (
-    <div className="bg-[#0d1f2d] border border-[#1a3d2a] rounded-xl px-4 py-3 flex flex-col gap-3">
+    <div className="bg-[#0d1f2d] border border-[#1a3d2a] rounded-xl px-3 sm:px-4 py-3 flex flex-col gap-2 sm:gap-3">
       {/* Rad 1: Variant + simuleringar */}
-      <div className="flex flex-wrap items-center gap-3">
+      <div className="flex flex-wrap items-center gap-2 sm:gap-3">
         <VariantSelector
           variant={variant}
           onChange={setVariant}

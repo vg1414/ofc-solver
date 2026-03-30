@@ -13,10 +13,39 @@
 //   worker.onmessage = (e) => { ... e.data.result ... };
 // ============================================================
 
-import { handleSolverMessage } from '../solver/solver';
-import type { SolverWorkerMessage } from '../solver/solver';
+import { solveFromBoard, solve } from '../solver/solver';
+import type { SolverWorkerMessage, SolverWorkerResponse } from '../solver/solver';
 
 self.onmessage = (event: MessageEvent<SolverWorkerMessage>) => {
-  const response = handleSolverMessage(event.data);
-  self.postMessage(response);
+  const msg = event.data;
+
+  const sendProgress = (percent: number) => {
+    self.postMessage({ type: 'progress', percent } as SolverWorkerResponse);
+  };
+
+  try {
+    if (msg.type === 'solveFromBoard') {
+      const result = solveFromBoard(
+        msg.board,
+        msg.cards,
+        msg.deadCards,
+        msg.variant,
+        {
+          ...msg.options,
+          onProgress: sendProgress,
+        },
+      );
+      self.postMessage({ type: 'result', result } as SolverWorkerResponse);
+    } else if (msg.type === 'solve') {
+      const result = solve(msg.state, msg.playerId, msg.opponentId, {
+        ...msg.options,
+        onProgress: sendProgress,
+      });
+      self.postMessage({ type: 'result', result } as SolverWorkerResponse);
+    } else {
+      self.postMessage({ type: 'error', message: 'Okänd meddelandetyp' } as SolverWorkerResponse);
+    }
+  } catch (err: any) {
+    self.postMessage({ type: 'error', message: err.message || String(err) } as SolverWorkerResponse);
+  }
 };

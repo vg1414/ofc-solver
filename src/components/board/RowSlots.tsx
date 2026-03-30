@@ -11,17 +11,17 @@ interface RowSlotsProps {
 
 export default function RowSlots({ row, label, royalty, highlightedSlots = [], onSlotClick }: RowSlotsProps) {
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex items-center gap-1.5 sm:gap-2">
       {/* Etikett */}
-      <div className="w-16 text-right">
-        <span className="text-xs text-slate-400 uppercase tracking-wider">{label}</span>
+      <div className="w-12 sm:w-16 text-right shrink-0">
+        <span className="text-[10px] sm:text-xs text-slate-400 uppercase tracking-wider">{label}</span>
         {royalty !== undefined && royalty > 0 && (
-          <div className="text-yellow-400 text-xs font-bold">+{royalty}p</div>
+          <div className="text-yellow-400 text-[10px] sm:text-xs font-bold">+{royalty}p</div>
         )}
       </div>
 
       {/* Kortplatser */}
-      <div className="flex gap-1.5">
+      <div className="flex gap-1 sm:gap-1.5">
         {row.cards.map((card, i) => (
           <CardSlot
             key={i}

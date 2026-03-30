@@ -40,6 +40,8 @@ export interface UseSolverState {
   error: string | null;
   /** Antal simuleringar från senaste körning */
   lastSimulations: number;
+  /** Beräkningsprogress 0–100 (null = ej startad/klar) */
+  progress: number | null;
 }
 
 export interface UseSolverReturn extends UseSolverState {
@@ -65,6 +67,7 @@ export function useSolver(): UseSolverReturn {
     isLoading: false,
     error: null,
     lastSimulations: 0,
+    progress: null,
   });
 
   // Skapa worker en gång
@@ -98,7 +101,7 @@ export function useSolver(): UseSolverReturn {
       // Öka request-id; svar med lägre id ignoreras
       const currentId = ++requestIdRef.current;
 
-      setState((s) => ({ ...s, isLoading: true, error: null }));
+      setState((s) => ({ ...s, isLoading: true, error: null, progress: 0 }));
 
       const worker = getWorker();
 
@@ -106,22 +109,31 @@ export function useSolver(): UseSolverReturn {
         // Ignorera svar från föregående anrop
         if (requestIdRef.current !== currentId) return;
 
+        const data = event.data;
+
+        // Progress-uppdatering — håll loading-state, uppdatera bara progress
+        if (data.type === 'progress') {
+          setState((s) => ({ ...s, progress: data.percent }));
+          return;
+        }
+
         worker.removeEventListener('message', handleMessage);
         worker.removeEventListener('error', handleError);
 
-        const data = event.data;
         if (data.type === 'result') {
           setState({
             result: data.result,
             isLoading: false,
             error: null,
             lastSimulations: data.result.simulations,
+            progress: 100,
           });
         } else {
           setState((s) => ({
             ...s,
             isLoading: false,
             error: data.message,
+            progress: null,
           }));
         }
       };
@@ -134,6 +146,7 @@ export function useSolver(): UseSolverReturn {
           ...s,
           isLoading: false,
           error: `Worker-fel: ${event.message}`,
+          progress: null,
         }));
       };
 
@@ -158,11 +171,11 @@ export function useSolver(): UseSolverReturn {
     workerRef.current?.terminate();
     workerRef.current = null;
     requestIdRef.current++;
-    setState((s) => ({ ...s, isLoading: false }));
+    setState((s) => ({ ...s, isLoading: false, progress: null }));
   }, []);
 
   const clearResult = useCallback(() => {
-    setState((s) => ({ ...s, result: null, error: null }));
+    setState((s) => ({ ...s, result: null, error: null, progress: null }));
   }, []);
 
   return {

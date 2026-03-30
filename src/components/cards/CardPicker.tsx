@@ -37,22 +37,22 @@ export default function CardPicker({
   const SUIT_ORDER: Suit[] = ['spades', 'hearts', 'diamonds', 'clubs'];
 
   return (
-    <div className="bg-[#111c28] border border-slate-700 rounded-xl p-4">
-      <h3 className="text-slate-400 text-xs uppercase tracking-widest mb-3">Välj kort</h3>
+    <div className="bg-[#111c28] border border-slate-700 rounded-xl p-3 sm:p-4">
+      <h3 className="text-slate-400 text-xs uppercase tracking-widest mb-2 sm:mb-3">Välj kort</h3>
 
       {/* Vanliga kort — en rad per färg */}
-      <div className="flex flex-col gap-1.5">
+      <div className="flex flex-col gap-1 sm:gap-1.5">
         {SUIT_ORDER.map((suit) => {
           const isRedSuit = SUIT_COLOR[suit] === 'red';
           return (
             <div key={suit} className="flex items-center gap-1">
               {/* Färgsymbol */}
-              <span className={`w-5 text-sm font-bold ${isRedSuit ? 'text-red-400' : 'text-slate-300'}`}>
+              <span className={`w-4 sm:w-5 text-xs sm:text-sm font-bold shrink-0 ${isRedSuit ? 'text-red-400' : 'text-slate-300'}`}>
                 {SUIT_SYMBOL[suit]}
               </span>
 
               {/* Kort */}
-              <div className="flex gap-1 flex-wrap">
+              <div className="flex gap-0.5 sm:gap-1 flex-wrap">
                 {ALL_RANKS.map((rank) => {
                   const card: CardType = { kind: 'card', rank, suit };
                   const used = isCardUsed(card, usedCards);
@@ -75,8 +75,8 @@ export default function CardPicker({
       </div>
 
       {/* Jokrar */}
-      <div className="flex items-center gap-2 mt-3 pt-3 border-t border-slate-700">
-        <span className="text-slate-400 text-xs uppercase tracking-widest w-16">Jokrar</span>
+      <div className="flex items-center gap-2 mt-2 sm:mt-3 pt-2 sm:pt-3 border-t border-slate-700">
+        <span className="text-slate-400 text-xs uppercase tracking-widest w-14 sm:w-16">Jokrar</span>
         {[0, 1].map((jokerIndex) => {
           const jokerCard: CardType = { kind: 'joker' };
           const used = jokerIndex < usedJokers;

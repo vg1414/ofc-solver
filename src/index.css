@@ -17,3 +17,63 @@ body {
 #root {
   min-height: 100vh;
 }
+
+/* === Animationer === */
+
+/* Kort som placeras på brädet glider in */
+@keyframes card-place {
+  0% {
+    opacity: 0;
+    transform: scale(0.7) translateY(-8px);
+  }
+  60% {
+    transform: scale(1.05) translateY(0);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.animate-card-place {
+  animation: card-place 0.22s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+/* Flik-innehåll tonar in vid byte */
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.18s ease-out both;
+}
+
+/* Glow-puls för bästa solver-rekommendation */
+@keyframes glow-pulse {
+  0%, 100% { box-shadow: 0 0 8px 1px rgba(34,197,94,0.25); }
+  50%       { box-shadow: 0 0 18px 4px rgba(34,197,94,0.45); }
+}
+
+.animate-glow-pulse {
+  animation: glow-pulse 2s ease-in-out infinite;
+}
+
+/* Slide-in för solver-panel när resultat dyker upp */
+@keyframes slide-in-up {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.animate-slide-in-up {
+  animation: slide-in-up 0.2s ease-out both;
+}
+
+/* Spinner — återanvänds av progress-indikatorn */
+@keyframes spin-slow {
+  to { transform: rotate(360deg); }
+}
+
+.animate-spin-slow {
+  animation: spin-slow 1.2s linear infinite;
+}

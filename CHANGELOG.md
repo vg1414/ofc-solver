@@ -1,5 +1,25 @@
 # Changelog
 
+## 2026-03-30 — Fas 6: Polish & Deploy (Steg 6.1–6.3)
+
+### Responsiv design (6.1)
+- Header, flikar, bräde, kortplatser och kortväljare anpassade för mobil och tablet
+- Tailwind `sm:`-breakpoints genomgående — appen fungerar från 320px och uppåt
+- Kortstorlekar krymper på mobil, flikar fyller hela bredden
+
+### Visuell polish (6.2)
+- Kort-placerings-animation: kort glider in och "poppar" när de placeras på brädet
+- Flik-byte tonar in med `fade-in`-animation
+- Solver-panel glider in underifrån när resultat visas
+- Grönt glow-puls på bästa solver-rekommendation
+- Bättre hover/active-effekter på kort och kortplatser
+
+### Prestandaoptimering (6.3)
+- Live progress-indikator under solver-beräkning: "Simulerar… 45%" + grön progress-bar
+- Solver-workern skickar progress-meddelanden (0–100%) i realtid
+- Tidsgräns: 5s för Normal (1000 sim), 8s för Noggrann (3000 sim)
+- `topCandidates` = 50 genomgående för bästa kvalitet
+
 ## 2026-03-27 — Initial release (Fas 1–5 klar)
 
 ### Pokermotorn (engine/)

@@ -27,7 +27,7 @@ export default function BoardView({
 
   return (
     <div className={`
-      bg-[#0d2218] border rounded-xl p-4 flex flex-col gap-3 transition-all duration-150
+      bg-[#0d2218] border rounded-xl p-3 sm:p-4 flex flex-col gap-2 sm:gap-3 transition-all duration-150
       ${isFouled ? 'border-red-600/60' : isActive ? 'border-green-500/70 shadow-green-900/30 shadow-md' : 'border-[#1a3d2a]'}
     `}>
       {label && (

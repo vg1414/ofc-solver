@@ -55,6 +55,8 @@ export interface SolverOptions {
   topCandidates?: number;
   /** Hoppa över Monte Carlo och använd bara heuristik (snabbläge) */
   heuristicOnly?: boolean;
+  /** Callback för progress (0–100) — används ej i Web Worker (skickas separat) */
+  onProgress?: (percent: number) => void;
 }
 
 /**
@@ -157,6 +159,7 @@ export function solveFromBoard(
     maxMs = 5000,
     topCandidates = 50,
     heuristicOnly = false,
+    onProgress,
   } = options;
 
   if (cards.length === 0) {
@@ -171,6 +174,7 @@ export function solveFromBoard(
     simulations,
     maxMs,
     topCandidates,
+    onProgress,
   });
 
   return convertMonteCarloResult(mcResult, 'monteCarlo');
@@ -194,6 +198,7 @@ function solveNormal(
     maxMs = 5000,
     topCandidates = 50,
     heuristicOnly = false,
+    onProgress,
   } = options;
 
   if (heuristicOnly) {
@@ -205,6 +210,7 @@ function solveNormal(
     simulations,
     maxMs,
     topCandidates,
+    onProgress,
   });
 
   return convertMonteCarloResult(mcResult, 'monteCarlo');
@@ -426,7 +432,13 @@ export interface SolverWorkerError {
   message: string;
 }
 
-export type SolverWorkerResponse = SolverWorkerOutput | SolverWorkerError;
+/** Progress-meddelande: skickas under beräkning (0–100) */
+export interface SolverWorkerProgress {
+  type: 'progress';
+  percent: number;
+}
+
+export type SolverWorkerResponse = SolverWorkerOutput | SolverWorkerError | SolverWorkerProgress;
 
 /**
  * Hanterar ett meddelande i Web Worker-kontext.

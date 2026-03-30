@@ -87,18 +87,36 @@ function PlacementDescription({ placements, discards }: PlacementDescriptionProp
 }
 
 // ============================================================
-// Loading-spinner
+// Loading-spinner med progress-indikator
 // ============================================================
 
-function LoadingSpinner({ simulations }: { simulations?: number }) {
+function LoadingSpinner({ simulations, progress }: { simulations?: number; progress?: number | null }) {
+  const hasProgress = progress !== null && progress !== undefined;
+  const pct = hasProgress ? Math.min(100, Math.max(0, progress!)) : 0;
+
   return (
-    <div className="flex flex-col items-center justify-center gap-3 py-6">
+    <div className="flex flex-col items-center justify-center gap-3 py-5">
       <div className="flex items-center gap-3">
         <div className="w-5 h-5 border-2 border-green-500/30 border-t-green-400 rounded-full animate-spin" />
-        <span className="text-green-400 text-sm font-medium">Solver beräknar…</span>
+        <span className="text-green-400 text-sm font-medium">
+          Simulerar…{hasProgress && pct < 100 ? ` ${pct}%` : ''}
+        </span>
       </div>
+
+      {/* Progress-bar */}
+      {hasProgress && (
+        <div className="w-full max-w-xs">
+          <div className="h-1.5 bg-slate-700/60 rounded-full overflow-hidden">
+            <div
+              className="h-full bg-green-500 rounded-full transition-all duration-200"
+              style={{ width: `${pct}%` }}
+            />
+          </div>
+        </div>
+      )}
+
       {simulations !== undefined && simulations > 0 && (
-        <span className="text-slate-500 text-xs">{simulations.toLocaleString()} simuleringar</span>
+        <span className="text-slate-600 text-xs">{simulations.toLocaleString()} sim</span>
       )}
     </div>
   );
@@ -113,6 +131,8 @@ interface SolverPanelProps {
   isLoading: boolean;
   error: string | null;
   lastSimulations?: number;
+  /** Beräkningsprogress 0–100 */
+  progress?: number | null;
   /** Hur många alternativ att visa (default: 5) */
   maxOptions?: number;
   /** Callback när användaren klickar på ett alternativ */
@@ -124,6 +144,7 @@ export default function SolverPanel({
   isLoading,
   error,
   lastSimulations = 0,
+  progress = null,
   maxOptions = 5,
   onSelectOption,
 }: SolverPanelProps) {
@@ -153,7 +174,7 @@ export default function SolverPanel({
 
       {/* Innehåll */}
       <div className="p-3">
-        {isLoading && <LoadingSpinner simulations={lastSimulations} />}
+        {isLoading && <LoadingSpinner simulations={lastSimulations} progress={progress} />}
 
         {!isLoading && error && (
           <div className="text-red-400 text-sm px-1 py-3 flex items-center gap-2">
@@ -169,7 +190,7 @@ export default function SolverPanel({
         )}
 
         {!isLoading && !error && options.length > 0 && (
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-2 animate-slide-in-up">
             {options.map((opt, idx) => {
               const isFirst = idx === 0;
               const barWidth = getBarWidth(opt.ev, maxAbsEV);
@@ -180,10 +201,10 @@ export default function SolverPanel({
                   key={idx}
                   onClick={() => onSelectOption?.(idx)}
                   className={`
-                    group relative rounded-lg px-3 py-2.5 text-left transition-all duration-100
+                    group relative rounded-lg px-3 py-2.5 text-left transition-all duration-200
                     ${isFirst
-                      ? 'bg-green-900/25 border border-green-700/50 hover:border-green-500/60'
-                      : 'bg-[#0f2535] border border-[#1e3a50] hover:border-slate-600/60'
+                      ? 'bg-green-900/25 border border-green-700/50 hover:border-green-500/70 animate-glow-pulse'
+                      : 'bg-[#0f2535] border border-[#1e3a50] hover:border-slate-600/60 hover:bg-[#12293f]'
                     }
                     ${onSelectOption ? 'cursor-pointer' : 'cursor-default'}
                   `}
@@ -214,7 +235,7 @@ export default function SolverPanel({
                   <div className="flex items-center gap-2">
                     <div className="flex-1 h-1.5 bg-slate-700/60 rounded-full overflow-hidden">
                       <div
-                        className={`h-full rounded-full transition-all duration-300 ${
+                        className={`h-full rounded-full transition-all duration-500 ${
                           isFirst ? 'bg-green-500' : opt.ev >= 0 ? 'bg-slate-500' : 'bg-red-700'
                         }`}
                         style={{ width: `${barWidth}%` }}
