@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-03-31 — Bugfix: Öppningshand-analys kraschade med "Okänd meddelandetyp"
+
+- `solver.worker.ts`: Workern delegerar nu all meddelandehantering till `handleSolverMessage()` i `solver.ts` — inkluderar därmed `solve_opening` och `solve_fl` som saknades
+
 ## 2026-03-31 — Fas 1–8: Öppningshand-solver + Fantasy Land-solver
 
 ### Tre solver-lägen (Normal / Öppningshand / Fantasy Land)

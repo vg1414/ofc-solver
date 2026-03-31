@@ -13,7 +13,7 @@
 //   worker.onmessage = (e) => { ... e.data.result ... };
 // ============================================================
 
-import { solveFromBoard, solve } from '../solver/solver';
+import { handleSolverMessage } from '../solver/solver';
 import type { SolverWorkerMessage, SolverWorkerResponse } from '../solver/solver';
 
 self.onmessage = (event: MessageEvent<SolverWorkerMessage>) => {
@@ -23,29 +23,15 @@ self.onmessage = (event: MessageEvent<SolverWorkerMessage>) => {
     self.postMessage({ type: 'progress', percent } as SolverWorkerResponse);
   };
 
-  try {
-    if (msg.type === 'solveFromBoard') {
-      const result = solveFromBoard(
-        msg.board,
-        msg.cards,
-        msg.deadCards,
-        msg.variant,
-        {
-          ...msg.options,
-          onProgress: sendProgress,
-        },
-      );
-      self.postMessage({ type: 'result', result } as SolverWorkerResponse);
-    } else if (msg.type === 'solve') {
-      const result = solve(msg.state, msg.playerId, msg.opponentId, {
-        ...msg.options,
-        onProgress: sendProgress,
-      });
-      self.postMessage({ type: 'result', result } as SolverWorkerResponse);
-    } else {
-      self.postMessage({ type: 'error', message: 'Okänd meddelandetyp' } as SolverWorkerResponse);
-    }
-  } catch (err: any) {
-    self.postMessage({ type: 'error', message: err.message || String(err) } as SolverWorkerResponse);
-  }
+  // Injicera progress-callback i options
+  const msgWithProgress = {
+    ...msg,
+    options: {
+      ...msg.options,
+      onProgress: sendProgress,
+    },
+  } as SolverWorkerMessage;
+
+  const response = handleSolverMessage(msgWithProgress);
+  self.postMessage(response);
 };
