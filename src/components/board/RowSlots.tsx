@@ -7,9 +7,10 @@ interface RowSlotsProps {
   royalty?: number;
   highlightedSlots?: number[];
   onSlotClick?: (row: RowName, slotIndex: number) => void;
+  onCardRemove?: (row: RowName, slotIndex: number) => void;
 }
 
-export default function RowSlots({ row, label, royalty, highlightedSlots = [], onSlotClick }: RowSlotsProps) {
+export default function RowSlots({ row, label, royalty, highlightedSlots = [], onSlotClick, onCardRemove }: RowSlotsProps) {
   return (
     <div className="flex items-center gap-1.5 sm:gap-2">
       {/* Etikett */}
@@ -30,6 +31,7 @@ export default function RowSlots({ row, label, royalty, highlightedSlots = [], o
             slotIndex={i}
             highlighted={highlightedSlots.includes(i)}
             onClick={onSlotClick}
+            onRemove={onCardRemove}
           />
         ))}
       </div>

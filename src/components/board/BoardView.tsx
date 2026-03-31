@@ -7,6 +7,7 @@ interface BoardViewProps {
   royalties?: { top: number; middle: number; bottom: number };
   highlightedSlots?: { row: RowName; slots: number[] }[];
   onSlotClick?: (row: RowName, slotIndex: number) => void;
+  onCardRemove?: (row: RowName, slotIndex: number) => void;
   isFouled?: boolean;
   isActive?: boolean;
   onActivate?: () => void;
@@ -18,6 +19,7 @@ export default function BoardView({
   royalties,
   highlightedSlots = [],
   onSlotClick,
+  onCardRemove,
   isFouled = false,
   isActive = false,
   onActivate,
@@ -57,6 +59,7 @@ export default function BoardView({
         royalty={royalties?.top}
         highlightedSlots={getHighlightedForRow('top')}
         onSlotClick={onSlotClick}
+        onCardRemove={onCardRemove}
       />
       <RowSlots
         row={board.middle}
@@ -64,6 +67,7 @@ export default function BoardView({
         royalty={royalties?.middle}
         highlightedSlots={getHighlightedForRow('middle')}
         onSlotClick={onSlotClick}
+        onCardRemove={onCardRemove}
       />
       <RowSlots
         row={board.bottom}
@@ -71,6 +75,7 @@ export default function BoardView({
         royalty={royalties?.bottom}
         highlightedSlots={getHighlightedForRow('bottom')}
         onSlotClick={onSlotClick}
+        onCardRemove={onCardRemove}
       />
     </div>
   );

@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { Card, RowName, GameVariant, GamePhase, Board } from '../engine/types';
+import type { Card, RowName, GameVariant, GamePhase, Board, SolverMode, FLCardCount } from '../engine/types';
 import { createEmptyBoard } from '../engine/types';
 import { isFoul } from '../engine/foulCheck';
 import { calcAllRoyalties } from '../engine/royalties';
@@ -63,6 +63,11 @@ interface GameStore {
   // --- Dead cards (alla sedda kort) ---
   deadCards: Card[];
 
+  // --- Solver-läge ---
+  solverMode: SolverMode;
+  selectedCards: Card[];
+  flCardCount: FLCardCount;
+
   // --- Fantasy Land ---
   isFantasyLand: boolean;
   fantasyLandCards: number; // 13-16
@@ -84,9 +89,16 @@ interface GameStore {
   addCurrentCard: (card: Card) => void;
   removeCurrentCard: (index: number) => void;
   resetGame: () => void;
+  removeCard: (row: RowName, slotIndex: number, player: 'me' | 'opponent') => void;
   undoLastPlacement: () => void;
   enterFantasyLand: (cardCount: number) => void;
   exitFantasyLand: () => void;
+
+  // --- Solver-läge actions ---
+  setSolverMode: (mode: SolverMode) => void;
+  toggleCardSelection: (card: Card) => void;
+  clearSelectedCards: () => void;
+  setFLCardCount: (count: FLCardCount) => void;
 }
 
 export const useGameStore = create<GameStore>((set, get) => ({
@@ -102,6 +114,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
   usedCards: [],
   usedJokers: 0,
   deadCards: [],
+  solverMode: 'normal',
+  selectedCards: [],
+  flCardCount: 13,
   isFantasyLand: false,
   fantasyLandCards: 0,
   myFouled: false,
@@ -193,6 +208,57 @@ export const useGameStore = create<GameStore>((set, get) => ({
     set(updates);
   },
 
+  removeCard: (row, slotIndex, player) => {
+    const { myBoard, opponentBoard, usedCards, usedJokers, deadCards, _history } = get();
+    const board = player === 'me' ? myBoard : opponentBoard;
+    const card = board[row].cards[slotIndex];
+    if (card === null) return;
+
+    const newBoard = {
+      ...board,
+      [row]: {
+        ...board[row],
+        cards: board[row].cards.map((c: Card | null, i: number) => i === slotIndex ? null : c),
+      },
+    };
+
+    const newUsedJokers = card.kind === 'joker' ? Math.max(0, usedJokers - 1) : usedJokers;
+    const newUsedCards = card.kind === 'card'
+      ? usedCards.filter(
+          (c) => !(c.kind === 'card' &&
+            c.rank === (card as { kind: 'card'; rank: string; suit: string }).rank &&
+            c.suit === (card as { kind: 'card'; rank: string; suit: string }).suit)
+        )
+      : usedCards;
+
+    // Ta bara bort första matchande kort ur deadCards
+    let removed = false;
+    const newDeadCardsDeduped = deadCards.filter((c) => {
+      if (removed) return true;
+      const match = card.kind === 'joker'
+        ? c.kind === 'joker'
+        : c.kind === 'card' && card.kind === 'card' && c.rank === card.rank && c.suit === card.suit;
+      if (match) { removed = true; return false; }
+      return true;
+    });
+
+    const newHistory = _history.filter(
+      (h) => !(h.player === player && h.row === row && h.slotIndex === slotIndex)
+    );
+
+    set({
+      ...(player === 'me' ? { myBoard: newBoard } : { opponentBoard: newBoard }),
+      usedCards: newUsedCards,
+      usedJokers: newUsedJokers,
+      deadCards: newDeadCardsDeduped,
+      _history: newHistory,
+      phase: 'placing',
+      myFouled: false,
+      myRoyalties: { top: 0, middle: 0, bottom: 0, total: 0 },
+      myHandDescriptions: { top: '', middle: '', bottom: '' },
+    });
+  },
+
   undoLastPlacement: () => {
     const { _history, myBoard, opponentBoard, usedCards, usedJokers, deadCards } = get();
     if (_history.length === 0) return;
@@ -243,6 +309,32 @@ export const useGameStore = create<GameStore>((set, get) => ({
   exitFantasyLand: () =>
     set({ isFantasyLand: false, fantasyLandCards: 0 }),
 
+  // --- Solver-läge actions ---
+
+  setSolverMode: (mode) =>
+    set({ solverMode: mode, selectedCards: [], selectedCard: null }),
+
+  toggleCardSelection: (card) => {
+    const { selectedCards, solverMode, flCardCount } = get();
+    const maxCards = solverMode === 'fantasyLand' ? flCardCount : 5;
+
+    const idx = selectedCards.findIndex((c) => {
+      if (card.kind === 'joker' && c.kind === 'joker') return true;
+      if (card.kind === 'card' && c.kind === 'card') return c.rank === card.rank && c.suit === card.suit;
+      return false;
+    });
+
+    if (idx !== -1) {
+      set({ selectedCards: selectedCards.filter((_, i) => i !== idx) });
+    } else if (selectedCards.length < maxCards) {
+      set({ selectedCards: [...selectedCards, card] });
+    }
+  },
+
+  clearSelectedCards: () => set({ selectedCards: [] }),
+
+  setFLCardCount: (count) => set({ flCardCount: count, selectedCards: [] }),
+
   resetGame: () =>
     set({
       phase: 'placing',
@@ -255,6 +347,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
       usedCards: [],
       usedJokers: 0,
       deadCards: [],
+      solverMode: 'normal',
+      selectedCards: [],
+      flCardCount: 13,
       isFantasyLand: false,
       fantasyLandCards: 0,
       myFouled: false,

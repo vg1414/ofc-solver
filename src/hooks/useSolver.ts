@@ -14,7 +14,7 @@
 // ============================================================
 
 import { useRef, useState, useCallback, useEffect } from 'react';
-import type { Board, Card, GameVariant } from '../engine/types';
+import type { Board, Card, GameVariant, SolverMode } from '../engine/types';
 import type {
   DetailedSolverResult,
   SolverOptions,
@@ -31,7 +31,10 @@ export interface SolverInput {
   cards: Card[];
   deadCards?: Card[];
   variant?: GameVariant;
+  opponentBoard?: Board;
   options?: SolverOptions;
+  /** Solver-läge: 'normal' | 'opening' | 'fantasyLand' (default: 'normal') */
+  mode?: SolverMode;
 }
 
 export interface UseSolverState {
@@ -91,7 +94,7 @@ export function useSolver(): UseSolverReturn {
 
   const runSolver = useCallback(
     (input: SolverInput) => {
-      const { board, cards, deadCards = [], variant = 'regular', options } = input;
+      const { board, cards, deadCards = [], variant = 'regular', opponentBoard, options, mode = 'normal' } = input;
 
       if (cards.length === 0) {
         setState((s) => ({ ...s, error: 'Inga kort att beräkna.', isLoading: false }));
@@ -153,14 +156,14 @@ export function useSolver(): UseSolverReturn {
       worker.addEventListener('message', handleMessage);
       worker.addEventListener('error', handleError);
 
-      const msg: SolverWorkerMessage = {
-        type: 'solveFromBoard',
-        board,
-        cards,
-        deadCards,
-        variant,
-        options,
-      };
+      let msg: SolverWorkerMessage;
+      if (mode === 'opening') {
+        msg = { type: 'solve_opening', cards, deadCards, options };
+      } else if (mode === 'fantasyLand') {
+        msg = { type: 'solve_fl', cards, deadCards, options };
+      } else {
+        msg = { type: 'solveFromBoard', board, cards, deadCards, variant, opponentBoard, options };
+      }
       worker.postMessage(msg);
     },
     [getWorker],

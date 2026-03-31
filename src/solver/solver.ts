@@ -27,7 +27,11 @@ import type {
   PlacementOption,
   SolverResult,
 } from '../engine/types';
-import { collectDeadCards } from '../engine/gameState';
+import { createEmptyBoard } from '../engine/types';
+import { collectDeadCards, qualifiesForRepeatFL } from '../engine/gameState';
+import { isFoul } from '../engine/foulCheck';
+import { applyPlacement } from './heuristics';
+import { estimateFLProbability } from './flProbability';
 import type { TurnPlacement, CardPlacement } from './placement';
 import {
   generateRegularPlacements,
@@ -89,6 +93,12 @@ export interface DetailedPlacementOption {
   discards: Card[];
   /** Antal simuleringar för just denna placering */
   simulations: number;
+  /** Estimerad sannolikhet att nå Fantasy Land (0–1), för öppningshand */
+  flProbability?: number;
+  /** true om placeringen kvalificerar för repeat-FL (Fantasy Land-läge) */
+  repeatFL?: boolean;
+  /** Resultatet: brädet efter att placeringen applicerats */
+  resultBoard?: Board;
 }
 
 // ============================================================
@@ -153,6 +163,7 @@ export function solveFromBoard(
   deadCards: Card[] = [],
   variant: GameVariant = 'regular',
   options: SolverOptions = {},
+  opponentBoard?: Board,
 ): DetailedSolverResult {
   const {
     simulations = 1000,
@@ -168,6 +179,43 @@ export function solveFromBoard(
 
   if (heuristicOnly) {
     return solveHeuristicOnly(board, cards, variant);
+  }
+
+  // Om motståndarens bräde är känt: bygg ett fullständigt GameState och
+  // använd runMonteCarlo (tar hänsyn till motståndarens redan lagda kort).
+  // Annars: använd runMonteCarloSinglePlayer (tomt motståndar-bräde).
+  if (opponentBoard) {
+    const state: GameState = {
+      players: [
+        {
+          id: 0,
+          board,
+          isFantasyLand: false,
+          fantasyLandCards: 0,
+        },
+        {
+          id: 1,
+          board: opponentBoard,
+          isFantasyLand: false,
+          fantasyLandCards: 0,
+        },
+      ],
+      currentCards: cards,
+      deadCards,
+      variant,
+      round: 1,
+      phase: 'placing',
+      discardIndex: null,
+    };
+
+    const mcResult = runMonteCarlo(state, 0, 1, {
+      simulations,
+      maxMs,
+      topCandidates,
+      onProgress,
+    });
+
+    return convertMonteCarloResult(mcResult, 'monteCarlo');
   }
 
   const mcResult = runMonteCarloSinglePlayer(board, cards, deadCards, {
@@ -373,6 +421,149 @@ function getPrimaryRow(placement: TurnPlacement): RowName {
 }
 
 // ============================================================
+// Öppningshand- och Fantasy Land-wrapper-funktioner
+// ============================================================
+
+/**
+ * Löser öppningshanden (5 kort på tomt bräde).
+ * Wrapper kring solveFromBoard() som enrichar resultatet med:
+ *   - flProbability: estimerad FL-sannolikhet per placering
+ *   - resultBoard: brädet efter placeringen
+ *
+ * @param cards       De 5 öppningskorten
+ * @param deadCards   Döda kort (om sådana finns)
+ * @param options     Simuleringsinställningar
+ */
+export function solveOpeningHand(
+  cards: Card[],
+  deadCards: Card[] = [],
+  options: SolverOptions = {},
+): DetailedSolverResult {
+  const emptyBoard = createEmptyBoard();
+  const result = solveFromBoard(emptyBoard, cards, deadCards, 'regular', options);
+
+  // Enricha varje option med FL-sannolikhet och resultBoard
+  const allDead = [...deadCards, ...cards];
+
+  for (const opt of result.options) {
+    const board = applyPlacement(emptyBoard, {
+      placements: opt.placements,
+      discards: opt.discards,
+    });
+    opt.resultBoard = board;
+    opt.flProbability = estimateFLProbability(board, allDead, 200);
+  }
+
+  // Uppdatera best-referensen (options[0] kan ha ändrats)
+  if (result.options.length > 0) {
+    result.best = result.options[0];
+  }
+
+  return result;
+}
+
+/**
+ * Löser en Fantasy Land-hand (13–16 kort, komplett bräde).
+ * Wrapper kring FL-solvern som enrichar resultatet med:
+ *   - repeatFL: om placeringen kvalificerar för repeat-FL
+ *   - resultBoard: det kompletta brädet
+ *
+ * @param cards       13–16 FL-kort
+ * @param deadCards   Döda kort
+ * @param options     Simuleringsinställningar
+ */
+export function solveFantasyLandMode(
+  cards: Card[],
+  deadCards: Card[] = [],
+  options: SolverOptions = {},
+): DetailedSolverResult {
+  const {
+    simulations = 500,
+    maxMs = 8000,
+    topCandidates = 100,
+    heuristicOnly = false,
+  } = options;
+
+  // Skapa ett tomt motståndar-bräde för MC-simuleringen
+  const emptyOpponentBoard = createEmptyBoard();
+
+  let result: DetailedSolverResult;
+
+  if (heuristicOnly) {
+    result = solveFantasyLandHeuristicOnlyInternal(cards);
+  } else {
+    const mcResult = runFantasyLandMonteCarlo(
+      cards,
+      deadCards,
+      emptyOpponentBoard,
+      { simulations, maxMs, topCandidates },
+    );
+    result = convertMonteCarloResult(mcResult, 'monteCarlo');
+  }
+
+  // Enricha varje option med repeatFL och resultBoard
+  const emptyBoard = createEmptyBoard();
+
+  for (const opt of result.options) {
+    const board = applyPlacement(emptyBoard, {
+      placements: opt.placements,
+      discards: opt.discards,
+    });
+    opt.resultBoard = board;
+
+    const topCards = board.top.cards.filter((c): c is Card => c !== null);
+    const middleCards = board.middle.cards.filter((c): c is Card => c !== null);
+    const bottomCards = board.bottom.cards.filter((c): c is Card => c !== null);
+
+    if (
+      topCards.length === 3 &&
+      middleCards.length === 5 &&
+      bottomCards.length === 5 &&
+      !isFoul(topCards, middleCards, bottomCards)
+    ) {
+      opt.repeatFL = qualifiesForRepeatFL(topCards, middleCards, bottomCards);
+    } else {
+      opt.repeatFL = false;
+    }
+  }
+
+  if (result.options.length > 0) {
+    result.best = result.options[0];
+  }
+
+  return result;
+}
+
+/**
+ * Intern FL-heuristik-wrapper (undviker namnkollision med befintlig privat funktion).
+ */
+function solveFantasyLandHeuristicOnlyInternal(cards: Card[]): DetailedSolverResult {
+  const all = generateFLPlacements(cards);
+  const filtered = filterFantasyLandPlacements(all, 100);
+
+  if (filtered.length === 0) {
+    throw new Error('Inga giltiga FL-placeringar hittades.');
+  }
+
+  const options: DetailedPlacementOption[] = filtered.map((p, idx) => ({
+    ev: filtered.length - idx,
+    rank: idx + 1,
+    primaryRow: 'bottom' as RowName,
+    placements: p.placements,
+    discards: p.discards,
+    simulations: 0,
+  }));
+
+  return {
+    options,
+    best: options[0],
+    simulations: 0,
+    timedOut: false,
+    method: 'heuristic',
+  };
+}
+
+// ============================================================
 // Konvertering till SolverResult (kompatibel med types.ts)
 // ============================================================
 
@@ -417,10 +608,29 @@ export interface SolverWorkerInputFromBoard {
   cards: Card[];
   deadCards?: Card[];
   variant?: GameVariant;
+  opponentBoard?: Board;
   options?: SolverOptions;
 }
 
-export type SolverWorkerMessage = SolverWorkerInput | SolverWorkerInputFromBoard;
+export interface SolverWorkerInputOpening {
+  type: 'solve_opening';
+  cards: Card[];
+  deadCards?: Card[];
+  options?: SolverOptions;
+}
+
+export interface SolverWorkerInputFL {
+  type: 'solve_fl';
+  cards: Card[];
+  deadCards?: Card[];
+  options?: SolverOptions;
+}
+
+export type SolverWorkerMessage =
+  | SolverWorkerInput
+  | SolverWorkerInputFromBoard
+  | SolverWorkerInputOpening
+  | SolverWorkerInputFL;
 
 export interface SolverWorkerOutput {
   type: 'result';
@@ -465,7 +675,18 @@ export function handleSolverMessage(
         msg.deadCards,
         msg.variant,
         msg.options,
+        msg.opponentBoard,
       );
+      return { type: 'result', result };
+    }
+
+    if (msg.type === 'solve_opening') {
+      const result = solveOpeningHand(msg.cards, msg.deadCards, msg.options);
+      return { type: 'result', result };
+    }
+
+    if (msg.type === 'solve_fl') {
+      const result = solveFantasyLandMode(msg.cards, msg.deadCards, msg.options);
       return { type: 'result', result };
     }
 

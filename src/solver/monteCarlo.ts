@@ -467,6 +467,7 @@ export function runFantasyLandMonteCarlo(
     simulations = 500,
     maxMs = 8000,
     topCandidates = 100,
+    onProgress,
   } = options;
 
   const deadline = Date.now() + maxMs;
@@ -491,11 +492,15 @@ export function runFantasyLandMonteCarlo(
     bottom: { name: 'bottom', cards: [null, null, null, null, null] },
   };
 
-  for (const candidate of candidates) {
+  const totalCandidates = candidates.length;
+  for (let ci = 0; ci < candidates.length; ci++) {
+    const candidate = candidates[ci];
     if (Date.now() >= deadline) {
       timedOut = true;
       break;
     }
+
+    onProgress?.(Math.round((ci / totalCandidates) * 100));
 
     // Applicera FL-placeringen (sätter ett komplett bräde)
     const completedBoard = applyPlacement(emptyPlayerBoard, candidate);
@@ -540,6 +545,7 @@ export function runFantasyLandMonteCarlo(
     }
   }
 
+  onProgress?.(100);
   results.sort((a, b) => b.ev - a.ev);
 
   if (results.length === 0) {

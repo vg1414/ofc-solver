@@ -7,9 +7,10 @@ interface CardSlotProps {
   slotIndex: number;
   highlighted?: boolean;
   onClick?: (row: RowName, slotIndex: number) => void;
+  onRemove?: (row: RowName, slotIndex: number) => void;
 }
 
-export default function CardSlot({ card, row, slotIndex, highlighted = false, onClick }: CardSlotProps) {
+export default function CardSlot({ card, row, slotIndex, highlighted = false, onClick, onRemove }: CardSlotProps) {
   const isEmpty = card === null;
 
   const handleClick = () => {
@@ -17,7 +18,20 @@ export default function CardSlot({ card, row, slotIndex, highlighted = false, on
   };
 
   if (!isEmpty) {
-    return <Card card={card} size="md" animate />;
+    return (
+      <div
+        className={`relative group ${onRemove ? 'cursor-pointer' : ''}`}
+        onClick={() => onRemove?.(row, slotIndex)}
+        title={onRemove ? 'Klicka för att ta bort kortet' : undefined}
+      >
+        <Card card={card} size="md" animate />
+        {onRemove && (
+          <div className="absolute inset-0 rounded-md bg-red-900/0 group-hover:bg-red-900/50 transition-colors duration-150 flex items-center justify-center">
+            <span className="text-white text-lg font-bold opacity-0 group-hover:opacity-100 transition-opacity duration-150">✕</span>
+          </div>
+        )}
+      </div>
+    );
   }
 
   return (

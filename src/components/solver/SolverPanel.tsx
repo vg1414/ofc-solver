@@ -13,6 +13,7 @@
 import type { DetailedSolverResult } from '../../solver/solver';
 import type { Card, RowName } from '../../engine/types';
 import { cardToDisplay } from '../../engine/card';
+import ResultBoardPreview from './ResultBoardPreview';
 
 
 // ============================================================
@@ -137,6 +138,8 @@ interface SolverPanelProps {
   maxOptions?: number;
   /** Callback när användaren klickar på ett alternativ */
   onSelectOption?: (optionIndex: number) => void;
+  /** Om motståndarens bräde togs med i EV-beräkningen */
+  usedOpponentBoard?: boolean;
 }
 
 export default function SolverPanel({
@@ -147,6 +150,7 @@ export default function SolverPanel({
   progress = null,
   maxOptions = 5,
   onSelectOption,
+  usedOpponentBoard = false,
 }: SolverPanelProps) {
   const options = result?.options.slice(0, maxOptions) ?? [];
   const evValues = options.map((o) => o.ev);
@@ -162,14 +166,24 @@ export default function SolverPanel({
             Solver rekommenderar
           </span>
         </div>
-        {result && (
-          <span className="text-slate-500 text-xs">
-            {result.simulations.toLocaleString()} sim
-            {result.timedOut && (
-              <span className="ml-1 text-yellow-600" title="Tidsgräns nåddes">⚠</span>
-            )}
-          </span>
-        )}
+        <div className="flex items-center gap-2">
+          {usedOpponentBoard && (
+            <span
+              className="text-[10px] font-semibold text-blue-400 bg-blue-900/30 border border-blue-700/40 rounded px-1.5 py-0.5"
+              title="EV beräknat mot motståndarens faktiska bräde"
+            >
+              ↕ Motståndare inkl.
+            </span>
+          )}
+          {result && (
+            <span className="text-slate-500 text-xs">
+              {result.simulations.toLocaleString()} sim
+              {result.timedOut && (
+                <span className="ml-1 text-yellow-600" title="Tidsgräns nåddes">⚠</span>
+              )}
+            </span>
+          )}
+        </div>
       </div>
 
       {/* Innehåll */}
@@ -224,11 +238,37 @@ export default function SolverPanel({
                       placements={opt.placements}
                       discards={opt.discards}
                     />
-                    {isFirst && (
-                      <span className="ml-auto text-[10px] text-green-600 font-semibold uppercase tracking-wide shrink-0">
-                        BÄST
-                      </span>
-                    )}
+                    <div className="ml-auto flex items-center gap-1 shrink-0">
+                      {/* FL%-badge */}
+                      {opt.flProbability !== undefined && (
+                        <span
+                          className={`text-[10px] font-bold px-1.5 py-0.5 rounded border ${
+                            opt.flProbability >= 0.5
+                              ? 'text-yellow-300 bg-yellow-900/30 border-yellow-700/50'
+                              : opt.flProbability >= 0.25
+                              ? 'text-amber-400 bg-amber-900/20 border-amber-700/40'
+                              : 'text-slate-400 bg-slate-800/30 border-slate-700/40'
+                          }`}
+                          title="Sannolikhet att nå Fantasy Land"
+                        >
+                          FL {Math.round(opt.flProbability * 100)}%
+                        </span>
+                      )}
+                      {/* Repeat-FL-badge */}
+                      {opt.repeatFL && (
+                        <span
+                          className="text-[10px] font-bold px-1.5 py-0.5 rounded border text-purple-300 bg-purple-900/30 border-purple-700/50"
+                          title="Kvalificerar för repeat Fantasy Land"
+                        >
+                          ↻ FL igen
+                        </span>
+                      )}
+                      {isFirst && !opt.flProbability && !opt.repeatFL && (
+                        <span className="text-[10px] text-green-600 font-semibold uppercase tracking-wide">
+                          BÄST
+                        </span>
+                      )}
+                    </div>
                   </div>
 
                   {/* EV-bar */}
@@ -245,6 +285,13 @@ export default function SolverPanel({
                       EV {formatEV(opt.ev)}
                     </span>
                   </div>
+
+                  {/* Board-förhandsvisning */}
+                  {opt.resultBoard && (
+                    <div className="mt-2">
+                      <ResultBoardPreview board={opt.resultBoard} />
+                    </div>
+                  )}
                 </button>
               );
             })}

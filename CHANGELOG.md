@@ -1,5 +1,28 @@
 # Changelog
 
+## 2026-03-31 — Fas 1–8: Öppningshand-solver + Fantasy Land-solver
+
+### Tre solver-lägen (Normal / Öppningshand / Fantasy Land)
+- `types.ts`: Ny typ `SolverMode` och `FLCardCount`
+- `gameStore.ts`: Nytt state `solverMode`, `selectedCards`, `flCardCount` + actions
+- `flProbability.ts` (ny): MC-baserad FL%-estimering efter öppningshand
+- `solver.ts`: `solveOpeningHand()` och `solveFantasyLandMode()`, enrichning med FL%, repeatFL, resultBoard
+- `useSolver.ts`: Stöd för `mode` i `SolverInput`, skickar rätt worker-meddelande
+- `SolverControls.tsx`: `ModeSelector`-komponent och `FLCardCountPicker` (visas i FL-läge)
+- `CardPicker.tsx`: Multi-select med counter och X-knappar per valt kort
+- `ResultBoardPreview.tsx` (ny): Kompakt read-only bräde-förhandsgranskning i resultatraden
+- `SolverPanel.tsx`: FL%-badge, repeatFL-badge och board-preview per placeringsalternativ
+- `App.tsx`: `handleRunSolver` branchar på `solverMode`, layout anpassas per läge
+
+## 2026-03-31 — Fas 7: Motståndarens bräde i solver
+
+### Motståndarens bräde inkluderas i EV-beräkning (7.1–7.3)
+- `solver.ts`: `solveFromBoard` tar nu emot valfri `opponentBoard`-parameter — om motståndarens bräde har minst ett kort används `runMonteCarlo` (tvåspelarläge) istället för `runMonteCarloSinglePlayer` (tomt motståndar-bräde)
+- `SolverWorkerInputFromBoard`: ny valfri `opponentBoard`-prop i worker-meddelandet
+- `useSolver.ts`: `SolverInput` utökad med `opponentBoard?`; skickas vidare till worker
+- `App.tsx`: kollar om motståndarens bräde har kort — om ja skickas det med i solver-anropet
+- `SolverPanel.tsx`: visar badge "↕ Motståndare inkl." i headern när motståndarens bräde användes
+
 ## 2026-03-30 — Fas 6: Polish & Deploy (Steg 6.1–6.3)
 
 ### Responsiv design (6.1)

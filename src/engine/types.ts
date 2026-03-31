@@ -112,6 +112,11 @@ export interface GameState {
   discardIndex: number | null;
 }
 
+// --- Solver-lägen ---
+
+export type SolverMode = 'normal' | 'opening' | 'fantasyLand';
+export type FLCardCount = 13 | 14 | 15 | 16;
+
 // --- Solver ---
 
 export interface PlacementOption {
