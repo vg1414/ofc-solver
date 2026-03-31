@@ -49,6 +49,7 @@ export default function App() {
   const { result, isLoading, error, lastSimulations, progress, runSolver, cancelSolver, clearResult } = useSolver();
   // Håller koll på om senaste solver-körning använde motståndarens bräde
   const [solverUsedOpponentBoard, setSolverUsedOpponentBoard] = useState(false);
+  const [flAggression, setFlAggression] = useState<'conservative' | 'balanced' | 'aggressive'>('balanced');
 
   // --- Hantera slot-klick ---
   const handleSlotClick = (row: RowName, slotIndex: number) => {
@@ -75,7 +76,7 @@ export default function App() {
         simulations,
         heuristicOnly: simulations <= 200,
         topCandidates: 50,
-        maxMs: simulations >= 3000 ? 8000 : 5000,
+        flAggression,
       };
 
       // Opening-läge: kör med valda kort (max 5), tomt bräde
@@ -279,6 +280,8 @@ export default function App() {
               onRunSolver={handleRunSolver}
               onCancelSolver={cancelSolver}
               onNewHand={clearResult}
+              flAggression={flAggression}
+              onFlAggressionChange={setFlAggression}
             />
 
             <SolverPanel

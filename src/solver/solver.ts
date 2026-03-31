@@ -53,7 +53,7 @@ import type { MonteCarloResult, PlacementEV } from './monteCarlo';
 export interface SolverOptions {
   /** Antal Monte Carlo-simuleringar per kandidat (default: 1000) */
   simulations?: number;
-  /** Max tid i ms för hela beräkningen (default: 5000) */
+  /** Max tid i ms för hela beräkningen (default: 30000) */
   maxMs?: number;
   /** Max kandidater att utvärdera med MC (default: 50) */
   topCandidates?: number;
@@ -61,7 +61,12 @@ export interface SolverOptions {
   heuristicOnly?: boolean;
   /** Callback för progress (0–100) — används ej i Web Worker (skickas separat) */
   onProgress?: (percent: number) => void;
+  /** Hur aggressivt solvern ska värdera Fantasy Land-potential (default: 'balanced') */
+  flAggression?: 'conservative' | 'balanced' | 'aggressive';
 }
+
+import { FL_VALUE_MAP } from './flConfig';
+export { FL_VALUE_MAP };
 
 /**
  * Utökat solverresultat med detaljer om varje placering,
@@ -167,7 +172,7 @@ export function solveFromBoard(
 ): DetailedSolverResult {
   const {
     simulations = 1000,
-    maxMs = 5000,
+    maxMs = 30000,
     topCandidates = 50,
     heuristicOnly = false,
     onProgress,
@@ -242,8 +247,8 @@ function solveNormal(
   options: SolverOptions,
 ): DetailedSolverResult {
   const {
-    simulations = 1000,
-    maxMs = 5000,
+    simulations = 2000,
+    maxMs = 30000,
     topCandidates = 50,
     heuristicOnly = false,
     onProgress,
@@ -259,6 +264,7 @@ function solveNormal(
     maxMs,
     topCandidates,
     onProgress,
+    flAggression: options.flAggression,
   });
 
   return convertMonteCarloResult(mcResult, 'monteCarlo');
@@ -274,8 +280,8 @@ function solveFantasyLand(
   options: SolverOptions,
 ): DetailedSolverResult {
   const {
-    simulations = 500,
-    maxMs = 8000,
+    simulations = 1500,
+    maxMs = 30000,
     topCandidates = 100,
     heuristicOnly = false,
   } = options;
@@ -454,7 +460,15 @@ export function solveOpeningHand(
     opt.flProbability = estimateFLProbability(board, allDead, 200);
   }
 
-  // Uppdatera best-referensen (options[0] kan ha ändrats)
+  // Justera EV med FL-värde baserat på aggressivitetsinställning
+  const flValue = FL_VALUE_MAP[options.flAggression ?? 'balanced'];
+  for (const opt of result.options) {
+    opt.ev += (opt.flProbability ?? 0) * flValue;
+  }
+  result.options.sort((a, b) => b.ev - a.ev);
+  for (let i = 0; i < result.options.length; i++) {
+    result.options[i].rank = i + 1;
+  }
   if (result.options.length > 0) {
     result.best = result.options[0];
   }
@@ -478,8 +492,8 @@ export function solveFantasyLandMode(
   options: SolverOptions = {},
 ): DetailedSolverResult {
   const {
-    simulations = 500,
-    maxMs = 8000,
+    simulations = 1500,
+    maxMs = 30000,
     topCandidates = 100,
     heuristicOnly = false,
   } = options;

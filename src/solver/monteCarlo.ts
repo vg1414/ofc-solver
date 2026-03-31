@@ -32,7 +32,8 @@
 import type { Card, Board, GameState } from '../engine/types';
 import { buildDeck, removeDeadCards } from '../engine/deck';
 import { scoreHand } from '../engine/scoring';
-import { collectDeadCards, isBoardComplete } from '../engine/gameState';
+import { collectDeadCards, isBoardComplete, getFantasyLandEntryCards } from '../engine/gameState';
+import { FL_VALUE_MAP } from './flConfig';
 import type { TurnPlacement } from './placement';
 import {
   generatePlacements,
@@ -58,6 +59,8 @@ export interface MonteCarloOptions {
   topCandidates?: number;
   /** Anropas med 0–100 under beräkning */
   onProgress?: (percent: number) => void;
+  /** FL-aggressivitet som påverkar bonus i rollout */
+  flAggression?: 'conservative' | 'balanced' | 'aggressive';
 }
 
 export interface PlacementEV {
@@ -102,6 +105,7 @@ export function runMonteCarlo(
     maxMs = 5000,
     topCandidates = 50,
     onProgress,
+    flAggression,
   } = options;
 
   const player   = state.players[playerId];
@@ -162,6 +166,7 @@ export function runMonteCarlo(
       state.currentCards,
       simsPerCandidate,
       deadline,
+      flAggression,
     );
 
     results.push({ placement: candidate, ev, simulations: simCount });
@@ -201,6 +206,7 @@ function evaluatePlacement(
   _currentCards: Card[],
   simulations: number,
   deadline: number,
+  flAggression?: 'conservative' | 'balanced' | 'aggressive',
 ): { ev: number; simCount: number } {
   // Applicera placeringen på spelarens bräde
   const boardAfterPlacement = applyPlacement(playerBoard, placement);
@@ -233,6 +239,7 @@ function evaluatePlacement(
       unknownDeck,
       playerNeedsCards,
       opponentNeedsCards,
+      flAggression,
     );
 
     totalEV += ev;
@@ -256,6 +263,7 @@ function rollout(
   unknownDeck: Card[],
   playerNeedsCards: number,
   opponentNeedsCards: number,
+  flAggression?: 'conservative' | 'balanced' | 'aggressive',
 ): number {
   // Blanda leken inplace (Fisher-Yates, definieras nedan för prestanda)
   shuffleInPlace(unknownDeck);
@@ -272,10 +280,22 @@ function rollout(
   const opponentCards = unknownDeck.slice(playerNeedsCards, totalNeeded);
 
   // Fyll brädena med greedy-completion
-  const completedPlayer   = greedyCompletion(playerBoard, playerCards);
+  const completedPlayer   = greedyCompletion(playerBoard, playerCards, true);
   const completedOpponent = greedyCompletion(opponentBoard, opponentCards);
 
-  return scoreTwoBoards(completedPlayer, completedOpponent);
+  const baseScore = scoreTwoBoards(completedPlayer, completedOpponent);
+
+  // FL-bonus: om spelaren kvalificerar sig för Fantasy Land, lägg till FL-värde
+  const topCards = completedPlayer.top.cards.filter((c): c is Card => c !== null);
+  if (topCards.length === 3) {
+    const flCards = getFantasyLandEntryCards(topCards as any);
+    if (flCards > 0 && baseScore > -50) {
+      const flValue = FL_VALUE_MAP[flAggression ?? 'balanced'];
+      return baseScore + flValue;
+    }
+  }
+
+  return baseScore;
 }
 
 /**

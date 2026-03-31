@@ -89,7 +89,7 @@ export function estimateFLProbability(
     shuffleInPlace(unknownDeck);
 
     const drawnCards = unknownDeck.slice(0, neededCards);
-    const completedBoard = greedyCompletion(boardAfterOpening, drawnCards);
+    const completedBoard = greedyCompletion(boardAfterOpening, drawnCards, true);
 
     const topCards = completedBoard.top.cards.filter(
       (c): c is Card => c !== null,

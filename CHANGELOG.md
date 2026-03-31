@@ -1,5 +1,15 @@
 # Changelog
 
+## 2026-03-31 — FL-värdering, aggressivitetsinställning och royalty-visning
+
+- `solver.ts`: Ny `flAggression`-inställning ('conservative'/'balanced'/'aggressive'), FL-sannolikhet viktas nu in i EV
+- `flConfig.ts`: Ny delad konstant `FL_VALUE_MAP` (löser cirkulär import mellan solver ↔ monteCarlo)
+- `heuristics.ts`: Höjda `flEntryBonus`-värden, aggressionsmultiplikator, FL-medveten `greedyCompletion`
+- `monteCarlo.ts`: FL-bonus i rollout-resultat, `flAggression` propageras genom hela MC-kedjan
+- `flProbability.ts`: `greedyCompletion` anropas med `tryFL=true` för bättre FL-estimat
+- `SolverControls.tsx`: Ny 3-stegs FL-strategi-toggle i UI
+- `ResultBoardPreview.tsx` + `SolverPanel.tsx`: Visar royalty-poäng per rad i FL-läge
+
 ## 2026-03-31 — Bugfix: Öppningshand-analys kraschade med "Okänd meddelandetyp"
 
 - `solver.worker.ts`: Workern delegerar nu all meddelandehantering till `handleSolverMessage()` i `solver.ts` — inkluderar därmed `solve_opening` och `solve_fl` som saknades

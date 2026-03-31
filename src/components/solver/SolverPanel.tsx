@@ -289,7 +289,7 @@ export default function SolverPanel({
                   {/* Board-förhandsvisning */}
                   {opt.resultBoard && (
                     <div className="mt-2">
-                      <ResultBoardPreview board={opt.resultBoard} />
+                      <ResultBoardPreview board={opt.resultBoard} showRoyalties={true} />
                     </div>
                   )}
                 </button>

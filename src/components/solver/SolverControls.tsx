@@ -10,11 +10,15 @@ import { useGameStore } from '../../store/gameStore';
 // Typer
 // ============================================================
 
+type FLAggression = 'conservative' | 'balanced' | 'aggressive';
+
 interface SolverControlsProps {
   isLoading: boolean;
   onRunSolver: (simulations: number) => void;
   onCancelSolver: () => void;
   onNewHand?: () => void;
+  flAggression?: FLAggression;
+  onFlAggressionChange?: (v: FLAggression) => void;
 }
 
 // ============================================================
@@ -186,11 +190,52 @@ function SimPresetPicker({ value, onChange, disabled }: SimPresetPickerProps) {
 // Huvud-komponent
 // ============================================================
 
+const FL_AGGRESSION_LABELS: { value: FLAggression; label: string }[] = [
+  { value: 'conservative', label: 'Försiktig' },
+  { value: 'balanced', label: 'Balanserad' },
+  { value: 'aggressive', label: 'Aggressiv' },
+];
+
+interface FLAggressionPickerProps {
+  value: FLAggression;
+  onChange: (v: FLAggression) => void;
+  disabled?: boolean;
+}
+
+function FLAggressionPicker({ value, onChange, disabled }: FLAggressionPickerProps) {
+  return (
+    <div className="flex items-center gap-2">
+      <span className="text-slate-500 text-xs">FL-strategi:</span>
+      <div className="flex rounded-lg overflow-hidden border border-[#1e3a50]">
+        {FL_AGGRESSION_LABELS.map((p) => (
+          <button
+            key={p.value}
+            onClick={() => onChange(p.value)}
+            disabled={disabled}
+            className={`
+              px-3 py-1 text-xs transition-colors
+              ${value === p.value
+                ? 'bg-slate-600 text-slate-100'
+                : 'bg-[#0d1f2d] text-slate-500 hover:text-slate-300 hover:bg-[#142a3a]'
+              }
+              ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
+            `}
+          >
+            {p.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function SolverControls({
   isLoading,
   onRunSolver,
   onCancelSolver,
   onNewHand,
+  flAggression = 'balanced',
+  onFlAggressionChange,
 }: SolverControlsProps) {
   const {
     variant, setVariant, resetGame,
@@ -262,6 +307,15 @@ export default function SolverControls({
         <FLCardCountPicker
           value={flCardCount}
           onChange={setFLCardCount}
+          disabled={isLoading}
+        />
+      )}
+
+      {/* Rad 3b: FL-strategi (visas i opening och normal) */}
+      {(solverMode === 'opening' || solverMode === 'normal') && onFlAggressionChange && (
+        <FLAggressionPicker
+          value={flAggression}
+          onChange={onFlAggressionChange}
           disabled={isLoading}
         />
       )}

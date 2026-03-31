@@ -25,6 +25,7 @@ import type {
   Board,
   RowName,
   HandRank,
+  Rank,
 } from '../engine/types';
 import { ROW_CAPACITY } from '../engine/types';
 import { ALL_RANKS, ALL_SUITS, RANK_ORDER, HAND_RANK_ORDER } from '../engine/constants';
@@ -219,7 +220,7 @@ function scoreBoard(board: Board): number {
   score += partialRoyaltyScore(bottomCards, 'bottom') * 2.0;
 
   // FL-entré-potential: bonus för höga par/triss på topp
-  score += flEntryBonus(topCards);
+  score += flEntryBonus(topCards) * 2;
 
   return score;
 }
@@ -396,17 +397,17 @@ function partialRoyaltyScore(cards: Card[], row: RowName): number {
 /**
  * Bonus för FL-inträdes-potential på topp.
  */
-function flEntryBonus(topCards: Card[]): number {
+export function flEntryBonus(topCards: Card[], multiplier: number = 1): number {
   if (topCards.length === 0) return 0;
 
   const regs = topCards.filter(isRegularCard);
   const jokerCount = topCards.filter(isJoker).length;
 
-  if (jokerCount >= 2) return 15; // 2 jokrar = garanterad triss = FL
+  if (jokerCount >= 2) return 25 * multiplier; // 2 jokrar = garanterad triss = FL
   if (jokerCount >= 1) {
     // 1 joker + 1 hög reg-kort: goda chanser till par/triss
     const hasHighCard = regs.some((c) => RANK_ORDER[c.rank] >= 12);
-    return hasHighCard ? 8 : 3;
+    return (hasHighCard ? 15 : 6) * multiplier;
   }
 
   // Inga jokrar: kolla om vi har par på topp
@@ -418,8 +419,9 @@ function flEntryBonus(topCards: Card[]): number {
     }
     for (const [vStr, cnt] of Object.entries(freq)) {
       const v = parseInt(vStr);
-      if (cnt >= 2 && v >= 12) return 10; // par av Q+
-      if (cnt >= 3) return 12;            // triss
+      if (cnt >= 3) return 25 * multiplier;            // triss
+      if (cnt >= 2 && v >= 12) return 20 * multiplier; // par av Q+
+      if (cnt >= 2 && v >= 6) return 4 * multiplier;   // par 66-JJ
     }
   }
 
@@ -623,7 +625,7 @@ export function resolveJokerIdentity(
  * @param board         Halvfärdigt bräde
  * @param remainingCards Kort att fördela
  */
-export function greedyCompletion(board: Board, remainingCards: Card[]): Board {
+export function greedyCompletion(board: Board, remainingCards: Card[], tryFL = false): Board {
   // Kopia av brädet att mutera
   const result: Board = cloneBoard(board);
 
@@ -643,12 +645,55 @@ export function greedyCompletion(board: Board, remainingCards: Card[]): Board {
   const freeMid    = countFreeSlots(result, 'middle');
   const freeBot    = countFreeSlots(result, 'bottom');
 
+  // --- FL-medveten logik: reservera matchande Q+-kort för toppen ---
+  const reservedForTop: RegularCard[] = [];
+
+  if (tryFL && freeTop > 0) {
+    const topCards = result.top.cards.filter((c): c is Card => c !== null);
+    const topRegular = topCards.filter(isRegularCard) as RegularCard[];
+
+    // Hitta befintliga Q+-kort i toppen
+    const highTopCards = topRegular.filter(c => RANK_ORDER[c.rank] >= 12);
+
+    if (highTopCards.length > 0) {
+      // Kolla om vi redan har ett par — leta efter triss
+      const rankCounts = new Map<Rank, number>();
+      for (const c of topRegular) {
+        rankCounts.set(c.rank, (rankCounts.get(c.rank) ?? 0) + 1);
+      }
+
+      let targetRank: Rank | null = null;
+      for (const [rank, count] of rankCounts) {
+        if (RANK_ORDER[rank] >= 12) {
+          if (count >= 2) {
+            // Par finns — leta efter triss
+            targetRank = rank;
+            break;
+          }
+          if (!targetRank) {
+            // Enskilt högt kort — leta efter par
+            targetRank = rank;
+          }
+        }
+      }
+
+      if (targetRank) {
+        const slotsLeft = freeTop - reservedForTop.length;
+        for (let i = regularCards.length - 1; i >= 0 && reservedForTop.length < slotsLeft; i--) {
+          if (regularCards[i].rank === targetRank) {
+            reservedForTop.push(regularCards.splice(i, 1)[0]);
+          }
+        }
+      }
+    }
+  }
+
   // --- Fördela reguljära kort ---
   // Strategi: Vi vill ha bottom > middle > top (foul-undvikande)
   //   → Fyll bottom med starka kort, middle med medel, top med svaga
 
   // Dela in korten i tre grupper (proportionellt mot lediga platser)
-  // freeTop + freeMid + freeBot = total lediga platser (används ej direkt)
+  const adjustedFreeTop = freeTop - reservedForTop.length;
   const allToPlace = [...regularCards];
 
   // Fördela: de sista (svagaste) korten → top, mellersta → middle, starkaste → bottom
@@ -663,11 +708,14 @@ export function greedyCompletion(board: Board, remainingCards: Card[]): Board {
       forBottom.push(card);
     } else if (forMiddle.length < freeMid) {
       forMiddle.push(card);
-    } else if (forTop.length < freeTop) {
+    } else if (forTop.length < adjustedFreeTop) {
       forTop.push(card);
     }
     // Om alla platser är fyllda: extra kort ignoreras
   }
+
+  // Lägg till reserverade FL-kort till toppen
+  forTop.push(...reservedForTop);
 
   // Placera korten
   placeCardsInRow(result, 'bottom', forBottom);
