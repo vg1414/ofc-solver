@@ -278,6 +278,7 @@ export default function App() {
               isLoading={isLoading}
               onRunSolver={handleRunSolver}
               onCancelSolver={cancelSolver}
+              onNewHand={clearResult}
             />
 
             <SolverPanel

@@ -14,6 +14,7 @@ interface SolverControlsProps {
   isLoading: boolean;
   onRunSolver: (simulations: number) => void;
   onCancelSolver: () => void;
+  onNewHand?: () => void;
 }
 
 // ============================================================
@@ -189,6 +190,7 @@ export default function SolverControls({
   isLoading,
   onRunSolver,
   onCancelSolver,
+  onNewHand,
 }: SolverControlsProps) {
   const {
     variant, setVariant, resetGame,
@@ -196,6 +198,11 @@ export default function SolverControls({
     solverMode, setSolverMode,
     selectedCards, flCardCount, setFLCardCount,
   } = useGameStore();
+
+  const handleNewHand = () => {
+    resetGame();
+    onNewHand?.();
+  };
   const [simulations, setSimulations] = useState(1000);
 
   const hasCards =
@@ -290,7 +297,7 @@ export default function SolverControls({
 
         {/* Återställ hand */}
         <button
-          onClick={resetGame}
+          onClick={handleNewHand}
           disabled={isLoading}
           className={`
             px-4 py-2 rounded-lg text-sm transition-colors border
