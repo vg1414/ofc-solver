@@ -17,7 +17,7 @@ En webbaserad solver för Open Face Chinese Poker (OFC) med stöd för hemspels-
 - **Egna spelkort** i fyrfärgslek (♠ svart, ♥ röd, ♦ blå, ♣ grön): hela kortet har färgens pastellton, stor valör och färgen som vattenstämpel. Jokrarna har en guldstjärna
 - **Lägg kort** genom att trycka på ett kort och sedan på en rad/plats, eller dra-och-släpp (touch + mus). Lediga platser andas i guld, kortet snäpper på plats och telefonen vibrerar lätt
 - **Kompakt 4×13-rutnät** för kortinmatning, alltid nåbart med tummen
-- **Första handen**: välj 5 kort → "Bästa öppning" → "Lägg så här" lägger ut alla. Sedan ett kort i taget
+- **Två lägen: Vanlig hand och Fantasy Land.** Öppningen ingår i vanlig hand: med tomt bräde väljer du 5 kort → "Bästa öppning" → "Lägg så här" lägger ut alla. Sedan ett kort i taget
 - **Solverns förslag visas som spökkort direkt på brädet**, med EV, FL-chans, foul-risk och "↻ FL igen"
 - Följer telefonens ljusa/mörka läge. Ark sveps ner för att stängas
 
@@ -78,6 +78,8 @@ npm test
 sh scripts/run.sh scripts/demo.ts
 ```
 
-## Deploy (Vercel)
+## Deploy (GitHub Pages)
 
-Projektet är konfigurerat för Vercel med `vercel.json`. Pusha till GitHub och koppla repot till Vercel — bygget sker automatiskt.
+Varje push till `main` bygger, testar och publicerar appen automatiskt via GitHub Actions (`.github/workflows/deploy.yml`).
+
+Live: https://vg1414.github.io/ofc-solver/

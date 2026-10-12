@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-10-12 — Publicering på GitHub Pages
+
+- `.github/workflows/deploy.yml`: bygger, testar och publicerar appen automatiskt vid varje push till main
+- `vite.config.ts`: `base` = `/ofc-solver/` vid bygge så att filerna hittas på GitHub Pages
+- Appen finns på https://vg1414.github.io/ofc-solver/
+
 ## 2026-10-12 — Nytt gränssnitt: varmt, ljust och mobil först
 
 Hela UI:t är omgjort med samma designspråk som Bokis (gradienter, glaskort, mjuka skuggor, fjädrande rörelser), i smaragd och guld på krämvit botten. Solver-motorn (`src/core`, `src/solver`, `src/workers`, `src/engine`) är orörd.
@@ -9,10 +15,10 @@ Hela UI:t är omgjort med samma designspråk som Bokis (gradienter, glaskort, mj
 - **Brädet** (`BoardView`) är ett ljust mintfilt-bord. Lediga platser andas i guld när ett kort är valt, korten snäpper på plats, royalties visas live per rad. Tryck på ett lagt kort två gånger för att ta bort det
 - **Dra-och-släpp** (`dnd/`) med pointer events: fungerar med touch och mus, det dragna kortet svävar ovanför fingret
 - **Kortinmatning**: kompakt 4×13-rutnät i en svävande glaspanel längst ner + jokerknapp med räknare (2 jokrar)
-- **Första handen**: i Normal-läget med tomt bräde väljer man upp till 5 kort; "Bästa öppning" + "Lägg så här" lägger ut alla. Sedan ett kort i taget
+- **Öppningen är inget eget läge längre**: lägena är "Vanlig hand" och "Fantasy Land". Med tomt bräde är det öppningshand: välj upp till 5 kort, "Bästa öppning" + "Lägg så här" lägger ut alla, sedan ett kort i taget. En rad ovanför brädet visar "Öppningshand" / "5 av 13 kort"
 - **Resultat**: förslaget visas som spökkort direkt på brädet. Bästa draget i guldkort med skimrande list och EV som räknas upp; övriga alternativ fälls ut. Öppning/FL visar minibräde med royalties
 - **Progress** med snurrande logga, gradient-bar och Avbryt
-- **Inställningsark** (variant, simuleringsnivå, husregler) som sveps ner för att stängas
+- **Inställningsark** (variant, simuleringsnivå, husregler) som stängs med ✕-knappen, svep ner eller tryck utanför
 - Följer telefonens ljusa/mörka läge. Liggande telefon och desktop får två kolumner
 - Nya store-actions `addSelectedCard` / `removeSelectedCardAt` (för två jokrar i handen). Befintliga actions är oförändrade
 - Typsnitt: Outfit + Playfair Display (som Bokis) och Barlow Condensed för kortens valörer
