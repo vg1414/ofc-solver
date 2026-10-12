@@ -99,6 +99,10 @@ interface GameStore {
   toggleCardSelection: (card: Card) => void;
   clearSelectedCards: () => void;
   setFLCardCount: (count: FLCardCount) => void;
+  /** Lägg till ett kort i handen (tillåter två jokrar, till skillnad från toggle) */
+  addSelectedCard: (card: Card) => void;
+  /** Ta bort kortet på plats `index` ur handen */
+  removeSelectedCardAt: (index: number) => void;
 }
 
 export const useGameStore = create<GameStore>((set, get) => ({
@@ -332,6 +336,15 @@ export const useGameStore = create<GameStore>((set, get) => ({
   },
 
   clearSelectedCards: () => set({ selectedCards: [] }),
+
+  addSelectedCard: (card) => {
+    const { selectedCards, solverMode, flCardCount } = get();
+    const maxCards = solverMode === 'fantasyLand' ? flCardCount : 5;
+    if (selectedCards.length < maxCards) set({ selectedCards: [...selectedCards, card] });
+  },
+
+  removeSelectedCardAt: (index) =>
+    set((s) => ({ selectedCards: s.selectedCards.filter((_, i) => i !== index) })),
 
   setFLCardCount: (count) => set({ flCardCount: count, selectedCards: [] }),
 

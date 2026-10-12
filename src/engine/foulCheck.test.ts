@@ -110,7 +110,7 @@ describe('isFoul — foul när middle ≥ bottom', () => {
     expect(isFoul(top, middle, bottom)).toBe(true);
   });
 
-  it('lika strong middle och bottom → foul', () => {
+  it('lika stark middle och bottom → INTE foul (husregel)', () => {
     const top    = [c('2','clubs'), c('3','hearts'), c('4','diamonds')];       // high card
     // Exakt samma hand-styrka på middle och bottom
     const middle = [c('A','clubs'), c('A','diamonds'), c('K','hearts'),
@@ -118,7 +118,7 @@ describe('isFoul — foul när middle ≥ bottom', () => {
     const bottom = [c('A','hearts'), c('A','spades'), c('K','clubs'),
                     c('K','diamonds'), c('Q','hearts')];                        // two pair AA+KK (lika)
 
-    expect(isFoul(top, middle, bottom)).toBe(true);
+    expect(isFoul(top, middle, bottom)).toBe(false);
   });
 });
 

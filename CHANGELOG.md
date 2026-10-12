@@ -1,5 +1,44 @@
 # Changelog
 
+## 2026-10-12 — Nytt gränssnitt: varmt, ljust och mobil först
+
+Hela UI:t är omgjort med samma designspråk som Bokis (gradienter, glaskort, mjuka skuggor, fjädrande rörelser), i smaragd och guld på krämvit botten. Solver-motorn (`src/core`, `src/solver`, `src/workers`, `src/engine`) är orörd.
+
+- **Bara Solvern kvar**: Poängräknare och Bokföring är borttagna (finns i BlackBook)
+- **Nya spelkort** (`PlayingCard`, `SuitIcon`): fyrfärgslek med pastellbakgrund per färg, stor valör, centrerad färgsymbol som vattenstämpel och lätt glans. Symbolerna ritas som SVG (inga emoji-hjärtan på iPhone). Jokern har guldstjärna
+- **Brädet** (`BoardView`) är ett ljust mintfilt-bord. Lediga platser andas i guld när ett kort är valt, korten snäpper på plats, royalties visas live per rad. Tryck på ett lagt kort två gånger för att ta bort det
+- **Dra-och-släpp** (`dnd/`) med pointer events: fungerar med touch och mus, det dragna kortet svävar ovanför fingret
+- **Kortinmatning**: kompakt 4×13-rutnät i en svävande glaspanel längst ner + jokerknapp med räknare (2 jokrar)
+- **Första handen**: i Normal-läget med tomt bräde väljer man upp till 5 kort; "Bästa öppning" + "Lägg så här" lägger ut alla. Sedan ett kort i taget
+- **Resultat**: förslaget visas som spökkort direkt på brädet. Bästa draget i guldkort med skimrande list och EV som räknas upp; övriga alternativ fälls ut. Öppning/FL visar minibräde med royalties
+- **Progress** med snurrande logga, gradient-bar och Avbryt
+- **Inställningsark** (variant, simuleringsnivå, husregler) som sveps ner för att stängas
+- Följer telefonens ljusa/mörka läge. Liggande telefon och desktop får två kolumner
+- Nya store-actions `addSelectedCard` / `removeSelectedCardAt` (för två jokrar i handen). Befintliga actions är oförändrade
+- Typsnitt: Outfit + Playfair Display (som Bokis) och Barlow Condensed för kortens valörer
+
+## 2026-10-12 — Ny solver-kärna: korrekta resultat
+
+Den gamla solvern räknade fel i grunden: simuleringen fick se alla framtida kort på en gång och sorterade dem bara efter valör, motståndaren foulade nästan jämt, FL-bonusen räknades dubbelt (även vid foul) och jokrar kunde orsaka onödig foul. Hela beräkningsdelen är därför ombyggd.
+
+- **Ny kärna `src/core/`** (ersätter `heuristics.ts`, `monteCarlo.ts`, `placement.ts`, `flProbability.ts`, `flConfig.ts`)
+  - `eval.ts`: snabb handvärdering på heltal. Jokrar väljs för att **undvika foul**, lika starka rader är OK och royal flush slår 5-tal
+  - `lookahead.ts`: simulerad spelare som får ett kort i taget (ingen framtidsblick). För varje rad slumpar den 12 möjliga framtider och räknar ut bästa slutuppställning, så den förstår vad varje rad kräver. Den vinner ≈ 1 poäng/hand mer än en enkel tumregel-spelare
+  - `policy.ts`: snabb tumregel-spelare (royalties, draws, FL-chans, foul-risk) som används för grovsållning
+  - `sim.ts`: Monte Carlo där alla kandidater spelas mot samma blandningar. Många kandidater (öppningshand) sållas först på två oberoende sätt (försiktigt + optimistiskt), sedan slås drag ut först när de är statistiskt sämre (> 2 standardfel)
+  - `poolData.ts`: 1 500 färdigspelade motståndarhänder per variant, förberäknade med `scripts/buildPool.ts` så att appen startar snabbt
+  - `fl.ts`: **exakt** Fantasy Land-lösare som går igenom alla uppställningar (även 14–16 kort)
+  - `flValue.ts`: FL-värdet är uträknat genom simulering (`scripts/computeFlValue.ts`) i stället för att gissas
+- FL-strategi-reglaget är borttaget, eftersom solvern nu räknar ut FL-värdet själv
+- Solver-panelen visar foul-risk (%) per alternativ
+- Simuleringsnivåer: Snabb 300 / Normal 800 / Noggrann 2000 (max 8 / 20 / 45 sekunder)
+- Appens egen foul- och royalty-visning använder samma regler som solvern
+- Nya facit-tester i `src/core/core.test.ts`
+- Mätskript i `scripts/` (`selfplay`, `tune`, `demo`, `compare`, `clair`, `computeFlValue`, `buildPool`)
+- Utslagning kräver minst 100 simuleringar (förhindrar att bra drag slås ut av slumpbrus)
+- Kalibrerat mot 7 testhänder (`scripts/calib.ts`): spelarintuitionen var bäst eller lika bra i 6 av 7
+- Exempel: med A♥A♦7♣8♣2♠ rekommenderas nu AA2 i middle och 7♣8♣ i bottom (EV +3,3 mot +1,7 för AA i bottom)
+
 ## 2026-03-31 — FL-värdering, aggressivitetsinställning och royalty-visning
 
 - `solver.ts`: Ny `flAggression`-inställning ('conservative'/'balanced'/'aggressive'), FL-sannolikhet viktas nu in i EV

@@ -16,6 +16,7 @@
 
 import type { Card, HandResult } from './types';
 import { evaluate3, evaluate5, compareHands } from './handEval';
+import { settle, toInts } from '../core/eval';
 
 // ---------------------------------------------------------------
 // Publikt API
@@ -41,18 +42,16 @@ export function isFoul(
     );
   }
 
-  const topResult    = evaluate3(topCards);
-  const middleResult = evaluate5(middleCards);
-  const bottomResult = evaluate5(bottomCards);
-
-  return isFoulFromResults(topResult, middleResult, bottomResult);
+  // Samma regler som solvern: jokrar väljs för att undvika foul, lika rader är OK
+  const all = toInts([...topCards, ...middleCards, ...bottomCards]);
+  return settle(all.slice(0, 3), all.slice(3, 8), all.slice(8)).foul;
 }
 
 /**
  * Kontrollerar foul direkt från redan utvärderade HandResult.
  * Användbart när handvärderingen redan gjorts (undviker dubbelt arbete).
  *
- * Foul om: top ≥ middle ELLER middle ≥ bottom.
+ * Foul om: top > middle ELLER middle > bottom (lika är OK).
  */
 export function isFoulFromResults(
   topResult: HandResult,
@@ -60,10 +59,10 @@ export function isFoulFromResults(
   bottomResult: HandResult,
 ): boolean {
   // top måste vara STRIKT svagare än middle
-  if (compareHands(topResult, middleResult) >= 0) return true;
+  if (compareHands(topResult, middleResult) > 0) return true;
 
   // middle måste vara STRIKT svagare än bottom
-  if (compareHands(middleResult, bottomResult) >= 0) return true;
+  if (compareHands(middleResult, bottomResult) > 0) return true;
 
   return false;
 }

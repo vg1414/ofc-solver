@@ -10,6 +10,7 @@ import {
   TOP_TRIPS_ROYALTIES,
 } from './constants';
 import { evaluate5, evaluate3 } from './handEval';
+import { settle, toInts, royaltyOf } from '../core/eval';
 
 // ---------------------------------------------------------------
 // Publikt API
@@ -61,16 +62,17 @@ export function calcAllRoyalties(
   middleCards: Card[],
   bottomCards: Card[],
 ): RoyaltyResult {
+  // Jokrar: samma val som solvern (bästa giltiga uppställning)
+  const all = toInts([...topCards, ...middleCards, ...bottomCards]);
+  const s = settle(all.slice(0, 3), all.slice(3, 8), all.slice(8));
+  if (!s.foul) {
+    const top = royaltyOf(s.top, 0), middle = royaltyOf(s.mid, 1), bottom = royaltyOf(s.bot, 2);
+    return { top, middle, bottom, total: top + middle + bottom };
+  }
   const top = calcTopRoyalty(topCards);
   const middle = calcRowRoyalty5(middleCards, 'middle');
   const bottom = calcRowRoyalty5(bottomCards, 'bottom');
-
-  return {
-    top,
-    middle,
-    bottom,
-    total: top + middle + bottom,
-  };
+  return { top, middle, bottom, total: top + middle + bottom };
 }
 
 /**

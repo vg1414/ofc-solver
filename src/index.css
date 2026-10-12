@@ -1,79 +1,524 @@
 @import "tailwindcss";
 
+/* "wide" = desktop ELLER telefon i liggande läge → tvåkolumnslayout */
+@custom-variant wide {
+  @media (min-width: 1024px) {
+    @slot;
+  }
+  @media (orientation: landscape) and (max-height: 540px) {
+    @slot;
+  }
+}
+
+/* ============================================================
+   Tema — samma designspråk som Bokis, men i smaragd + guld:
+   gradienter, glaskort, mjuka färgade skuggor och fjädrande rörelser.
+   Alla färger är CSS-variabler som byter värde i mörkt läge.
+   @theme inline gör dem till Tailwind-klasser: bg-surface, text-ink-2 osv.
+   ============================================================ */
+
 :root {
+  /* Varma, mjuka neutraler (krämvitt i stället för grått) */
+  --page: #fbf7f1;
+  --surface: #ffffff;
+  --glass: rgba(255, 255, 255, 0.72);
+  --glass-brd: rgba(255, 255, 255, 0.95);
+  --sunken: #f4eee6;
+  --line: #eee5d9;
+  --line-strong: #dccfbf;
+  --ink: #2a241f;
+  --ink-2: #7a6f65;
+  --ink-3: #ab9f93;
+  --accent: #15936a;
+  --accent-hover: #11835d;
+  --on-accent: #ffffff;
+  --accent-soft: #e3f4ea;
+  --accent-ink: #0e6a4b;
+  --gold: #b07a0c;
+  --gold-soft: #fff5dc;
+  --gold-line: #f0d385;
+  --danger: #d0443f;
+  --danger-soft: #fdece9;
+  --fl: #7a4fd0;
+  --fl-soft: #f3ecfd;
+
+  --grad: linear-gradient(135deg, #3cc48f 0%, #17996b 55%, #0f7653 100%);
+  --grad-hot: linear-gradient(135deg, #ffb37a 0%, #f5b83d 50%, #3cc48f 100%);
+  --grad-gold: linear-gradient(135deg, #ffe7a6 0%, #f8c254 55%, #e39a1b 100%);
+  --grad-fl: linear-gradient(135deg, #b38cf7 0%, #7a4fd0 60%, #5a33a8 100%);
+  --grad-ink: linear-gradient(120deg, #2a241f 0%, #11835d 60%, #3cc48f 100%);
+  /* Ljust mintfilt-bord */
+  --felt: radial-gradient(130% 100% at 50% 0%, #f6fcf8 0%, #e3f4ea 55%, #cfeadb 100%);
+  --felt-line: rgba(17, 131, 93, 0.16);
+  --felt-label: #0e6a4b;
+  --glow: 0 8px 24px -6px rgba(23, 153, 107, 0.5);
+  --glow-gold: 0 8px 22px -6px rgba(227, 154, 27, 0.55);
+  --glow-fl: 0 8px 22px -6px rgba(122, 79, 208, 0.5);
+  --shadow-soft: 0 1px 2px rgba(80, 50, 20, 0.04), 0 10px 30px -12px rgba(120, 80, 40, 0.18);
+  --shadow-big: 0 2px 6px rgba(80, 50, 20, 0.05), 0 22px 48px -16px rgba(120, 80, 40, 0.26);
+  --shadow-card: 0 1px 1px rgb(80 50 20 / 0.1), 0 3px 8px -2px rgb(80 50 20 / 0.18);
+  --shadow-lift: 0 14px 28px -6px rgb(80 50 20 / 0.3), 0 4px 8px rgb(80 50 20 / 0.12);
+  --blob-1: #ffd9c4;
+  --blob-2: #ffecbf;
+  --blob-3: #cdf0dc;
+  --blob-opacity: 0.6;
+  --spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+
+  /* Kortfärger: bakgrund / tecken / kant */
+  --spade-bg: #eceef1;   --spade-fg: #1d2127;   --spade-line: #c4c8cf;
+  --heart-bg: #fde6ea;   --heart-fg: #c81d39;   --heart-line: #f1b2bd;
+  --diamond-bg: #e0ebfd; --diamond-fg: #1a55c6; --diamond-line: #adc7f3;
+  --club-bg: #def3e6;    --club-fg: #13733b;    --club-line: #a5d6b7;
+  --joker-bg: #f0e7fc;   --joker-fg: #5b3a9e;   --joker-line: #ccb6ee; --joker-star: #e2a812;
+
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --page: #12100e;
+    --surface: #1c1916;
+    --glass: rgba(30, 27, 24, 0.74);
+    --glass-brd: rgba(255, 255, 255, 0.07);
+    --sunken: #171411;
+    --line: #2e2924;
+    --line-strong: #403931;
+    --ink: #f1ebe4;
+    --ink-2: #b3a89c;
+    --ink-3: #7a7065;
+    --accent: #2bc08a;
+    --accent-hover: #3bd29b;
+    --on-accent: #ffffff;
+    --accent-soft: #113428;
+    --accent-ink: #7fe0b7;
+    --gold: #f2c14e;
+    --gold-soft: #2a2311;
+    --gold-line: #6e5620;
+    --danger: #ff7a82;
+    --danger-soft: #3a161a;
+    --fl: #c3a2ff;
+    --fl-soft: #2a1e45;
+    --grad-ink: linear-gradient(120deg, #efe9e2 0%, #7fe0b7 60%, #2bc08a 100%);
+    --felt: radial-gradient(130% 100% at 50% 0%, #1b3a2e 0%, #142c23 55%, #10231c 100%);
+    --felt-line: rgba(127, 224, 183, 0.18);
+    --felt-label: #7fe0b7;
+    --shadow-soft: 0 1px 2px rgba(0, 0, 0, 0.3), 0 10px 30px -12px rgba(0, 0, 0, 0.6);
+    --shadow-big: 0 2px 6px rgba(0, 0, 0, 0.3), 0 22px 48px -16px rgba(0, 0, 0, 0.7);
+    --blob-1: #4a2a1a;
+    --blob-2: #3f3210;
+    --blob-3: #0f4a33;
+    --blob-opacity: 0.45;
+
+    /* Korten behåller sina ljusa pastellfärger (som riktiga kort), lite nedtonade */
+    --spade-bg: #dcdfe4;   --spade-line: #9ea3ab;
+    --heart-bg: #f6d6dc;   --heart-line: #d991a0;
+    --diamond-bg: #d2e0f8; --diamond-line: #8eaee6;
+    --club-bg: #d1eadb;    --club-line: #86c09b;
+    --joker-bg: #e4d8f7;   --joker-line: #a98bdc;
+    color-scheme: dark;
+  }
+}
+
+@theme inline {
+  --color-page: var(--page);
+  --color-surface: var(--surface);
+  --color-glass: var(--glass);
+  --color-sunken: var(--sunken);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-ink-3: var(--ink-3);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-on-accent: var(--on-accent);
+  --color-accent-soft: var(--accent-soft);
+  --color-accent-ink: var(--accent-ink);
+  --color-gold: var(--gold);
+  --color-gold-soft: var(--gold-soft);
+  --color-gold-line: var(--gold-line);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-fl: var(--fl);
+  --color-fl-soft: var(--fl-soft);
+  --font-sans: "Outfit", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-serif: "Playfair Display", Georgia, serif;
+  --font-card: "Barlow Condensed", "Arial Narrow", system-ui, sans-serif;
+  --shadow-card: var(--shadow-card);
+  --shadow-lift: var(--shadow-lift);
+  --shadow-soft: var(--shadow-soft);
+  --shadow-big: var(--shadow-big);
+}
+
+html,
+body {
+  background-color: var(--page);
+  color: var(--ink);
 }
 
 body {
   margin: 0;
-  background-color: #0f1923;
-  color: #e2e8f0;
-  font-family: system-ui, -apple-system, sans-serif;
+  font-family: var(--font-sans);
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior-y: none;
 }
 
 #root {
-  min-height: 100vh;
+  min-height: 100dvh;
 }
 
-/* === Animationer === */
+button {
+  cursor: pointer;
+  -webkit-user-select: none;
+  user-select: none;
+  font-family: inherit;
+}
+button:disabled {
+  cursor: not-allowed;
+}
 
-/* Kort som placeras på brädet glider in */
-@keyframes card-place {
-  0% {
-    opacity: 0;
-    transform: scale(0.7) translateY(-8px);
-  }
-  60% {
-    transform: scale(1.05) translateY(0);
-  }
-  100% {
-    opacity: 1;
-    transform: scale(1) translateY(0);
+:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--accent) 40%, transparent);
+  outline-offset: 2px;
+}
+
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Liggande telefon: kortbredden begränsas av skärmhöjden så att hela brädet syns */
+@media (orientation: landscape) and (max-height: 540px) {
+  :root {
+    --card-h-cap: calc((100dvh - 214px) / 4.3);
   }
 }
 
-.animate-card-place {
-  animation: card-place 0.22s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+/* ============================================================
+   Byggstenar (samma idé som i Bokis)
+   ============================================================ */
+
+/* Levande bakgrund: mjuka färgklickar som sakta driver runt */
+.bg-blobs {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+.bg-blobs span {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(60px);
+  opacity: var(--blob-opacity);
+  will-change: transform;
+}
+.bg-blobs span:nth-child(1) {
+  width: 60vmax; height: 60vmax; left: -22vmax; top: -16vmax;
+  background: radial-gradient(circle, var(--blob-1) 0%, transparent 70%);
+  animation: blob-drift-1 26s ease-in-out infinite alternate;
+}
+.bg-blobs span:nth-child(2) {
+  width: 50vmax; height: 50vmax; right: -18vmax; top: 30vh;
+  background: radial-gradient(circle, var(--blob-2) 0%, transparent 70%);
+  animation: blob-drift-2 32s ease-in-out infinite alternate;
+}
+.bg-blobs span:nth-child(3) {
+  width: 46vmax; height: 46vmax; left: 10vw; bottom: -22vmax;
+  background: radial-gradient(circle, var(--blob-3) 0%, transparent 70%);
+  animation: blob-drift-3 28s ease-in-out infinite alternate;
+}
+@keyframes blob-drift-1 { to { transform: translate(12vw, 10vh) scale(1.12); } }
+@keyframes blob-drift-2 { to { transform: translate(-14vw, -8vh) scale(0.9); } }
+@keyframes blob-drift-3 { to { transform: translate(10vw, -12vh) scale(1.08); } }
+
+/* Glaskort */
+.glass {
+  background: var(--glass);
+  border: 1px solid var(--glass-brd);
+  box-shadow: var(--shadow-soft);
+  backdrop-filter: blur(16px) saturate(1.4);
+  -webkit-backdrop-filter: blur(16px) saturate(1.4);
 }
 
-/* Flik-innehåll tonar in vid byte */
+/* Topbar med gradient, rundad nederkant och långsamt rörlig glöd */
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  background: var(--grad);
+  background-color: #17996b;
+  border-radius: 0 0 26px 26px;
+  box-shadow: 0 10px 30px -12px rgba(15, 118, 83, 0.5);
+  overflow: hidden;
+  isolation: isolate;
+  color: #fff;
+}
+.topbar::before {
+  content: "";
+  position: absolute;
+  inset: -40% -10%;
+  background:
+    radial-gradient(circle at 18% 30%, rgba(255, 220, 170, 0.4) 0%, transparent 40%),
+    radial-gradient(circle at 85% 80%, rgba(255, 230, 140, 0.35) 0%, transparent 45%);
+  animation: topbar-glow 12s ease-in-out infinite alternate;
+  z-index: -1;
+  pointer-events: none;
+}
+@keyframes topbar-glow { to { transform: translateX(8%) rotate(4deg); } }
+
+/* Rubrik med gradient-text (Playfair, som i Bokis) */
+.title-serif {
+  font-family: var(--font-serif);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  background: var(--grad-ink);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Liten rubrik med glödande prick */
+.eyebrow {
+  position: relative;
+  padding-left: 14px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ink-3);
+}
+.eyebrow::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 50%;
+  width: 8px;
+  height: 8px;
+  margin-top: -4px;
+  border-radius: 50%;
+  background: var(--grad-hot);
+  box-shadow: 0 0 10px rgba(245, 160, 80, 0.7);
+}
+
+/* Huvudknapp: gradient-pill med glöd och en glans som sveper över */
+.btn-primary {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  background: var(--grad);
+  color: #fff;
+  box-shadow: var(--glow);
+  transition: transform 0.2s var(--spring), box-shadow 0.2s ease, filter 0.2s;
+}
+.btn-primary::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -75%;
+  width: 50%;
+  height: 100%;
+  background: linear-gradient(100deg, transparent, rgba(255, 255, 255, 0.38), transparent);
+  transform: skewX(-20deg);
+  pointer-events: none;
+  animation: btn-sheen 4.5s ease-in-out infinite;
+}
+@keyframes btn-sheen { 0%, 70% { left: -75%; } 100% { left: 130%; } }
+.btn-primary:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 12px 28px -6px rgba(23, 153, 107, 0.6); }
+.btn-primary:active:not(:disabled) { transform: scale(0.96); }
+.btn-primary:disabled {
+  background: var(--sunken);
+  color: var(--ink-3);
+  box-shadow: none;
+}
+.btn-primary:disabled::after { display: none; }
+.btn-primary.gold { background: var(--grad-gold); color: #3a2600; box-shadow: var(--glow-gold); }
+
+/* Sekundär pill-knapp */
+.btn-ghost {
+  background: var(--glass);
+  color: var(--ink-2);
+  border: 1.5px solid var(--line);
+  transition: transform 0.2s var(--spring), color 0.2s, border-color 0.2s, background 0.2s;
+}
+.btn-ghost:hover:not(:disabled) { color: var(--accent-ink); border-color: color-mix(in srgb, var(--accent) 35%, transparent); }
+.btn-ghost:active:not(:disabled) { transform: scale(0.94); }
+.btn-ghost:disabled { opacity: 0.45; }
+
+/* Ripple-cirkel (läggs till från JS vid tryck) */
+.ripple {
+  position: absolute;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.45);
+  transform: scale(0);
+  animation: ripple 0.6s ease-out forwards;
+  pointer-events: none;
+}
+@keyframes ripple { to { transform: scale(4); opacity: 0; } }
+
+/* ---------- Filtbordet (ljust och mjukt) ---------- */
+.felt {
+  position: relative;
+  background: var(--felt);
+  border: 1px solid var(--glass-brd);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.8),
+    inset 0 -20px 40px -30px rgba(17, 131, 93, 0.25),
+    var(--shadow-soft);
+  isolation: isolate;
+  overflow: hidden;
+}
+/* Fin filtstruktur */
+.felt::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  opacity: 0.5;
+  background-image: radial-gradient(var(--felt-line) 0.7px, transparent 0.8px);
+  background-size: 5px 5px;
+  pointer-events: none;
+}
+.felt-row.fouled { box-shadow: inset 0 0 0 1.5px var(--danger); }
+
+/* Tom plats på filten */
+.slot {
+  border-radius: calc(var(--card-w) * 0.14);
+  background: rgba(255, 255, 255, 0.5);
+  box-shadow: inset 0 0 0 1.5px var(--felt-line);
+  transition: transform 0.2s var(--spring), background-color 0.2s, box-shadow 0.2s;
+}
+@media (prefers-color-scheme: dark) {
+  .slot { background: rgba(255, 255, 255, 0.04); }
+}
+/* Plats som kan ta emot ett kort: varm guldkant som andas */
+.slot.target {
+  cursor: pointer;
+  animation: slot-breathe 1.6s ease-in-out infinite;
+}
+@keyframes slot-breathe {
+  0%, 100% { background-color: rgba(255, 214, 120, 0.12); box-shadow: inset 0 0 0 1.5px rgba(232, 168, 40, 0.5); }
+  50% { background-color: rgba(255, 214, 120, 0.3); box-shadow: inset 0 0 0 2px rgba(232, 168, 40, 0.9), 0 0 16px rgba(245, 184, 61, 0.35); }
+}
+.slot.over {
+  transform: scale(1.08);
+  background-color: rgba(255, 214, 120, 0.4);
+  box-shadow: inset 0 0 0 2px #e8a828, 0 0 22px rgba(245, 184, 61, 0.55);
+  animation: none;
+}
+
+/* ============================================================
+   Animationer — korta och fjädrande, aldrig sega
+   ============================================================ */
+
+/* Kort som placeras "snäpper" på plats */
+@keyframes card-snap {
+  0% { transform: scale(0.8) translateY(-10px) rotate(-4deg); opacity: 0.3; }
+  60% { transform: scale(1.07) translateY(0) rotate(0.5deg); opacity: 1; }
+  100% { transform: scale(1); }
+}
+.animate-card-snap {
+  animation: card-snap 0.32s var(--spring) both;
+}
+
+/* Spökkort (solverns förslag) tonar in och pulserar svagt */
+@keyframes ghost-in {
+  0% { opacity: 0; transform: translateY(-14px) scale(0.85); }
+  100% { opacity: 1; transform: none; }
+}
+@keyframes ghost-pulse {
+  0%, 100% { opacity: 0.72; box-shadow: 0 0 0 0 rgba(245, 184, 61, 0); }
+  50% { opacity: 0.95; box-shadow: 0 0 20px 2px rgba(245, 184, 61, 0.5); }
+}
+.animate-ghost {
+  animation:
+    ghost-in 0.4s var(--spring) both,
+    ghost-pulse 1.8s ease-in-out 0.4s infinite;
+}
+
 @keyframes fade-in {
   from { opacity: 0; transform: translateY(6px); }
-  to   { opacity: 1; transform: translateY(0); }
+  to { opacity: 1; transform: none; }
 }
-
 .animate-fade-in {
-  animation: fade-in 0.18s ease-out both;
+  animation: fade-in 0.25s var(--ease) both;
 }
 
-/* Glow-puls för bästa solver-rekommendation */
-@keyframes glow-pulse {
-  0%, 100% { box-shadow: 0 0 8px 1px rgba(34,197,94,0.25); }
-  50%       { box-shadow: 0 0 18px 4px rgba(34,197,94,0.45); }
+@keyframes rise-in {
+  from { opacity: 0; transform: translateY(18px) scale(0.98); }
+  to { opacity: 1; transform: none; }
+}
+.animate-rise-in {
+  animation: rise-in 0.42s var(--ease) both;
 }
 
-.animate-glow-pulse {
-  animation: glow-pulse 2s ease-in-out infinite;
+@keyframes badge-in {
+  from { opacity: 0; transform: scale(0.4) translateY(6px); }
+}
+.animate-badge-in {
+  animation: badge-in 0.5s var(--spring) both;
 }
 
-/* Slide-in för solver-panel när resultat dyker upp */
-@keyframes slide-in-up {
-  from { opacity: 0; transform: translateY(10px); }
-  to   { opacity: 1; transform: translateY(0); }
+/* Ett kort som är "beväpnat" för borttagning skakar lätt */
+@keyframes wiggle {
+  0%, 100% { transform: rotate(0); }
+  25% { transform: rotate(-3deg); }
+  75% { transform: rotate(3deg); }
+}
+.animate-wiggle {
+  animation: wiggle 0.25s ease-in-out 2;
 }
 
-.animate-slide-in-up {
-  animation: slide-in-up 0.2s ease-out both;
+/* Glans som sveper över progress-baren */
+@keyframes shimmer {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(250%); }
+}
+.animate-shimmer {
+  animation: shimmer 1.3s ease-in-out infinite;
 }
 
-/* Spinner — återanvänds av progress-indikatorn */
-@keyframes spin-slow {
-  to { transform: rotate(360deg); }
+/* Skimrande guldlist (bästa draget) */
+.gold-strip {
+  height: 4px;
+  background: linear-gradient(90deg, #f5b83d 0%, #ffe08a 25%, #3fd39a 50%, #ffe08a 75%, #f5b83d 100%);
+  background-size: 200% 100%;
+  animation: strip-move 3s linear infinite;
+}
+@keyframes strip-move { to { background-position: -200% 0; } }
+
+/* Mätare som växer fram */
+@keyframes grow-x { from { transform: scaleX(0); } }
+.animate-grow-x {
+  transform-origin: left;
+  animation: grow-x 0.9s var(--ease) both;
 }
 
-.animate-spin-slow {
-  animation: spin-slow 1.2s linear infinite;
+/* Logga som snurrar under beräkning */
+@keyframes logo-spin { to { transform: rotate(360deg); } }
+.animate-logo-spin {
+  animation: logo-spin 1s cubic-bezier(0.55, 0.1, 0.35, 0.95) infinite;
+}
+
+@keyframes floaty {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+.animate-floaty {
+  animation: floaty 4s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

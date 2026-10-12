@@ -1,77 +1,68 @@
 // ============================================================
-// ResultBoardPreview.tsx — Kompakt read-only bräde för solver-resultat
+// ResultBoardPreview.tsx — Minibild av ett bräde (read-only)
 // ============================================================
-//
-// Visar ett helt OFC-bräde (topp/mitten/botten) med små kort.
-// Används i SolverPanel för att förhandsgranska vart korten hamnar.
-// Read-only — inga klick-handlers.
+// Används i resultatlistan (öppning/FL) och som förhandsvisning av
+// motståndarens bräde. Royalties räknas med appens egna regler.
 // ============================================================
 
-import type { Board, Card as CardType } from '../../engine/types';
-import Card from '../cards/Card';
-import { calcTopRoyalty, calcRowRoyalty5 } from '../../engine/royalties';
-
-// ============================================================
-// Mini-kortrad
-// ============================================================
+import type { Board, Card } from '../../engine/types';
+import PlayingCard from '../cards/PlayingCard';
+import { calcTopRoyalty, calcRowRoyalty5, calcAllRoyalties } from '../../engine/royalties';
 
 interface MiniRowProps {
   label: string;
-  cards: (CardType | null)[];
+  cards: (Card | null)[];
   royalty?: number;
+  cardWidth: number;
 }
 
-function MiniRow({ label, cards, royalty }: MiniRowProps) {
+function MiniRow({ label, cards, royalty, cardWidth }: MiniRowProps) {
   return (
-    <div className="flex items-center gap-1">
-      <span className="text-[9px] text-slate-500 uppercase tracking-wider w-10 text-right shrink-0">
-        {label}
-      </span>
-      <div className="flex gap-0.5">
+    <div className="flex items-center gap-1.5">
+      <span className="w-9 shrink-0 text-[9px] font-bold uppercase tracking-wide text-ink-3">{label}</span>
+      <div className="flex gap-[2px]">
         {cards.map((card, i) =>
           card ? (
-            <Card key={i} card={card} size="xs" />
+            <PlayingCard key={i} card={card} width={cardWidth} compact />
           ) : (
             <div
               key={i}
-              className="w-6 h-8 rounded border border-dashed border-slate-700/50 bg-slate-800/20"
+              className="rounded-[3px] bg-sunken shadow-[inset_0_0_0_1px_var(--line)]"
+              style={{ width: cardWidth, height: cardWidth * 1.4 }}
             />
-          )
+          ),
         )}
       </div>
-      {royalty != null && royalty > 0 && (
-        <span className="text-[9px] text-amber-400 font-bold ml-1">+{royalty}p</span>
-      )}
+      {royalty != null && royalty > 0 && <span className="ml-0.5 text-[10px] font-bold text-gold tabular">+{royalty}p</span>}
     </div>
   );
 }
 
-// ============================================================
-// Huvud-komponent
-// ============================================================
-
 interface ResultBoardPreviewProps {
   board: Board;
   showRoyalties?: boolean;
+  cardWidth?: number;
 }
 
-export default function ResultBoardPreview({ board, showRoyalties }: ResultBoardPreviewProps) {
-  const topCards = board.top.cards.filter((c): c is CardType => c !== null);
-  const midCards = board.middle.cards.filter((c): c is CardType => c !== null);
-  const botCards = board.bottom.cards.filter((c): c is CardType => c !== null);
+export default function ResultBoardPreview({ board, showRoyalties, cardWidth = 22 }: ResultBoardPreviewProps) {
+  const topCards = board.top.cards.filter((c): c is Card => c !== null);
+  const midCards = board.middle.cards.filter((c): c is Card => c !== null);
+  const botCards = board.bottom.cards.filter((c): c is Card => c !== null);
 
-  const topRoy = showRoyalties && topCards.length === 3 ? calcTopRoyalty(topCards) : 0;
-  const midRoy = showRoyalties && midCards.length === 5 ? calcRowRoyalty5(midCards, 'middle') : 0;
-  const botRoy = showRoyalties && botCards.length === 5 ? calcRowRoyalty5(botCards, 'bottom') : 0;
+  const full = topCards.length === 3 && midCards.length === 5 && botCards.length === 5;
+  const all = full ? calcAllRoyalties(topCards, midCards, botCards) : null;
+  const topRoy = !showRoyalties ? 0 : all ? all.top : topCards.length === 3 ? calcTopRoyalty(topCards) : 0;
+  const midRoy = !showRoyalties ? 0 : all ? all.middle : midCards.length === 5 ? calcRowRoyalty5(midCards, 'middle') : 0;
+  const botRoy = !showRoyalties ? 0 : all ? all.bottom : botCards.length === 5 ? calcRowRoyalty5(botCards, 'bottom') : 0;
   const totalRoy = topRoy + midRoy + botRoy;
 
   return (
-    <div className="bg-[#0a1a20] border border-[#1a3040]/60 rounded-lg px-2.5 py-2 flex flex-col gap-1">
-      <MiniRow label="Topp" cards={board.top.cards} royalty={showRoyalties ? topRoy : undefined} />
-      <MiniRow label="Mitten" cards={board.middle.cards} royalty={showRoyalties ? midRoy : undefined} />
-      <MiniRow label="Botten" cards={board.bottom.cards} royalty={showRoyalties ? botRoy : undefined} />
+    <div className="inline-flex flex-col gap-[3px]">
+      <MiniRow label="Topp" cards={board.top.cards} royalty={showRoyalties ? topRoy : undefined} cardWidth={cardWidth} />
+      <MiniRow label="Mitt" cards={board.middle.cards} royalty={showRoyalties ? midRoy : undefined} cardWidth={cardWidth} />
+      <MiniRow label="Botten" cards={board.bottom.cards} royalty={showRoyalties ? botRoy : undefined} cardWidth={cardWidth} />
       {showRoyalties && totalRoy > 0 && (
-        <div className="text-[9px] text-amber-300 font-bold text-right">Totalt: +{totalRoy}p</div>
+        <div className="text-[10px] font-bold text-gold">Royalties totalt: +{totalRoy}p</div>
       )}
     </div>
   );

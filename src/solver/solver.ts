@@ -1,96 +1,47 @@
 // ============================================================
-// solver.ts — Huvud-API för OFC-solvern
+// solver.ts — Huvud-API för OFC-solvern (används av Web Workern)
 // ============================================================
 //
-// Orkestrerare som tar emot ett GameState och returnerar rankade
-// placeringsalternativ med EV-värden. Delegerar till:
-//   - placement.ts   → generera lagliga placeringar
-//   - heuristics.ts  → filtrera och rangordna snabbt
-//   - monteCarlo.ts  → beräkna EV via simulering
-//
-// Exponerar solve() som kan köras i en Web Worker via
-// solverWorker.ts (allt är synkront och serialiserbart).
-//
-// Hanterar:
-//   - Vanlig OFC (1 kort åt gången, runda 2–9)
-//   - Vanlig OFC runda 1 (5 kort)
-//   - Pineapple OFC (3 kort in, 2 placeras, 1 kastas)
-//   - Fantasy Land (13–16 kort, komplett bräde på en gång)
+// Översätter appens kort/bräden till den snabba kärnan i src/core/:
+//   - core/sim.ts    → Monte Carlo (vanligt drag, öppningshand, Pineapple)
+//   - core/fl.ts     → exakt Fantasy Land-lösare
+//   - core/eval.ts   → handvärdering, jokrar, foul, poäng
+// och översätter svaret tillbaka till placeringar som UI:t visar.
 // ============================================================
 
-import type {
-  Card,
-  Board,
-  GameState,
-  GameVariant,
-  RowName,
-  PlacementOption,
-  SolverResult,
-} from '../engine/types';
+import type { Card, Board, GameVariant, RowName } from '../engine/types';
 import { createEmptyBoard } from '../engine/types';
-import { collectDeadCards, qualifiesForRepeatFL } from '../engine/gameState';
-import { isFoul } from '../engine/foulCheck';
-import { applyPlacement } from './heuristics';
-import { estimateFLProbability } from './flProbability';
-import type { TurnPlacement, CardPlacement } from './placement';
-import {
-  generateRegularPlacements,
-  generatePineapplePlacements,
-  generateFantasyLandPlacements as generateFLPlacements,
-} from './placement';
-import { filterPlacements, filterFantasyLandPlacements } from './heuristics';
-import {
-  runMonteCarlo,
-  runFantasyLandMonteCarlo,
-  runMonteCarloSinglePlayer,
-} from './monteCarlo';
-import type { MonteCarloResult, PlacementEV } from './monteCarlo';
+import { toInt } from '../core/eval';
+import { allAssignments } from '../core/policy';
+import { evaluateCandidates, opponentPool } from '../core/sim';
+import type { Candidate, CandidateResult } from '../core/sim';
+import { solveFantasyLand } from '../core/fl';
 
 // ============================================================
 // Publika typer
 // ============================================================
 
 export interface SolverOptions {
-  /** Antal Monte Carlo-simuleringar per kandidat (default: 1000) */
+  /** Max simuleringar per kandidat (de bästa kandidaterna får flest) */
   simulations?: number;
-  /** Max tid i ms för hela beräkningen (default: 30000) */
+  /** Max tid i ms för hela beräkningen (default: 20000) */
   maxMs?: number;
-  /** Max kandidater att utvärdera med MC (default: 50) */
-  topCandidates?: number;
-  /** Hoppa över Monte Carlo och använd bara heuristik (snabbläge) */
-  heuristicOnly?: boolean;
-  /** Callback för progress (0–100) — används ej i Web Worker (skickas separat) */
+  /** Callback för progress (0–100) */
   onProgress?: (percent: number) => void;
-  /** Hur aggressivt solvern ska värdera Fantasy Land-potential (default: 'balanced') */
-  flAggression?: 'conservative' | 'balanced' | 'aggressive';
 }
 
-import { FL_VALUE_MAP } from './flConfig';
-export { FL_VALUE_MAP };
-
-/**
- * Utökat solverresultat med detaljer om varje placering,
- * inklusive vilka kort som placeras var och vilka som kastas.
- */
-export interface DetailedSolverResult {
-  /** Alla utvärderade alternativ, sorterade bäst → sämst */
-  options: DetailedPlacementOption[];
-  /** Bästa alternativ */
-  best: DetailedPlacementOption;
-  /** Antal simuleringar totalt */
-  simulations: number;
-  /** true om beräkningen avbröts p.g.a. tidsgräns */
-  timedOut: boolean;
-  /** Vilken metod som användes */
-  method: 'monteCarlo' | 'heuristic';
+export interface CardPlacement {
+  card: Card;
+  row: RowName;
+  slotIndex: number;
 }
 
 export interface DetailedPlacementOption {
-  /** EV för denna placering */
+  /** Förväntat värde i poäng (inkl. värdet av ev. Fantasy Land) */
   ev: number;
   /** Rangordning (1 = bäst) */
   rank: number;
-  /** Vilken rad det primära kortet läggs i (för enkel-kort-placering) */
+  /** Vilken rad det primära kortet läggs i */
   primaryRow: RowName;
   /** Alla kortplaceringar i denna tur */
   placements: CardPlacement[];
@@ -98,12 +49,73 @@ export interface DetailedPlacementOption {
   discards: Card[];
   /** Antal simuleringar för just denna placering */
   simulations: number;
-  /** Estimerad sannolikhet att nå Fantasy Land (0–1), för öppningshand */
+  /** Andel simuleringar som nådde Fantasy Land (0–1) */
   flProbability?: number;
-  /** true om placeringen kvalificerar för repeat-FL (Fantasy Land-läge) */
+  /** Andel simuleringar som slutade i foul (0–1) */
+  foulProbability?: number;
+  /** true om uppställningen ger repeat-FL (Fantasy Land-läge) */
   repeatFL?: boolean;
-  /** Resultatet: brädet efter att placeringen applicerats */
+  /** Brädet efter placeringen */
   resultBoard?: Board;
+}
+
+export interface DetailedSolverResult {
+  options: DetailedPlacementOption[];
+  best: DetailedPlacementOption;
+  simulations: number;
+  timedOut: boolean;
+  method: 'monteCarlo' | 'exact';
+}
+
+const ROWS: RowName[] = ['top', 'middle', 'bottom'];
+
+// ============================================================
+// Översättning app ↔ kärna
+// ============================================================
+
+/** Ger varje synligt kort ett heltal; jokrar får 52 resp. 53 i ordning */
+class CardIds {
+  private jokers = 0;
+  id(c: Card): number {
+    if (c.kind === 'joker') return this.jokers++ === 0 ? 52 : 53;
+    return toInt(c);
+  }
+  rows(board: Board): number[][] {
+    return ROWS.map((r) => board[r].cards.filter((c): c is Card => c !== null).map((c) => this.id(c)));
+  }
+}
+
+function unseenFrom(seen: number[]): number[] {
+  const s = new Set(seen);
+  return Array.from({ length: 54 }, (_, i) => i).filter((i) => !s.has(i));
+}
+
+function buildOption(
+  board: Board, hand: Card[], assign: number[], ev: number, sims: number,
+): DetailedPlacementOption {
+  const resultBoard: Board = {
+    top: { name: 'top', cards: [...board.top.cards] },
+    middle: { name: 'middle', cards: [...board.middle.cards] },
+    bottom: { name: 'bottom', cards: [...board.bottom.cards] },
+  };
+  const placements: CardPlacement[] = [];
+  const discards: Card[] = [];
+  hand.forEach((card, k) => {
+    if (assign[k] < 0) { discards.push(card); return; }
+    const row = ROWS[assign[k]];
+    const slotIndex = resultBoard[row].cards.findIndex((c) => c === null);
+    resultBoard[row].cards[slotIndex] = card;
+    placements.push({ card, row, slotIndex });
+  });
+  const counts = [0, 0, 0];
+  for (const a of assign) if (a >= 0) counts[a]++;
+  const primary = counts[2] >= counts[1] && counts[2] >= counts[0] ? 2 : counts[1] >= counts[0] ? 1 : 0;
+  return { ev, rank: 0, primaryRow: ROWS[primary], placements, discards, simulations: sims, resultBoard };
+}
+
+function finish(options: DetailedPlacementOption[], method: DetailedSolverResult['method'], timedOut = false): DetailedSolverResult {
+  options.forEach((o, i) => (o.rank = i + 1));
+  return { options, best: options[0], simulations: options.reduce((a, o) => a + o.simulations, 0), timedOut, method };
 }
 
 // ============================================================
@@ -111,56 +123,8 @@ export interface DetailedPlacementOption {
 // ============================================================
 
 /**
- * Kör solvern och returnerar rankade placeringsalternativ.
- *
- * Detta är det primära API:et — allt annat (heuristik, Monte Carlo,
- * FL-hantering) delegeras härifrån.
- *
- * Designad att köras i en Web Worker (synkron, serialiserbar input/output).
- *
- * @param state       Aktuellt GameState
- * @param playerId    Spelarens index i state.players
- * @param opponentId  Motståndarens index (default: 1 om playerId=0, annars 0)
- * @param options     Simuleringsinställningar
- */
-export function solve(
-  state: GameState,
-  playerId: number = 0,
-  opponentId?: number,
-  options: SolverOptions = {},
-): DetailedSolverResult {
-  const oppId = opponentId ?? (playerId === 0 ? 1 : 0);
-
-  const player = state.players[playerId];
-  if (!player) {
-    throw new Error(`Ingen spelare med id ${playerId}.`);
-  }
-  if (!state.players[oppId]) {
-    throw new Error(`Ingen motståndare med id ${oppId}.`);
-  }
-
-  if (state.currentCards.length === 0) {
-    throw new Error('Inga kort att placera (currentCards är tom).');
-  }
-
-  // Välj lösningsväg baserat på spelets fas
-  if (player.isFantasyLand) {
-    return solveFantasyLand(state, playerId, oppId, options);
-  }
-
-  return solveNormal(state, playerId, oppId, options);
-}
-
-/**
- * Förenklat API: tar emot bräde + kort utan fullständigt GameState.
- * Skapar ett minimalt GameState internt. Användbart för Web Worker
- * och tester.
- *
- * @param board       Spelarens nuvarande bräde
- * @param cards       Kort att placera
- * @param deadCards   Döda kort (redan använda)
- * @param variant     Spelvariant
- * @param options     Simuleringsinställningar
+ * Bästa placering av `cards` på `board` (vanligt drag, öppning eller Pineapple).
+ * Döda kort = kort som syns men inte ligger på något bräde (t.ex. kastade).
  */
 export function solveFromBoard(
   board: Board,
@@ -170,542 +134,109 @@ export function solveFromBoard(
   options: SolverOptions = {},
   opponentBoard?: Board,
 ): DetailedSolverResult {
-  const {
-    simulations = 1000,
-    maxMs = 30000,
-    topCandidates = 50,
-    heuristicOnly = false,
-    onProgress,
-  } = options;
+  if (cards.length === 0) throw new Error('Inga kort att placera.');
+  const { simulations = 800, onProgress } = options;
+  const maxMs = options.maxMs ?? (simulations <= 300 ? 8000 : simulations <= 800 ? 20000 : 45000);
 
-  if (cards.length === 0) {
-    throw new Error('Inga kort att placera.');
+  const ids = new CardIds();
+  const rows = ids.rows(board);
+  const opp = opponentBoard ? ids.rows(opponentBoard) : undefined;
+  const hand = cards.map((c) => ids.id(c));
+  const dead = deadCards.map((c) => ids.id(c));
+  const seen = [...rows.flat(), ...(opp ?? []).flat(), ...hand, ...dead];
+  const unseen = unseenFrom(seen);
+
+  const free = 13 - rows.flat().length;
+  if (hand.length > free + (variant === 'pineapple' && hand.length === 3 ? 1 : 0)) {
+    throw new Error('Fler kort än lediga platser på brädet.');
   }
 
-  if (heuristicOnly) {
-    return solveHeuristicOnly(board, cards, variant);
-  }
-
-  // Om motståndarens bräde är känt: bygg ett fullständigt GameState och
-  // använd runMonteCarlo (tar hänsyn till motståndarens redan lagda kort).
-  // Annars: använd runMonteCarloSinglePlayer (tomt motståndar-bräde).
-  if (opponentBoard) {
-    const state: GameState = {
-      players: [
-        {
-          id: 0,
-          board,
-          isFantasyLand: false,
-          fantasyLandCards: 0,
-        },
-        {
-          id: 1,
-          board: opponentBoard,
-          isFantasyLand: false,
-          fantasyLandCards: 0,
-        },
-      ],
-      currentCards: cards,
-      deadCards,
-      variant,
-      round: 1,
-      phase: 'placing',
-      discardIndex: null,
-    };
-
-    const mcResult = runMonteCarlo(state, 0, 1, {
-      simulations,
-      maxMs,
-      topCandidates,
-      onProgress,
-    });
-
-    return convertMonteCarloResult(mcResult, 'monteCarlo');
-  }
-
-  const mcResult = runMonteCarloSinglePlayer(board, cards, deadCards, {
-    simulations,
-    maxMs,
-    topCandidates,
-    onProgress,
-  });
-
-  return convertMonteCarloResult(mcResult, 'monteCarlo');
-}
-
-// ============================================================
-// Interna lösningsvägar
-// ============================================================
-
-/**
- * Löser en vanlig (icke-FL) placering med full Monte Carlo.
- */
-function solveNormal(
-  state: GameState,
-  playerId: number,
-  opponentId: number,
-  options: SolverOptions,
-): DetailedSolverResult {
-  const {
-    simulations = 2000,
-    maxMs = 30000,
-    topCandidates = 50,
-    heuristicOnly = false,
-    onProgress,
-  } = options;
-
-  if (heuristicOnly) {
-    const player = state.players[playerId];
-    return solveHeuristicOnly(player.board, state.currentCards, state.variant);
-  }
-
-  const mcResult = runMonteCarlo(state, playerId, opponentId, {
-    simulations,
-    maxMs,
-    topCandidates,
-    onProgress,
-    flAggression: options.flAggression,
-  });
-
-  return convertMonteCarloResult(mcResult, 'monteCarlo');
-}
-
-/**
- * Löser en Fantasy Land-placering.
- */
-function solveFantasyLand(
-  state: GameState,
-  _playerId: number,
-  opponentId: number,
-  options: SolverOptions,
-): DetailedSolverResult {
-  const {
-    simulations = 1500,
-    maxMs = 30000,
-    topCandidates = 100,
-    heuristicOnly = false,
-  } = options;
-
-  const opponent = state.players[opponentId];
-  const deadCards = collectDeadCards(state);
-
-  if (heuristicOnly) {
-    return solveFantasyLandHeuristicOnly(state.currentCards);
-  }
-
-  const mcResult = runFantasyLandMonteCarlo(
-    state.currentCards,
-    deadCards,
-    opponent.board,
-    { simulations, maxMs, topCandidates },
-  );
-
-  return convertMonteCarloResult(mcResult, 'monteCarlo');
-}
-
-/**
- * Ren heuristisk lösning (ingen Monte Carlo).
- * Snabbt men mindre exakt — användbart för realtidsförhandsgranskning.
- */
-function solveHeuristicOnly(
-  board: Board,
-  cards: Card[],
-  variant: GameVariant,
-): DetailedSolverResult {
-  let candidates: TurnPlacement[];
-
-  if (variant === 'pineapple' && cards.length === 3) {
-    candidates = generatePineapplePlacements(board, cards);
+  // Kandidater: alla sätt att lägga ut korten (Pineapple: ett av tre kastas)
+  const cands: Candidate[] = [];
+  if (variant === 'pineapple' && hand.length === 3) {
+    for (let d = 0; d < 3; d++) {
+      const keep = hand.filter((_, k) => k !== d);
+      for (const a of allAssignments(rows, keep)) cands.push({ assign: [...a.slice(0, d), -1, ...a.slice(d)] });
+    }
   } else {
-    candidates = generateRegularPlacements(board, cards);
+    for (const a of allAssignments(rows, hand)) cands.push({ assign: a });
   }
+  if (cands.length === 0) throw new Error('Inga giltiga placeringar hittades.');
 
-  const filtered = filterPlacements(candidates, board, 50);
-
-  if (filtered.length === 0) {
-    throw new Error('Inga giltiga placeringar hittades.');
-  }
-
-  const options: DetailedPlacementOption[] = filtered.map((p, idx) => ({
-    ev: filtered.length - idx, // Heuristisk rangordning (ej riktig EV)
-    rank: idx + 1,
-    primaryRow: getPrimaryRow(p),
-    placements: p.placements,
-    discards: p.discards,
-    simulations: 0,
-  }));
-
-  return {
-    options,
-    best: options[0],
-    simulations: 0,
-    timedOut: false,
-    method: 'heuristic',
-  };
-}
-
-/**
- * Ren heuristisk lösning för Fantasy Land.
- */
-function solveFantasyLandHeuristicOnly(
-  cards: Card[],
-): DetailedSolverResult {
-  const all = generateFLPlacements(cards);
-  const filtered = filterFantasyLandPlacements(all, 100);
-
-  if (filtered.length === 0) {
-    throw new Error('Inga giltiga FL-placeringar hittades.');
-  }
-
-  const options: DetailedPlacementOption[] = filtered.map((p, idx) => ({
-    ev: filtered.length - idx,
-    rank: idx + 1,
-    primaryRow: 'bottom' as RowName, // FL har inga "primära" rader
-    placements: p.placements,
-    discards: p.discards,
-    simulations: 0,
-  }));
-
-  return {
-    options,
-    best: options[0],
-    simulations: 0,
-    timedOut: false,
-    method: 'heuristic',
-  };
-}
-
-// ============================================================
-// Konverteringshjälp
-// ============================================================
-
-/**
- * Konverterar MonteCarloResult till DetailedSolverResult.
- */
-function convertMonteCarloResult(
-  mcResult: MonteCarloResult,
-  method: 'monteCarlo' | 'heuristic',
-): DetailedSolverResult {
-  const options: DetailedPlacementOption[] = mcResult.ranked.map(
-    (r: PlacementEV, idx: number) => ({
-      ev: r.ev,
-      rank: idx + 1,
-      primaryRow: getPrimaryRow(r.placement),
-      placements: r.placement.placements,
-      discards: r.placement.discards,
-      simulations: r.simulations,
-    }),
+  const t0 = Date.now();
+  const res: CandidateResult[] = evaluateCandidates(
+    { rows, hand, unseen, opponent: opp, variant, maxSims: simulations, maxMs, onProgress },
+    cands,
   );
+  const timedOut = Date.now() - t0 >= maxMs;
 
-  return {
-    options,
-    best: options[0],
-    simulations: mcResult.totalSimulations,
-    timedOut: mcResult.timedOut,
-    method,
-  };
+  const out = res.map((r) => {
+    const o = buildOption(board, cards, r.assign, r.ev, r.sims);
+    o.flProbability = r.flRate;
+    o.foulProbability = r.foulRate;
+    return o;
+  });
+  return finish(out, 'monteCarlo', timedOut);
 }
 
-/**
- * Bestämmer den "primära" raden för en placering.
- * För enkla placeringar (1 kort): raden där kortet läggs.
- * För flerkorts-placeringar: raden med flest kort (eller bottom).
- */
-function getPrimaryRow(placement: TurnPlacement): RowName {
-  if (placement.placements.length === 0) return 'bottom';
-  if (placement.placements.length === 1) return placement.placements[0].row;
-
-  const counts: Record<RowName, number> = { top: 0, middle: 0, bottom: 0 };
-  for (const p of placement.placements) {
-    counts[p.row]++;
-  }
-
-  // Returnera raden med flest kort (tiebreak: bottom > middle > top)
-  if (counts.bottom >= counts.middle && counts.bottom >= counts.top) return 'bottom';
-  if (counts.middle >= counts.top) return 'middle';
-  return 'top';
-}
-
-// ============================================================
-// Öppningshand- och Fantasy Land-wrapper-funktioner
-// ============================================================
-
-/**
- * Löser öppningshanden (5 kort på tomt bräde).
- * Wrapper kring solveFromBoard() som enrichar resultatet med:
- *   - flProbability: estimerad FL-sannolikhet per placering
- *   - resultBoard: brädet efter placeringen
- *
- * @param cards       De 5 öppningskorten
- * @param deadCards   Döda kort (om sådana finns)
- * @param options     Simuleringsinställningar
- */
+/** Öppningshand: 5 kort på tomt bräde */
 export function solveOpeningHand(
   cards: Card[],
   deadCards: Card[] = [],
   options: SolverOptions = {},
+  variant: GameVariant = 'regular',
 ): DetailedSolverResult {
-  const emptyBoard = createEmptyBoard();
-  const result = solveFromBoard(emptyBoard, cards, deadCards, 'regular', options);
-
-  // Enricha varje option med FL-sannolikhet och resultBoard
-  const allDead = [...deadCards, ...cards];
-
-  for (const opt of result.options) {
-    const board = applyPlacement(emptyBoard, {
-      placements: opt.placements,
-      discards: opt.discards,
-    });
-    opt.resultBoard = board;
-    opt.flProbability = estimateFLProbability(board, allDead, 200);
-  }
-
-  // Justera EV med FL-värde baserat på aggressivitetsinställning
-  const flValue = FL_VALUE_MAP[options.flAggression ?? 'balanced'];
-  for (const opt of result.options) {
-    opt.ev += (opt.flProbability ?? 0) * flValue;
-  }
-  result.options.sort((a, b) => b.ev - a.ev);
-  for (let i = 0; i < result.options.length; i++) {
-    result.options[i].rank = i + 1;
-  }
-  if (result.options.length > 0) {
-    result.best = result.options[0];
-  }
-
-  return result;
+  return solveFromBoard(createEmptyBoard(), cards, deadCards, variant, options);
 }
 
-/**
- * Löser en Fantasy Land-hand (13–16 kort, komplett bräde).
- * Wrapper kring FL-solvern som enrichar resultatet med:
- *   - repeatFL: om placeringen kvalificerar för repeat-FL
- *   - resultBoard: det kompletta brädet
- *
- * @param cards       13–16 FL-kort
- * @param deadCards   Döda kort
- * @param options     Simuleringsinställningar
- */
+/** Fantasy Land: 13–16 kort → exakt bästa uppställning */
 export function solveFantasyLandMode(
   cards: Card[],
-  deadCards: Card[] = [],
+  _deadCards: Card[] = [],
   options: SolverOptions = {},
 ): DetailedSolverResult {
-  const {
-    simulations = 1500,
-    maxMs = 30000,
-    topCandidates = 100,
-    heuristicOnly = false,
-  } = options;
-
-  // Skapa ett tomt motståndar-bräde för MC-simuleringen
-  const emptyOpponentBoard = createEmptyBoard();
-
-  let result: DetailedSolverResult;
-
-  if (heuristicOnly) {
-    result = solveFantasyLandHeuristicOnlyInternal(cards);
-  } else {
-    const mcResult = runFantasyLandMonteCarlo(
-      cards,
-      deadCards,
-      emptyOpponentBoard,
-      { simulations, maxMs, topCandidates },
-    );
-    result = convertMonteCarloResult(mcResult, 'monteCarlo');
-  }
-
-  // Enricha varje option med repeatFL och resultBoard
-  const emptyBoard = createEmptyBoard();
-
-  for (const opt of result.options) {
-    const board = applyPlacement(emptyBoard, {
-      placements: opt.placements,
-      discards: opt.discards,
-    });
-    opt.resultBoard = board;
-
-    const topCards = board.top.cards.filter((c): c is Card => c !== null);
-    const middleCards = board.middle.cards.filter((c): c is Card => c !== null);
-    const bottomCards = board.bottom.cards.filter((c): c is Card => c !== null);
-
-    if (
-      topCards.length === 3 &&
-      middleCards.length === 5 &&
-      bottomCards.length === 5 &&
-      !isFoul(topCards, middleCards, bottomCards)
-    ) {
-      opt.repeatFL = qualifiesForRepeatFL(topCards, middleCards, bottomCards);
-    } else {
-      opt.repeatFL = false;
-    }
-  }
-
-  if (result.options.length > 0) {
-    result.best = result.options[0];
-  }
-
-  return result;
-}
-
-/**
- * Intern FL-heuristik-wrapper (undviker namnkollision med befintlig privat funktion).
- */
-function solveFantasyLandHeuristicOnlyInternal(cards: Card[]): DetailedSolverResult {
-  const all = generateFLPlacements(cards);
-  const filtered = filterFantasyLandPlacements(all, 100);
-
-  if (filtered.length === 0) {
-    throw new Error('Inga giltiga FL-placeringar hittades.');
-  }
-
-  const options: DetailedPlacementOption[] = filtered.map((p, idx) => ({
-    ev: filtered.length - idx,
-    rank: idx + 1,
-    primaryRow: 'bottom' as RowName,
-    placements: p.placements,
-    discards: p.discards,
-    simulations: 0,
-  }));
-
-  return {
-    options,
-    best: options[0],
-    simulations: 0,
-    timedOut: false,
-    method: 'heuristic',
-  };
+  if (cards.length < 13 || cards.length > 16) throw new Error(`Fantasy Land kräver 13–16 kort, fick ${cards.length}.`);
+  options.onProgress?.(5);
+  const ids = new CardIds();
+  const hand = cards.map((c) => ids.id(c));
+  const pool = opponentPool('regular');
+  options.onProgress?.(30);
+  const res = solveFantasyLand(hand, pool);
+  options.onProgress?.(100);
+  const out = res.slice(0, 15).map((r) => {
+    const o = buildOption(createEmptyBoard(), cards, r.assign, r.ev, pool.length);
+    o.repeatFL = r.repeat;
+    return o;
+  });
+  return finish(out, 'exact');
 }
 
 // ============================================================
-// Konvertering till SolverResult (kompatibel med types.ts)
+// Web Worker-meddelanden
 // ============================================================
-
-/**
- * Konverterar DetailedSolverResult till det enklare SolverResult-formatet
- * definierat i types.ts (för äldre UI-konsumenter).
- */
-export function toSimpleSolverResult(result: DetailedSolverResult): SolverResult {
-  const options: PlacementOption[] = result.options.map((o) => ({
-    row: o.primaryRow,
-    slotIndex: o.placements[0]?.slotIndex ?? 0,
-    ev: o.ev,
-    rank: o.rank,
-  }));
-
-  return {
-    options,
-    best: options[0],
-    simulations: result.simulations,
-  };
-}
-
-// ============================================================
-// Web Worker-kompatibelt meddelande-API
-// ============================================================
-
-/**
- * Input-meddelande som kan skickas till en Web Worker.
- * Alla fält är serialiserbara (inga funktioner/klasser).
- */
-export interface SolverWorkerInput {
-  type: 'solve';
-  state: GameState;
-  playerId: number;
-  opponentId?: number;
-  options?: SolverOptions;
-}
-
-export interface SolverWorkerInputFromBoard {
-  type: 'solveFromBoard';
-  board: Board;
-  cards: Card[];
-  deadCards?: Card[];
-  variant?: GameVariant;
-  opponentBoard?: Board;
-  options?: SolverOptions;
-}
-
-export interface SolverWorkerInputOpening {
-  type: 'solve_opening';
-  cards: Card[];
-  deadCards?: Card[];
-  options?: SolverOptions;
-}
-
-export interface SolverWorkerInputFL {
-  type: 'solve_fl';
-  cards: Card[];
-  deadCards?: Card[];
-  options?: SolverOptions;
-}
 
 export type SolverWorkerMessage =
-  | SolverWorkerInput
-  | SolverWorkerInputFromBoard
-  | SolverWorkerInputOpening
-  | SolverWorkerInputFL;
+  | { type: 'solveFromBoard'; board: Board; cards: Card[]; deadCards?: Card[]; variant?: GameVariant; opponentBoard?: Board; options?: SolverOptions }
+  | { type: 'solve_opening'; cards: Card[]; deadCards?: Card[]; variant?: GameVariant; options?: SolverOptions }
+  | { type: 'solve_fl'; cards: Card[]; deadCards?: Card[]; options?: SolverOptions };
 
-export interface SolverWorkerOutput {
-  type: 'result';
-  result: DetailedSolverResult;
-}
+export type SolverWorkerResponse =
+  | { type: 'result'; result: DetailedSolverResult }
+  | { type: 'error'; message: string }
+  | { type: 'progress'; percent: number };
 
-export interface SolverWorkerError {
-  type: 'error';
-  message: string;
-}
-
-/** Progress-meddelande: skickas under beräkning (0–100) */
-export interface SolverWorkerProgress {
-  type: 'progress';
-  percent: number;
-}
-
-export type SolverWorkerResponse = SolverWorkerOutput | SolverWorkerError | SolverWorkerProgress;
-
-/**
- * Hanterar ett meddelande i Web Worker-kontext.
- * Kan anropas direkt från solverWorker.ts:
- *
- *   self.onmessage = (e) => {
- *     const response = handleSolverMessage(e.data);
- *     self.postMessage(response);
- *   };
- */
-export function handleSolverMessage(
-  msg: SolverWorkerMessage,
-): SolverWorkerResponse {
+export function handleSolverMessage(msg: SolverWorkerMessage): SolverWorkerResponse {
   try {
-    if (msg.type === 'solve') {
-      const result = solve(msg.state, msg.playerId, msg.opponentId, msg.options);
-      return { type: 'result', result };
+    switch (msg.type) {
+      case 'solveFromBoard':
+        return { type: 'result', result: solveFromBoard(msg.board, msg.cards, msg.deadCards, msg.variant, msg.options, msg.opponentBoard) };
+      case 'solve_opening':
+        return { type: 'result', result: solveOpeningHand(msg.cards, msg.deadCards, msg.options, msg.variant) };
+      case 'solve_fl':
+        return { type: 'result', result: solveFantasyLandMode(msg.cards, msg.deadCards, msg.options) };
     }
-
-    if (msg.type === 'solveFromBoard') {
-      const result = solveFromBoard(
-        msg.board,
-        msg.cards,
-        msg.deadCards,
-        msg.variant,
-        msg.options,
-        msg.opponentBoard,
-      );
-      return { type: 'result', result };
-    }
-
-    if (msg.type === 'solve_opening') {
-      const result = solveOpeningHand(msg.cards, msg.deadCards, msg.options);
-      return { type: 'result', result };
-    }
-
-    if (msg.type === 'solve_fl') {
-      const result = solveFantasyLandMode(msg.cards, msg.deadCards, msg.options);
-      return { type: 'result', result };
-    }
-
-    return { type: 'error', message: `Okänd meddelandetyp: ${(msg as any).type}` };
-  } catch (err: any) {
-    return { type: 'error', message: err.message || String(err) };
+    return { type: 'error', message: `Okänd meddelandetyp: ${(msg as { type: string }).type}` };
+  } catch (err) {
+    return { type: 'error', message: err instanceof Error ? err.message : String(err) };
   }
 }

@@ -158,7 +158,7 @@ export function useSolver(): UseSolverReturn {
 
       let msg: SolverWorkerMessage;
       if (mode === 'opening') {
-        msg = { type: 'solve_opening', cards, deadCards, options };
+        msg = { type: 'solve_opening', cards, deadCards, variant, options };
       } else if (mode === 'fantasyLand') {
         msg = { type: 'solve_fl', cards, deadCards, options };
       } else {

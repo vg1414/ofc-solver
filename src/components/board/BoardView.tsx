@@ -1,82 +1,182 @@
-import type { Board, RowName } from '../../engine/types';
-import RowSlots from './RowSlots';
+// ============================================================
+// BoardView.tsx — Ett OFC-bräde (Topp 3 / Mitt 5 / Botten 5)
+// ============================================================
+//
+// Interaktion:
+//  - Är ett kort valt ("lyft") andas alla lediga platser i grönt.
+//    Tryck på en plats → kortet läggs där. Tryck någonstans på raden
+//    → kortet läggs på radens första lediga plats (stora tumvänliga mål).
+//  - Dra-och-släpp: raderna och platserna är släppytor (data-drop-*).
+//  - Tryck på ett lagt kort → det "beväpnas" (skakar + rött ✕).
+//    Tryck igen inom 2,5 s → kortet tas bort. Skyddar mot feltryck.
+//  - Spökkort: solverns förslag visas genomskinligt med streckad ram.
+//
+// Kortstorlek: brädet är en "container" och kortbredden räknas ut från
+// brädets egen bredd (cqw), så 5 kort alltid får plats — oavsett skärm.
+// ============================================================
+
+import { useEffect, useState } from 'react';
+import type { Board, Card, RowName } from '../../engine/types';
+import type { CardPlacement } from '../../solver/solver';
+import { calcRowRoyalty5, calcTopRoyalty } from '../../engine/royalties';
+import PlayingCard from '../cards/PlayingCard';
+import { useDragContext } from '../dnd/useDraggable';
+import { haptic } from '../cards/cardStyle';
+
+const ROWS: { name: RowName; label: string }[] = [
+  { name: 'top', label: 'Topp' },
+  { name: 'middle', label: 'Mitt' },
+  { name: 'bottom', label: 'Botten' },
+];
+
+function liveRoyalty(cards: (Card | null)[], row: RowName): number {
+  const filled = cards.filter((c): c is Card => c !== null);
+  if (row === 'top') return filled.length === 3 ? calcTopRoyalty(filled) : 0;
+  return filled.length === 5 ? calcRowRoyalty5(filled, row) : 0;
+}
 
 interface BoardViewProps {
   board: Board;
-  label?: string;
-  royalties?: { top: number; middle: number; bottom: number };
-  highlightedSlots?: { row: RowName; slots: number[] }[];
-  onSlotClick?: (row: RowName, slotIndex: number) => void;
-  onCardRemove?: (row: RowName, slotIndex: number) => void;
-  isFouled?: boolean;
-  isActive?: boolean;
-  onActivate?: () => void;
+  /** Kortet som är lyft och väntar på att placeras */
+  heldCard?: Card | null;
+  /** Kan man lägga kort här (aktivt bräde)? */
+  interactive?: boolean;
+  onPlace?: (row: RowName, slot: number) => void;
+  onRemove?: (row: RowName, slot: number) => void;
+  ghosts?: CardPlacement[];
+  fouled?: boolean;
+  /** Visa royalties per rad (beräknas live när raden är full) */
+  showRoyalties?: boolean;
+  /** Max kortbredd i px */
+  maxCardWidth?: number;
 }
 
 export default function BoardView({
   board,
-  label,
-  royalties,
-  highlightedSlots = [],
-  onSlotClick,
-  onCardRemove,
-  isFouled = false,
-  isActive = false,
-  onActivate,
+  heldCard = null,
+  interactive = false,
+  onPlace,
+  onRemove,
+  ghosts = [],
+  fouled = false,
+  showRoyalties = true,
+  maxCardWidth = 64,
 }: BoardViewProps) {
-  const getHighlightedForRow = (row: RowName) =>
-    highlightedSlots.find((h) => h.row === row)?.slots ?? [];
+  const drag = useDragContext();
+  const [armed, setArmed] = useState<{ row: RowName; slot: number } | null>(null);
+  const dragging = interactive && !!drag?.dragging;
+  const placing = interactive && (!!heldCard || dragging);
+
+  // Avväpna automatiskt efter en stund
+  useEffect(() => {
+    if (!armed) return;
+    const t = window.setTimeout(() => setArmed(null), 2500);
+    return () => window.clearTimeout(t);
+  }, [armed]);
+
+  const tapCard = (row: RowName, slot: number) => {
+    if (!onRemove) return;
+    if (armed?.row === row && armed.slot === slot) {
+      onRemove(row, slot);
+      setArmed(null);
+      haptic(12);
+    } else {
+      setArmed({ row, slot });
+      haptic(4);
+    }
+  };
+
+  const tapRow = (row: RowName) => {
+    if (!placing || !heldCard || !onPlace) return;
+    const free = board[row].cards.findIndex((c) => c === null);
+    if (free >= 0) onPlace(row, free);
+  };
 
   return (
-    <div className={`
-      bg-[#0d2218] border rounded-xl p-3 sm:p-4 flex flex-col gap-2 sm:gap-3 transition-all duration-150
-      ${isFouled ? 'border-red-600/60' : isActive ? 'border-green-500/70 shadow-green-900/30 shadow-md' : 'border-[#1a3d2a]'}
-    `}>
-      {label && (
-        <div className="flex items-center justify-between mb-1">
-          <button
-            onClick={onActivate}
-            className={`text-sm font-semibold tracking-wide uppercase transition-colors ${
-              isActive
-                ? 'text-green-400'
-                : 'text-slate-500 hover:text-slate-300 cursor-pointer'
-            }`}
-          >
-            {label}
-            {isActive && <span className="ml-2 text-xs normal-case font-normal text-green-600">● aktiv</span>}
-          </button>
-          {isFouled && (
-            <span className="text-red-400 text-xs font-bold bg-red-900/30 px-2 py-0.5 rounded">
-              FOULED
-            </span>
-          )}
-        </div>
-      )}
+    <div className="@container w-full" style={{ containerType: 'inline-size' }}>
+      <div
+        className={`felt flex flex-col gap-[calc(var(--card-w)*0.12)] rounded-[26px] p-3 sm:p-4 ${fouled ? 'felt-row fouled' : ''}`}
+        style={{ '--card-w': `min(${maxCardWidth}px, calc((100cqw - 84px) / 5 - 5px), var(--card-h-cap, 999px))` } as React.CSSProperties}
+      >
+        {ROWS.map(({ name, label }) => {
+          const cards = board[name].cards;
+          const hasFree = cards.some((c) => c === null);
+          const isOverRow = dragging && drag?.over?.row === name;
+          const roy = showRoyalties ? liveRoyalty(cards, name) : 0;
 
-      <RowSlots
-        row={board.top}
-        label="Topp"
-        royalty={royalties?.top}
-        highlightedSlots={getHighlightedForRow('top')}
-        onSlotClick={onSlotClick}
-        onCardRemove={onCardRemove}
-      />
-      <RowSlots
-        row={board.middle}
-        label="Mitten"
-        royalty={royalties?.middle}
-        highlightedSlots={getHighlightedForRow('middle')}
-        onSlotClick={onSlotClick}
-        onCardRemove={onCardRemove}
-      />
-      <RowSlots
-        row={board.bottom}
-        label="Botten"
-        royalty={royalties?.bottom}
-        highlightedSlots={getHighlightedForRow('bottom')}
-        onSlotClick={onSlotClick}
-        onCardRemove={onCardRemove}
-      />
+          return (
+            <div
+              key={name}
+              data-drop-row={interactive ? name : undefined}
+              onClick={() => tapRow(name)}
+              className={`flex items-center gap-1.5 rounded-[16px] -mx-1.5 px-1.5 py-1 transition-colors duration-200 ${
+                isOverRow && hasFree ? 'bg-[rgba(255,214,120,0.18)]' : ''
+              } ${placing && hasFree && heldCard ? 'cursor-pointer' : ''}`}
+            >
+              {/* Etikett */}
+              <div className="w-[50px] shrink-0 flex flex-col items-start leading-tight">
+                <span className="text-[11px] font-extrabold uppercase tracking-[0.08em] text-[color:var(--felt-label)]">{label}</span>
+                {roy > 0 && (
+                  <span className="mt-1 text-[12px] font-extrabold text-gold tabular animate-badge-in">+{roy}p</span>
+                )}
+              </div>
+
+              {/* Platser */}
+              <div className="flex gap-[calc(var(--card-w)*0.09)]">
+                {cards.map((card, i) => {
+                  const ghost = !card ? ghosts.find((g) => g.row === name && g.slotIndex === i) : undefined;
+                  const isOverSlot = isOverRow && drag?.over?.slot === i && !card;
+                  const isArmed = armed?.row === name && armed.slot === i;
+
+                  if (card) {
+                    return (
+                      <button
+                        key={i}
+                        type="button"
+                        aria-label={isArmed ? 'Tryck igen för att ta bort kortet' : 'Ta bort kort'}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          tapCard(name, i);
+                        }}
+                        className={`relative rounded-[calc(var(--card-w)*0.14)] transition-transform duration-200 active:scale-95 ${isArmed ? 'animate-wiggle' : ''}`}
+                        disabled={!onRemove}
+                      >
+                        <PlayingCard card={card} snap />
+                        {isArmed && (
+                          <span className="absolute inset-0 flex items-center justify-center rounded-[calc(var(--card-w)*0.14)] bg-[rgba(208,68,63,0.78)] text-white text-xl font-bold backdrop-blur-[1px] animate-badge-in">
+                            ✕
+                          </span>
+                        )}
+                      </button>
+                    );
+                  }
+
+                  return (
+                    <div
+                      key={i}
+                      data-drop-row={interactive ? name : undefined}
+                      data-drop-slot={interactive ? i : undefined}
+                      onClick={(e) => {
+                        if (!placing || !heldCard || !onPlace) return;
+                        e.stopPropagation();
+                        onPlace(name, i);
+                      }}
+                      className={`slot relative w-[var(--card-w)] h-[calc(var(--card-w)*1.4)] ${isOverSlot ? 'over' : placing ? 'target' : ''}`}
+                    >
+                      {ghost && !placing && <PlayingCard card={ghost.card} ghost className="absolute inset-0" />}
+                      {placing && !isOverSlot && (
+                        <span className="absolute inset-0 flex items-center justify-center text-[#d4900f] text-xl font-light" aria-hidden>
+                          +
+                        </span>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
