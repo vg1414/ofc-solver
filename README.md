@@ -20,6 +20,8 @@ En webbaserad solver för Open Face Chinese Poker (OFC) med stöd för hemspels-
 - **Två lägen: Vanlig hand och Fantasy Land.** Öppningen ingår i vanlig hand: med tomt bräde väljer du 5 kort → "Bästa öppning" → "Lägg så här" lägger ut alla. Sedan ett kort i taget
 - **Solverns förslag visas som spökkort direkt på brädet**, med EV, FL-chans, foul-risk och "↻ FL igen"
 - Följer telefonens ljusa/mörka läge. Ark sveps ner för att stängas
+- **Splash vid start:** korten delas ut och vänds till en hand, virvlar runt som solverns simuleringar och slår ihop till appikonen med ett fjädrande klick. Ett tryck hoppar över
+- **Egen appikon** (grönt kort med vit spader). Appen kan läggas till på hemskärmen och öppnas då i helskärm som "OFC"
 
 ## Träna
 

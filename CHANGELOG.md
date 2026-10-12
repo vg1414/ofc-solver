@@ -5,6 +5,7 @@
 - **Ny splash vid varje start (ca 5 s):** 13 kort delas ut på brädet och vänds i en våg till en riktig hand (QQ i toppen glöder guld för Fantasy Land). Sedan lyfter korten till en ring som snurrar allt fortare medan valörerna flimrar (solverns simuleringar). Ringen rusar ihop med ett fjädrande klick och en pulsring, det översta kortet växer till appikonen och "OFC Solver" skrivs fram med ett penndrag
 - Ett tryck var som helst hoppar över. Med "minska rörelse" visas bara slutbilden. Tempot styrs av `--splash-k`. Följer mörkt läge
 - Nya filer `src/splash/splash.ts` + `splash.css`, och testsidan `splash-demo.html` (bara i dev: spela igen, tempo, stega i tid)
+- README och CLAUDE.md beskriver splashen och appikonen
 
 ## 2026-10-12 — Egen appikon och hemskärms-app
 

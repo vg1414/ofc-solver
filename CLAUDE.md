@@ -21,7 +21,7 @@ npm run build    # tsc + vite build (måste gå igenom innan push)
 npm test         # vitest (måste gå igenom innan push)
 ```
 
-Förhandsvisning i Claude-appen: `.claude/launch.json` ligger i föräldermappen `OFC/` (konfigurationerna `ofc-dev`, `ofc-ui`, `ofc-train`).
+Förhandsvisning i Claude-appen: `.claude/launch.json` ligger i föräldermappen `OFC/` (konfigurationerna `ofc-dev`, `ofc-ui`, `ofc-train`, `ofc-splash`).
 
 ## Husregler (motorn räknar redan med dessa)
 
@@ -43,6 +43,8 @@ Förhandsvisning i Claude-appen: `.claude/launch.json` ligger i föräldermappen
 | `src/store/gameStore.ts` | Zustand-state för Solver-fliken (bräden, valda kort, variant) |
 | `src/components/` | UI. `board/` bräde, `cards/` spelkort + rutnät + hand, `dnd/` dra-och-släpp, `solver/` Solver-fliken, `training/` Träna-fliken, `ui/` BottomSheet + Segmented |
 | `src/training/` | Träningslogik (ingen UI): drag/poäng, turordning, scenariogenerator, topplistor |
+| `src/splash/` | Splash-skärmen (`splash.ts` + `splash.css`), startas från `main.tsx` |
+| `public/` | Appikoner (`favicon.svg/.ico`, `apple-touch-icon.png`, `icon-*.png`) och `manifest.webmanifest` |
 | `scripts/` | Mät- och kalibreringsskript för solvern (`sh scripts/run.sh scripts/demo.ts`) |
 
 ## Hur solvern räknar
@@ -88,6 +90,8 @@ En `useSolver()` = en egen worker, och den räknar en sak i taget. Träningen an
 - Mobil först (360–430 px, en hand). Desktop och liggande telefon får två kolumner (`wide:`-varianten).
 - Alla ark använder `BottomSheet`: ✕-knapp, svep ner för att stänga, tryck på den mörka ytan stänger.
 - Allt UI på svenska. Diskret "Made by: David Hefner" längst ner ska alltid finnas.
+- **Ikon:** grönt kort med vit spader på krämvit botten, lutat −8°. Källan är `public/favicon.svg`. PNG-ikonerna är renderade från den.
+- **Splash** (`src/splash/`), ca 5 s vid varje start: 13 kort delas ut på brädet och vänds (QQ glöder guld), virvlar i en ring med flimrande valörer, slår ihop med ett fjädrande klick och det översta kortet växer till ikonen. Därefter skrivs "OFC Solver" fram med ett penndrag. Allt räknas ut från tiden `t` i `render(t)` (tidslinjen `T`). Ett tryck hoppar över, "minska rörelse" visar slutbilden och tempot styrs av `--splash-k`. Testsida: `/splash-demo.html` i dev, med spela igen, tempo och stegning i tid. Korten vänds i 2D (scaleX), eftersom 3D + blur gör korten osynliga i Chrome.
 - Återanvänd byggstenarna: `PlayingCard`, `BoardView`, `CardGrid`/`JokerButton`, `HandTray`, `BottomSheet`, `Segmented`, `DragProvider`/`useDraggable`.
 
 ## Arbetsrutin
