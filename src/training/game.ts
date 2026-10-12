@@ -92,8 +92,14 @@ export type Solve = (input: SolverInput) => Promise<DetailedSolverResult>;
 
 /** Datorn i helhandsläget: Snabb (300 sim) med kort tidsgräns så att spelet flyter */
 export const CPU_OPTIONS: SolverOptions = { simulations: 300, maxMs: 3000 };
-/** Datorn när den spelar fram scenarion: ännu kortare — det räcker för realistiska bräden */
-export const GEN_OPTIONS: SolverOptions = { simulations: 300, maxMs: 1200 };
+/**
+ * Datorn när den spelar fram scenarion: Normal-nivå (800 sim, max 3 s).
+ * Mätt mot noggrann omräkning: snittförlust ≈ 0,24 EV på öppningar och
+ * ≈ 0,07 på enkortsdrag (300 sim / 1,2 s gav 1,21 resp. 0,28) — så brädena
+ * ser ut som i ett välspelat parti. Kön förbereder scenarion i förväg,
+ * så den längre tiden märks inte.
+ */
+export const GEN_OPTIONS: SolverOptions = { simulations: 800, maxMs: 3000 };
 
 export interface SolveArgs {
   seat: Seat;

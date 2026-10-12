@@ -72,6 +72,8 @@ describe('träning: bortsållat drag (finalist)', () => {
 describe('träning: poäng och gradering', () => {
   it('100 − diff×100 med golv 0', () => {
     expect(pointsFor(0)).toBe(100);
+    expect(pointsFor(0.01)).toBe(100); // Perfekt = fulla poäng
+    expect(pointsFor(0.06)).toBe(94);
     expect(pointsFor(0.234)).toBe(77);
     expect(pointsFor(3)).toBe(0);
   });

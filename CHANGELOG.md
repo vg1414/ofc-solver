@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-10-12 — Scenariokö, bättre spelad dator och Perfekt = 100 p
+
+- **Scenariokö** (`src/training/useScenarioPool.ts`): 3 scenarion hålls redo per variant och läge. Kön fylls redan på startsidan (prickar visar hur många som är redo), så första scenariot visas direkt. Överblivna scenarion sparas till nästa omgång, och kön pausas när Solver-fliken visas
+- **Datorn spelar fram scenarion bättre:** generatorn kör nu Normal-nivå (800 sim, max 3 s per drag) i stället för 300 sim / 1,2 s. Mätt mot noggrann omräkning med låst drag sjönk snittförlusten från 1,21 till 0,24 EV på öppningar och från 0,28 till 0,07 EV på enkortsdrag
+- **Perfekt ger alltid 100 p** (tidigare t.ex. 99 p vid 0,01 EV). Texten säger "Lika bra som bästa draget (inom felmarginalen)" när draget skiljer sig från solverns
+- Motståndarens minibräde flödar inte längre över i smal liggande layout
+
 ## 2026-10-12 — Splash: rubriken delas ut som kort
 
 - "OFC Solver" skrivs inte längre fram med ett penndrag. I stället delar ikonkortet ut nio små kort som flyger i en båge, snäpper fast med en studs över varje bokstav, vänds och "puffar" bort så att rubriken blir kvar som text ("Solver" i appens gröna gradient)

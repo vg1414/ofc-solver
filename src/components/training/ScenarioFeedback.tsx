@@ -53,7 +53,7 @@ export default function ScenarioFeedback({ j, onNext, nextLabel }: ScenarioFeedb
         <div className="min-w-0 flex-1">
           <div className="title-serif text-[26px]">{GRADE_LABEL[j.grade]}{j.grade === 'perfect' ? '!' : ''}</div>
           <div className="text-[12.5px] font-semibold text-ink-2">
-            {j.grade === 'perfect' ? 'Du hittade bästa draget.' : j.diff > 0 ? `${evFmt.format(-j.diff)} EV mot bästa draget` : 'Lika bra som bästa draget.'}
+            {j.grade === 'perfect' ? (j.player === j.best ? 'Du hittade bästa draget.' : 'Lika bra som bästa draget (inom felmarginalen).') : j.diff > 0 ? `${evFmt.format(-j.diff)} EV mot bästa draget` : 'Lika bra som bästa draget.'}
           </div>
         </div>
         <div className="text-right leading-none">

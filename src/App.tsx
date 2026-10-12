@@ -111,7 +111,7 @@ export default function App() {
         </div>
         {trainMounted && (
           <div className={tab === 'train' ? 'contents' : 'hidden'}>
-            <TrainingView />
+            <TrainingView active={tab === 'train'} />
           </div>
         )}
       </main>

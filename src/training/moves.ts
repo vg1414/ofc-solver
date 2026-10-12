@@ -105,8 +105,13 @@ export function gradeOf(diff: number): Grade {
   return 'miss';
 }
 
-/** Max 100 p per scenario: 100 − diff × 100, aldrig under 0 */
+/**
+ * Max 100 p per scenario: 100 − diff × 100, aldrig under 0.
+ * Perfekt (diff ≤ 0,05) ger alltid fulla 100 p — så små skillnader ligger
+ * inom solverns slumpbrus och ska inte kosta poäng.
+ */
 export function pointsFor(diff: number): number {
+  if (diff <= PERFECT_MAX) return 100;
   return Math.max(0, Math.round(100 - diff * 100));
 }
 

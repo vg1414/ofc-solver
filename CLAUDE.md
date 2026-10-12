@@ -77,8 +77,8 @@ En `useSolver()` = en egen worker, och den räknar en sak i taget. Träningen an
 
 ## Träna-fliken (`src/components/training/`, logik i `src/training/`)
 
-- **Scenarion:** 5/10/20 scenarion. `scenarios.ts` låter datorn spela fram båda bräden med solvern (snabbt, 1,2 s per drag) och stannar på ett slumpat drag (≈ 25 % öppningar). En buffert med 2 scenarion förbereds i förväg i en egen worker. Spelarens drag bedöms på Noggrann nivå, som startar direkt när scenariot visas. Draget matchas mot `result.options` på kort + rad (`moves.ts`). Om draget sållades bort räknas det om med `pinned` (`pinned.ts`).
-- **Poäng:** 100 − EV-förlust × 100 per scenario (golv 0). Perfekt ≤ 0,05, Bra ≤ 0,5, annars Miss.
+- **Scenarion:** 5/10/20 scenarion. `scenarios.ts` låter datorn spela fram båda bräden med solvern (Normal: 800 sim, max 3 s per drag) och stannar på ett slumpat drag (≈ 25 % öppningar). Scenariokön `useScenarioPool.ts` (ägs av `TrainingView`) håller 3 scenarion redo per variant + läge i en egen worker. Den börjar redan på startsidan, sparar överblivna till nästa omgång och pausas när Solver-fliken visas. Spelarens drag bedöms på Noggrann nivå, som startar direkt när scenariot visas. Draget matchas mot `result.options` på kort + rad (`moves.ts`). Om draget sållades bort räknas det om med `pinned` (`pinned.ts`).
+- **Poäng:** 100 − EV-förlust × 100 per scenario (golv 0), men Perfekt ger alltid 100. Perfekt ≤ 0,05, Bra ≤ 0,5, annars Miss.
 - **★ Joker:** som Scenarion, men `placeJokers` flyttar en joker (ibland två) i leken till platserna där spelarens hand delas ut.
 - **Hel hand mot datorn:** `HandRun.tsx` och `game.ts`. Turordningen räknas ut i förväg (`turnOrder`), och den som börjar växlar varje hand. Datorn spelar med solvern (300 sim, max 3 s). Poäng via `engine/scoring.ts`, FL och repeat-FL till nästa hand. Coach-läge: en tredje worker bedömer varje drag (800 sim, max 10 s).
 - **Topplistor:** localStorage, topp 10 per läge × variant × antal (`leaderboard.ts`). Senaste namnet kommer ihåg.

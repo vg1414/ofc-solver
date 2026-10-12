@@ -89,7 +89,7 @@ export function OpponentMini({ board, label = 'Motståndaren' }: { board: Board;
   const n = countPlaced(board);
   if (n === 0) return null;
   return (
-    <div className="glass flex items-center gap-3 self-start rounded-[20px] px-3 py-2 animate-fade-in">
+    <div className="glass flex max-w-full items-center gap-3 self-start overflow-hidden rounded-[20px] px-3 py-2 animate-fade-in">
       <ResultBoardPreview board={board} cardWidth={17} />
       <span className="text-[11px] font-semibold leading-tight text-ink-3">
         {label}

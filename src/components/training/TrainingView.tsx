@@ -17,6 +17,7 @@ import Footer from '../layout/Footer';
 import Leaderboard from './Leaderboard';
 import ScenarioRun from './ScenarioRun';
 import HandRun from './HandRun';
+import { POOL_SIZE, useScenarioPool } from '../../training/useScenarioPool';
 
 const COUNTS = [5, 10, 20] as const;
 const CFG_KEY = 'ofc-train-config';
@@ -41,7 +42,8 @@ function loadConfig(): Config {
   }
 }
 
-export default function TrainingView() {
+/** active = Träna-fliken syns (annars pausas scenariokön) */
+export default function TrainingView({ active = true }: { active?: boolean }) {
   const { variant, setVariant } = useGameStore();
   const [cfg, setCfg] = useState<Config>(loadConfig);
   const [running, setRunning] = useState<{ id: number; variant: GameVariant } | null>(null);
@@ -54,6 +56,10 @@ export default function TrainingView() {
     }
   }, [cfg]);
 
+  // Scenariokön fylls redan på startsidan, så första scenariot är klart direkt
+  const poolVariant = running?.variant ?? variant;
+  const pool = useScenarioPool(poolVariant, cfg.mode === 'joker', active && cfg.mode !== 'hand');
+
   const start = () => {
     haptic([8, 30, 8]);
     window.scrollTo({ top: 0 });
@@ -63,13 +69,13 @@ export default function TrainingView() {
 
   if (running) {
     return cfg.mode !== 'hand' ? (
-      <ScenarioRun key={running.id} variant={running.variant} jokers={cfg.mode === 'joker'} count={cfg.count} onExit={exit} onRestart={start} />
+      <ScenarioRun key={running.id} variant={running.variant} jokers={cfg.mode === 'joker'} pool={pool} count={cfg.count} onExit={exit} onRestart={start} />
     ) : (
       <HandRun key={running.id} variant={running.variant} count={cfg.count} coach={cfg.coach} onExit={exit} onRestart={start} />
     );
   }
 
-  return <Setup cfg={cfg} setCfg={setCfg} variant={variant} setVariant={setVariant} onStart={start} />;
+  return <Setup cfg={cfg} setCfg={setCfg} variant={variant} setVariant={setVariant} onStart={start} ready={cfg.mode === 'hand' ? null : pool.ready} />;
 }
 
 function Setup({
@@ -78,12 +84,15 @@ function Setup({
   variant,
   setVariant,
   onStart,
+  ready,
 }: {
   cfg: Config;
   setCfg: (c: Config) => void;
   variant: GameVariant;
   setVariant: (v: GameVariant) => void;
   onStart: () => void;
+  /** Antal färdiga scenarion i kön (null = Hel hand) */
+  ready: number | null;
 }) {
   const scen = cfg.mode !== 'hand';
   const entries = loadBoard(boardKey(cfg.mode, variant, cfg.count));
@@ -130,7 +139,7 @@ function Setup({
               <ul className="mt-1.5 flex flex-col gap-1 text-[13px] text-ink-2">
                 <li>• Riktiga lägen: datorn spelar fram båda bräden, sedan är det din tur.</li>
                 <li>• Blandat: öppningshänder och drag mitt i handen.</li>
-                <li>• Upp till <b className="text-gold">100 p</b> per scenario: 100 − EV-förlust × 100.</li>
+                <li>• Upp till <b className="text-gold">100 p</b> per scenario: 100 − EV-förlust × 100 (Perfekt = 100).</li>
                 <li>• Perfekt ≤ 0,05 · Bra ≤ 0,5 · Miss &gt; 0,5 EV.</li>
               </ul>
             </>
@@ -205,6 +214,18 @@ function Setup({
           <button type="button" onClick={onStart} className="btn-primary h-13 rounded-full py-3.5 text-[16px] font-bold">
             ★ Starta {cfg.count} {unit}
           </button>
+          {ready !== null && (
+            <div className="-mt-1 flex items-center justify-center gap-1.5 text-[11.5px] font-bold text-ink-3" aria-live="polite">
+              {Array.from({ length: POOL_SIZE }, (_, i) => (
+                <span
+                  key={i}
+                  className={`h-2 w-2 rounded-full transition-all duration-500 ${i < ready ? 'scale-100' : 'scale-75 opacity-40'}`}
+                  style={{ background: i < ready ? 'var(--grad)' : 'var(--line-strong)' }}
+                />
+              ))}
+              <span className="ml-1">{ready > 0 ? `${ready} scenario${ready > 1 ? 'n' : ''} redo` : 'Datorn spelar fram scenarion…'}</span>
+            </div>
+          )}
         </div>
       </div>
 

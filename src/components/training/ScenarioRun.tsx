@@ -3,14 +3,14 @@
 // ============================================================
 //
 // Två solver-workers arbetar samtidigt:
-//  - `gen`  spelar fram kommande scenarion (datorn spelar båda bräden).
-//           Den håller en buffert på 2 färdiga scenarion i förväg.
+//  - scenariokön (useScenarioPool, ägs av TrainingView) spelar fram
+//           kommande scenarion i förväg — redan från startsidan.
 //  - `ev`   bedömer scenariot du ser just nu (Noggrann, 2000 sim). Den
 //           startar direkt när scenariot visas, så resultatet oftast är
 //           klart när du har lagt dina kort.
 //
 // Faser:  loading → play → (judging) → feedback → loading … → summary
-//   loading  väntar på nästa scenario från bufferten
+//   loading  väntar på nästa scenario från kön
 //   play     du lägger dina kort
 //   judging  du är klar men solvern räknar fortfarande (progress visas)
 //   feedback gradering + ditt drag mot bästa draget
@@ -21,7 +21,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { GameVariant } from '../../engine/types';
 import type { DetailedSolverResult, SolverOptions } from '../../solver/solver';
 import { countPlaced, judge, type Judgement, type Move } from '../../training/moves';
-import { generateScenario, scenarioLabel, type Scenario } from '../../training/scenarios';
+import { scenarioLabel, type Scenario } from '../../training/scenarios';
+import type { ScenarioPool } from '../../training/useScenarioPool';
 import { CANCELLED, useSolverJobs } from '../../training/useSolverJobs';
 import { SOLVER_HAS_PINNED, pinnedOptions } from '../../training/pinned';
 import { useMoveBuilder } from '../../training/useMoveBuilder';
@@ -37,12 +38,13 @@ import { OpponentMini, RunHeader, SolverChip, Spinner, useCountUp } from './Trai
 
 /** Bedömningsnivå: Noggrann */
 const EVAL_OPTIONS: SolverOptions = { simulations: 2000 };
-const BUFFER = 2;
 
 interface ScenarioRunProps {
   variant: GameVariant;
   /** Jokerträning: minst en joker i handen i varje scenario */
   jokers?: boolean;
+  /** Kön med färdiga scenarion */
+  pool: ScenarioPool;
   count: number;
   onExit: () => void;
   onRestart: () => void;
@@ -50,12 +52,9 @@ interface ScenarioRunProps {
 
 type Phase = 'loading' | 'play' | 'judging' | 'feedback' | 'summary';
 
-export default function ScenarioRun({ variant, jokers = false, count, onExit, onRestart }: ScenarioRunProps) {
-  const gen = useSolverJobs();
+export default function ScenarioRun({ variant, jokers = false, pool, count, onExit, onRestart }: ScenarioRunProps) {
   const ev = useSolverJobs();
 
-  const [buffer, setBuffer] = useState<Scenario[]>([]);
-  const [genError, setGenError] = useState<string | null>(null);
   const [current, setCurrent] = useState<Scenario | null>(null);
   const [result, setResult] = useState<{ id: string; res: DetailedSolverResult; pinned: boolean } | null>(null);
   // true medan bedömningen körs om med spelarens drag låst
@@ -64,43 +63,6 @@ export default function ScenarioRun({ variant, jokers = false, count, onExit, on
   const [locked, setLocked] = useState<Move | null>(null);
   const [done, setDone] = useState<ScenarioDone[]>([]);
   const [phase, setPhase] = useState<Phase>('loading');
-
-  // ---------- Generatorn: håll bufferten fylld ----------
-  const made = useRef(0);
-  const bufLen = useRef(0);
-  const wake = useRef<(() => void) | null>(null);
-  const { solve: genSolve, cancel: genCancel } = gen;
-
-  useEffect(() => {
-    let alive = true;
-    const isAlive = () => alive;
-    (async () => {
-      while (alive && made.current < count) {
-        if (bufLen.current >= BUFFER) {
-          await new Promise<void>((r) => (wake.current = r));
-          continue;
-        }
-        try {
-          const s = await generateScenario(genSolve, variant, isAlive, Math.random, { jokers });
-          if (!alive) return;
-          made.current++;
-          bufLen.current++;
-          setGenError(null);
-          setBuffer((b) => [...b, s]);
-        } catch (e) {
-          if (!alive) return;
-          const msg = e instanceof Error ? e.message : String(e);
-          if (msg !== CANCELLED) setGenError(msg);
-          await new Promise((r) => setTimeout(r, 800));
-        }
-      }
-    })();
-    return () => {
-      alive = false;
-      wake.current?.();
-      genCancel();
-    };
-  }, [count, variant, jokers, genSolve, genCancel]);
 
   // ---------- Bedömning ----------
   const { solve: evSolve, cancel: evCancel } = ev;
@@ -123,21 +85,22 @@ export default function ScenarioRun({ variant, jokers = false, count, onExit, on
     [evSolve],
   );
 
-  // Ta nästa scenario ur bufferten och börja räkna direkt
+  // Ta nästa scenario ur kön och börja räkna direkt.
+  // takenFor skyddar mot att samma plats tar två scenarion (StrictMode kör effekter två gånger).
+  const { take, ready } = pool;
+  const takenFor = useRef(-1);
   useEffect(() => {
-    if (phase !== 'loading' || buffer.length === 0) return;
-    const [s, ...rest] = buffer;
-    bufLen.current = rest.length;
-    wake.current?.();
-    wake.current = null;
-    setBuffer(rest);
+    if (phase !== 'loading' || ready === 0 || takenFor.current === done.length) return;
+    const s = take();
+    if (!s) return;
+    takenFor.current = done.length;
     setCurrent(s);
     setResult(null);
     setEvalError(null);
     setLocked(null);
     setPhase('play');
     startEval(s);
-  }, [phase, buffer, startEval]);
+  }, [phase, ready, take, done.length, startEval]);
 
   // Klar + resultat finns → bedöm
   useEffect(() => {
@@ -161,7 +124,6 @@ export default function ScenarioRun({ variant, jokers = false, count, onExit, on
   const next = () => {
     if (done.length >= count) {
       evCancel();
-      genCancel();
       setPhase('summary');
     } else setPhase('loading');
   };
@@ -187,7 +149,7 @@ export default function ScenarioRun({ variant, jokers = false, count, onExit, on
 
   if (phase === 'loading' || !current) {
     return (
-      <DockLayout dock={<Spinner title="Datorn spelar fram…" sub={genError ?? 'Ett riktigt parti spelas upp till din tur'} />}>
+      <DockLayout dock={<Spinner title="Datorn spelar fram…" sub={pool.error ?? 'Ett riktigt parti spelas upp till din tur'} />}>
         {header}
         <div className="felt flex min-h-[260px] items-center justify-center rounded-[26px] p-6 text-center">
           <p className="max-w-[260px] text-[13px] font-semibold text-[color:var(--felt-label)] opacity-80">
