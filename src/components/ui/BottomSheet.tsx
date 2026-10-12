@@ -77,9 +77,20 @@ export default function BottomSheet({ open, onClose, title, children }: BottomSh
           className="bg-surface/95 backdrop-blur-xl text-ink rounded-t-[28px] sm:rounded-[28px] shadow-[0_30px_80px_-20px_rgba(60,30,10,0.45)] max-h-[85dvh] flex flex-col pb-[env(safe-area-inset-bottom)]"
           style={{ touchAction: scrollable ? 'pan-y' : 'none' }}
         >
-          <div className="pt-2.5 pb-1 shrink-0" style={{ touchAction: 'none' }}>
+          <div className="relative pt-2.5 pb-1 shrink-0" style={{ touchAction: 'none' }}>
             <div className="mx-auto h-1.5 w-10 rounded-full bg-line-strong" />
-            {title && <h2 className="title-serif px-5 pt-3 text-[24px]">{title}</h2>}
+            {title && <h2 className="title-serif px-5 pr-16 pt-3 text-[24px]">{title}</h2>}
+            {/* Stängknapp — för desktop och för den som inte vill svepa */}
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label="Stäng"
+              className="btn-ghost absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-full"
+            >
+              <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" aria-hidden="true">
+                <path d="M6 6l12 12M18 6L6 18" />
+              </svg>
+            </button>
           </div>
           <div ref={bodyRef} className="overflow-y-auto overscroll-contain px-5 pb-5 pt-2">
             {children}

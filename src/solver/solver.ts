@@ -28,7 +28,16 @@ export interface SolverOptions {
   maxMs?: number;
   /** Callback för progress (0–100) */
   onProgress?: (percent: number) => void;
+  /**
+   * Låsta drag: varje inre lista är ett komplett drag (alla kort i handen,
+   * 'discard' = kastas i Pineapple). De sållas aldrig bort och räknas lika
+   * noga som bästa draget, på samma blandningar. Ignoreras i Fantasy Land.
+   */
+  pinned?: PinnedMove[];
 }
+
+/** Ett komplett drag: vilket kort som hamnar i vilken rad (eller kastas) */
+export type PinnedMove = { card: Card; row: RowName | 'discard' }[];
 
 export interface CardPlacement {
   card: Card;
@@ -57,6 +66,12 @@ export interface DetailedPlacementOption {
   repeatFL?: boolean;
   /** Brädet efter placeringen */
   resultBoard?: Board;
+  /** true = överlevde sållningen till slutet (eller var låst) → lika noga räknad som bästa draget */
+  finalist?: boolean;
+  /** true = draget var låst via options.pinned */
+  pinned?: boolean;
+  /** Standardfel för EV-skillnaden mot bästa draget, parvis på samma blandningar (bara finalister) */
+  evDiffSE?: number;
 }
 
 export interface DetailedSolverResult {
@@ -88,6 +103,25 @@ class CardIds {
 function unseenFrom(seen: number[]): number[] {
   const s = new Set(seen);
   return Array.from({ length: 54 }, (_, i) => i).filter((i) => !s.has(i));
+}
+
+const sameCard = (a: Card, b: Card) =>
+  a.kind === 'joker' ? b.kind === 'joker' : b.kind === 'card' && a.rank === b.rank && a.suit === b.suit;
+
+/** Samma nyckel som allAssignments använder: vilka kort-id:n som hamnar var */
+const assignKey = (hand: number[], assign: number[]) =>
+  [-1, 0, 1, 2].map((r) => hand.filter((_, k) => assign[k] === r).sort().join('.')).join('|');
+
+/** Översätter ett låst drag till en assign-array (rad per kort, -1 = kastas) */
+function pinnedAssign(move: PinnedMove, cards: Card[]): number[] {
+  const assign: number[] = cards.map(() => NaN);
+  for (const { card, row } of move) {
+    const k = cards.findIndex((c, i) => Number.isNaN(assign[i]) && sameCard(c, card));
+    if (k < 0) throw new Error('Låst drag innehåller ett kort som inte finns i handen.');
+    assign[k] = row === 'discard' ? -1 : ROWS.indexOf(row);
+  }
+  if (assign.some((a) => Number.isNaN(a))) throw new Error('Låst drag saknar placering för något kort i handen.');
+  return assign;
 }
 
 function buildOption(
@@ -163,6 +197,16 @@ export function solveFromBoard(
   }
   if (cands.length === 0) throw new Error('Inga giltiga placeringar hittades.');
 
+  // Låsta drag → markera motsvarande kandidat
+  if (options.pinned?.length) {
+    const byKey = new Map(cands.map((c) => [assignKey(hand, c.assign), c]));
+    for (const move of options.pinned) {
+      const cand = byKey.get(assignKey(hand, pinnedAssign(move, cards)));
+      if (!cand) throw new Error('Låst drag är inte ett giltigt drag i den här situationen.');
+      cand.pinned = true;
+    }
+  }
+
   const t0 = Date.now();
   const res: CandidateResult[] = evaluateCandidates(
     { rows, hand, unseen, opponent: opp, variant, maxSims: simulations, maxMs, onProgress },
@@ -174,6 +218,9 @@ export function solveFromBoard(
     const o = buildOption(board, cards, r.assign, r.ev, r.sims);
     o.flProbability = r.flRate;
     o.foulProbability = r.foulRate;
+    o.finalist = r.finalist;
+    if (r.pinned) o.pinned = true;
+    if (r.evDiffSE !== undefined) o.evDiffSE = r.evDiffSE;
     return o;
   });
   return finish(out, 'monteCarlo', timedOut);

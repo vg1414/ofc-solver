@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Card } from '../engine/types';
 import type { DetailedPlacementOption, DetailedSolverResult } from '../solver/solver';
-import { applyMove, countPlaced, emptyBoard, gradeOf, judge, moveKey, placementsOn, pointsFor } from './moves';
+import { applyMove, countPlaced, emptyBoard, gradeOf, judge, moveKey, placementsOn, pointsFor, wasScreenedEarly } from './moves';
 import { settleHand, turnOrder, newSeat, applyToSeat } from './game';
 import { insertEntry, qualifies, makeEntry, type LeaderboardEntry } from './leaderboard';
 
@@ -49,6 +49,23 @@ describe('träning: matchning av drag', () => {
     const j = judge(r, { placements: [{ card: c('As'), row: 'top', slotIndex: 0 }], discards: [] });
     expect(j.diff).toBe(0);
     expect(j.points).toBe(100);
+  });
+});
+
+describe('träning: bortsållat drag (finalist)', () => {
+  it('solverns finalist-flagga går före tumregeln', () => {
+    const best = { ...opt(1.0, 2000, [['As', 'bottom']]), finalist: true };
+    // Lika många simuleringar men inte finalist → bortsållat
+    expect(wasScreenedEarly({ ...opt(0.8, 2000, [['As', 'top']]), finalist: false }, best)).toBe(true);
+    // Låst/finalist → säker, även med färre simuleringar (tidsgränsen)
+    expect(wasScreenedEarly({ ...opt(0.8, 900, [['As', 'top']]), finalist: true }, best)).toBe(false);
+    // Bästa draget själv är aldrig bortsållat
+    expect(wasScreenedEarly(best, best)).toBe(false);
+  });
+  it('utan finalist-fält (t.ex. Fantasy Land) används tumregeln', () => {
+    const best = opt(1.0, 2000, [['As', 'bottom']]);
+    expect(wasScreenedEarly(opt(0.8, 999, [['As', 'top']]), best)).toBe(true);
+    expect(wasScreenedEarly(opt(0.8, 1000, [['As', 'top']]), best)).toBe(false);
   });
 });
 
@@ -134,5 +151,18 @@ describe('träning: topplistor', () => {
   });
   it('tomt namn blir Anonym', () => {
     expect(makeEntry('   ', 5).name).toBe('Anonym');
+  });
+});
+
+describe('visningsordning', () => {
+  it('bästa först, resten efter EV', async () => {
+    const { sortForDisplay } = await import('../hooks/solverOrder');
+    const a = opt(2.0, 2000, [['As', 'bottom']]);
+    const b = opt(0.5, 300, [['As', 'middle']]);
+    const d = opt(2.4, 60, [['As', 'top']]);
+    const s = sortForDisplay(res([a, b, d]));
+    expect(s.options.map((o) => o.ev)).toEqual([2.0, 2.4, 0.5]);
+    expect(s.best.ev).toBe(2.0);
+    expect(s.options.map((o) => o.rank)).toEqual([1, 2, 3]);
   });
 });

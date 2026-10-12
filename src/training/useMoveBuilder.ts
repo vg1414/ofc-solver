@@ -29,7 +29,7 @@ interface Placed {
 
 export function useMoveBuilder(base: Board, hand: Card[], place: number) {
   const [placed, setPlaced] = useState<Placed[]>([]);
-  const [held, setHeld] = useState<number | null>(null);
+  const [chosen, setHeld] = useState<number | null>(null);
 
   const board = useMemo(() => {
     const b = cloneBoard(base);
@@ -44,6 +44,10 @@ export function useMoveBuilder(base: Board, hand: Card[], place: number) {
   );
 
   const done = placed.length >= place;
+  // Bara ett kort kvar att lägga och inget val om vilket → det är redan lyft,
+  // så man kan trycka direkt på en rad (vanlig OFC efter öppningen)
+  const auto = !done && remaining.length === 1 ? remaining[0].id : null;
+  const held = chosen !== null && remaining.some((r) => r.id === chosen) ? chosen : auto;
   const heldCard = held !== null ? hand[held] : null;
 
   const put = useCallback(
@@ -63,9 +67,11 @@ export function useMoveBuilder(base: Board, hand: Card[], place: number) {
       const h = remaining[index];
       if (!h) return;
       haptic(5);
+      // Det automatiskt lyfta kortet (enda kortet) går inte att sänka
+      if (h.id === auto) return;
       setHeld((cur) => (cur === h.id ? null : h.id));
     },
-    [remaining],
+    [remaining, auto],
   );
 
   const placeAt = useCallback(

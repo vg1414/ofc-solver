@@ -21,6 +21,7 @@ import type {
   SolverWorkerMessage,
   SolverWorkerResponse,
 } from '../solver/solver';
+import { sortForDisplay } from './solverOrder';
 
 // ============================================================
 // Typer
@@ -125,7 +126,8 @@ export function useSolver(): UseSolverReturn {
 
         if (data.type === 'result') {
           setState({
-            result: data.result,
+            // Bästa draget först, resten i EV-ordning (se solverOrder.ts)
+            result: sortForDisplay(data.result),
             isLoading: false,
             error: null,
             lastSimulations: data.result.simulations,

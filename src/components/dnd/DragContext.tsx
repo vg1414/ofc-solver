@@ -32,6 +32,7 @@ const CARD_W = 52;
 function hitTest(x: number, y: number): DropTarget | null {
   const el = document.elementFromPoint(x, y) as HTMLElement | null;
   if (!el) return null;
+  if (el.closest('[data-drop-hand]')) return { row: null, slot: null, hand: true };
   const slotEl = el.closest<HTMLElement>('[data-drop-slot]');
   if (slotEl) {
     return { row: slotEl.dataset.dropRow as RowName, slot: Number(slotEl.dataset.dropSlot) };
@@ -73,7 +74,7 @@ export function DragProvider({ children, onDrop }: DragProviderProps) {
     position(e.clientX, e.clientY);
     const t = hitTest(e.clientX, e.clientY - liftRef.current);
     const prev = overRef.current;
-    if (t?.row !== prev?.row || t?.slot !== prev?.slot) {
+    if (t?.row !== prev?.row || t?.slot !== prev?.slot || t?.hand !== prev?.hand) {
       overRef.current = t;
       setOver(t);
       if (t) haptic(3);

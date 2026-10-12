@@ -3,8 +3,11 @@ import { createContext } from 'react';
 import type { Card, RowName } from '../../engine/types';
 
 export interface DropTarget {
-  row: RowName;
+  /** Rad på brädet (null = inte över brädet) */
+  row: RowName | null;
   slot: number | null;
+  /** true = över "Din hand" (handen tar emot kort) */
+  hand?: boolean;
 }
 
 export interface DragContextValue {

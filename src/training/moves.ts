@@ -110,9 +110,15 @@ export function pointsFor(diff: number): number {
   return Math.max(0, Math.round(100 - diff * 100));
 }
 
-/** Spelarens drag räknades betydligt färre gånger än bästa draget → EV:n är osäkrare */
+/**
+ * Spelarens drag räknades inte klart → EV:n är osäkrare.
+ * Solvern säger det exakt via `finalist`; saknas fältet (t.ex. Fantasy
+ * Land) används tumregeln "färre än hälften så många simuleringar".
+ */
 export function wasScreenedEarly(player: DetailedPlacementOption, best: DetailedPlacementOption): boolean {
-  return player !== best && player.simulations < best.simulations * 0.5;
+  if (player === best) return false;
+  if (player.finalist !== undefined) return !player.finalist;
+  return player.simulations < best.simulations * 0.5;
 }
 
 export interface Judgement {

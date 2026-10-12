@@ -290,6 +290,7 @@ export default function ResultsPanel({
 
 /** Progress under beräkning, med avbryt-knapp */
 export function SolverProgress({ progress, onCancel, maxSeconds }: { progress: number | null; onCancel: () => void; maxSeconds: number }) {
+  // Solvern rapporterar progress som aldrig går bakåt, så värdet kan visas direkt
   const p = Math.min(100, Math.max(0, progress ?? 0));
   return (
     <div className="flex flex-col gap-3 py-1 animate-fade-in" role="status" aria-live="polite">

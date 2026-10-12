@@ -128,6 +128,8 @@ export function opponentPool(variant: Variant, n = 1500): Settled[] {
 export interface Candidate {
   /** Rad per kort i handen (-1 = kastas) */
   assign: number[];
+  /** Låst: sållas aldrig bort, räknas lika noga som bästa draget */
+  pinned?: boolean;
 }
 
 export interface CandidateResult {
@@ -138,6 +140,12 @@ export interface CandidateResult {
   flRate: number;
   /** Andel simuleringar som slutade i foul */
   foulRate: number;
+  /** Överlevde till slutet (eller var låst) → fullt räknad med stark spelare */
+  finalist: boolean;
+  /** Var låst via `pinned` */
+  pinned: boolean;
+  /** Standardfel för EV-skillnaden mot bästa draget (parvis, samma blandningar). Bara för finalister. */
+  evDiffSE?: number;
 }
 
 export interface EvalInput {
@@ -174,6 +182,16 @@ export function evaluateCandidates(input: EvalInput, cands: Candidate[]): Candid
   const stats = cands.map((c) => ({ c, sum: 0, n: 0, fl: 0, foul: 0, stage: 2, vals: [] as number[] }));
   let alive = stats.slice();
 
+  // Progress 0–100 som aldrig går bakåt. Skickas bara när den ökat minst 1.
+  let last = 0;
+  const report = (p: number) => {
+    const v = Math.min(100, Math.floor(p));
+    if (v >= last + 1) { last = v; onProgress?.(v); }
+  };
+  // Med grovsållning: sållningen får 0–20 %, huvudloopen 20–100 %.
+  const screening = alive.length > SCREEN_KEEP * 2;
+  const mainFrom = screening ? 20 : 0;
+
   const runOne = (st: (typeof stats)[number], i: number) => {
     const deck = scenario(i);
     const r: number[][] = [rows[0].slice(), rows[1].slice(), rows[2].slice()];
@@ -199,10 +217,16 @@ export function evaluateCandidates(input: EvalInput, cands: Candidate[]): Candid
   // oberoende sätt och låt de bästa från BÅDA listorna gå vidare:
   //   a) snabba heuristiska spelaren (försiktig)
   //   b) bästa möjliga slutuppställning givet framtiden (optimistisk)
-  if (alive.length > SCREEN_KEEP * 2) {
+  if (screening) {
+    // Två varv över kandidaterna (a och b) → 2 × antal steg à 0–20 %
+    const steps = alive.length * 2;
+    let done = 0;
     const saved = LA.samples;
     LA.samples = 0;
-    for (const st of alive) for (let i = 0; i < SCREEN_SIMS; i++) runOne(st, i);
+    for (const st of alive) {
+      for (let i = 0; i < SCREEN_SIMS; i++) runOne(st, i);
+      report(20 * ++done / steps);
+    }
     LA.samples = saved;
     const placed = cands[0].assign.filter((x) => x >= 0).length;
     const freeAfter = 13 - rows[0].length - rows[1].length - rows[2].length - placed;
@@ -213,14 +237,15 @@ export function evaluateCandidates(input: EvalInput, cands: Candidate[]): Candid
       let sum = 0;
       for (let i = 0; i < SCREEN_SIMS / 2; i++) sum += bestCompletion(r, scenario(i).slice(0, freeAfter));
       optimistic.set(st, sum);
+      report(20 * ++done / steps);
     }
     const byA = alive.slice().sort((x, y) => y.sum - x.sum).slice(0, SCREEN_KEEP);
     const byB = alive.slice().sort((x, y) => optimistic.get(y)! - optimistic.get(x)!).slice(0, SCREEN_KEEP);
-    const keep = new Set([...byA, ...byB]);
+    const keep = new Set([...byA, ...byB, ...alive.filter((st) => st.c.pinned)]);
     for (const st of alive) st.stage = keep.has(st) ? 2 : 1;
     alive = [...keep];
     for (const st of alive) { st.sum = 0; st.n = 0; st.fl = 0; st.foul = 0; st.vals = []; }
-    onProgress?.(20);
+    report(20);
   }
 
   // Steg 2: stark spelare. Ett drag slås ut först när det är statistiskt
@@ -234,26 +259,48 @@ export function evaluateCandidates(input: EvalInput, cands: Candidate[]): Candid
     return m + 2 * sd / Math.sqrt(n) < 0;
   };
   const timeUp = () => Date.now() - start > maxMs;
+  // Huvudloopens egen andel 0–1: simuleringar gjorda eller tid förbrukad av
+  // den tid som var kvar när loopen började (det som går fortast vinner).
+  const mainStart = Date.now();
+  const mainMs = Math.max(1, maxMs - (mainStart - start));
   let batch = 25;
   while (true) {
     const target = Math.min(maxSims, Math.min(...alive.map((s) => s.n)) + batch);
     for (const st of alive) while (st.n < target && !timeUp()) runOne(st, st.n);
     const n = Math.min(...alive.map((s) => s.n));
-    onProgress?.(Math.min(99, Math.round(Math.max(100 * n / maxSims, 100 * (Date.now() - start) / maxMs))));
-    if (n >= maxSims || alive.length <= 1 || timeUp() || n === 0) break;
+    const own = Math.min(1, Math.max(n / maxSims, (Date.now() - mainStart) / mainMs));
+    report(Math.min(99, mainFrom + (100 - mainFrom) * own));
+    // Ensam kvar = avgjort, utom för låsta drag som alltid räknas klart
+    if (n >= maxSims || (alive.length <= 1 && !alive.some((st) => st.c.pinned)) || timeUp() || n === 0) break;
     let lead = alive[0];
     for (const st of alive) if (mean(st, n) > mean(lead, n)) lead = st;
-    if (n >= 100) alive = alive.filter((st) => st === lead || !worse(st, lead, n));
-    // Tidsspärr: för många jämna kandidater → behåll de 12 bästa
-    if (alive.length > 12 && n >= 100) alive = alive.sort((x, y) => mean(y, n) - mean(x, n)).slice(0, 12);
+    if (n >= 100) alive = alive.filter((st) => st === lead || st.c.pinned || !worse(st, lead, n));
+    // Tidsspärr: för många jämna kandidater → behåll de 12 bästa (låsta räknas inte)
+    if (alive.length > 12 && n >= 100) {
+      const free = alive.filter((st) => !st.c.pinned);
+      if (free.length > 12) alive = [...free.sort((x, y) => mean(y, n) - mean(x, n)).slice(0, 12), ...alive.filter((st) => st.c.pinned)];
+    }
     batch = Math.min(200, Math.ceil(batch * 1.5));
   }
   for (const st of alive) st.stage = 3;
-  onProgress?.(100);
+  report(100);
 
-  return stats
-    .map((s) => ({ stage: s.stage, assign: s.c.assign, ev: s.sum / Math.max(1, s.n), sims: s.n, flRate: s.fl / Math.max(1, s.n), foulRate: s.foul / Math.max(1, s.n) }))
+  const out = stats
+    .map((s) => ({ st: s, stage: s.stage, assign: s.c.assign, ev: s.sum / Math.max(1, s.n), sims: s.n, flRate: s.fl / Math.max(1, s.n), foulRate: s.foul / Math.max(1, s.n), finalist: s.stage === 3, pinned: !!s.c.pinned }))
     .sort((a, b) => b.stage - a.stage || b.sims - a.sims || b.ev - a.ev); // överlevt längst först
+
+  // Precision för finalisterna: standardfelet för skillnaden mot bästa
+  // draget, räknat parvis på samma blandningar (vals[i] = blandning i).
+  const best = out[0].st;
+  return out.map(({ st, ...r }) => {
+    if (!r.finalist) return r;
+    const n = Math.min(st.n, best.n);
+    if (st === best || n < 2) return { ...r, evDiffSE: 0 };
+    let sum = 0, sq = 0;
+    for (let i = 0; i < n; i++) { const d = st.vals[i] - best.vals[i]; sum += d; sq += d * d; }
+    const m = sum / n;
+    return { ...r, evDiffSE: Math.sqrt(Math.max(0, (sq - n * m * m) / (n - 1)) / n) };
+  });
 }
 
 export { freeOf, CAP };

@@ -56,6 +56,8 @@ export default function ScenarioRun({ variant, count, onExit, onRestart }: Scena
   const [genError, setGenError] = useState<string | null>(null);
   const [current, setCurrent] = useState<Scenario | null>(null);
   const [result, setResult] = useState<{ id: string; res: DetailedSolverResult; pinned: boolean } | null>(null);
+  // true medan bedömningen körs om med spelarens drag låst
+  const [rerun, setRerun] = useState(false);
   const [evalError, setEvalError] = useState<string | null>(null);
   const [locked, setLocked] = useState<Move | null>(null);
   const [done, setDone] = useState<ScenarioDone[]>([]);
@@ -102,6 +104,7 @@ export default function ScenarioRun({ variant, count, onExit, onRestart }: Scena
   const { solve: evSolve, cancel: evCancel } = ev;
   const startEval = useCallback(
     (s: Scenario, pin?: Move) => {
+      setRerun(!!pin);
       evSolve({
         board: s.board,
         cards: s.hand,
@@ -201,6 +204,7 @@ export default function ScenarioRun({ variant, count, onExit, onRestart }: Scena
       phase={phase}
       ready={!!result && result.id === current.id}
       progress={ev.progress}
+      rerun={rerun}
       evalError={evalError}
       judgement={phase === 'feedback' ? done[done.length - 1]?.j ?? null : null}
       lockedMove={locked}
@@ -225,6 +229,8 @@ interface StageProps {
   phase: Phase;
   ready: boolean;
   progress: number | null;
+  /** Bedömningen körs om med spelarens drag låst */
+  rerun: boolean;
   evalError: string | null;
   judgement: Judgement | null;
   lockedMove: Move | null;
@@ -234,7 +240,7 @@ interface StageProps {
   onRetryEval: () => void;
 }
 
-function ScenarioStage({ scenario, header, phase, ready, progress, evalError, judgement, lockedMove, onLock, onNext, nextLabel, onRetryEval }: StageProps) {
+function ScenarioStage({ scenario, header, phase, ready, progress, rerun, evalError, judgement, lockedMove, onLock, onNext, nextLabel, onRetryEval }: StageProps) {
   const mb = useMoveBuilder(scenario.board, scenario.hand, scenario.place);
   const playing = phase === 'play';
   const boardRef = useRef<HTMLDivElement>(null);
@@ -247,7 +253,11 @@ function ScenarioStage({ scenario, header, phase, ready, progress, evalError, ju
     dock = evalError ? (
       <EvalError msg={evalError} onRetry={onRetryEval} />
     ) : (
-      <Spinner title="Solvern räknar klart…" sub="Noggrann nivå · ditt drag bedöms strax" progress={progress} />
+      <Spinner
+        title="Solvern räknar klart…"
+        sub={rerun ? 'Räknar om ditt drag lika noga som bästa draget' : 'Noggrann nivå · ditt drag bedöms strax'}
+        progress={progress}
+      />
     );
   } else {
     dock = (

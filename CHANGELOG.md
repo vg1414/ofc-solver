@@ -9,6 +9,13 @@
 - Förberett för solverns kommande `pinned`-fält (`src/training/pinned.ts`, flaggan `SOLVER_HAS_PINNED`)
 - `BoardView`: ny valfri prop `canRemove` (bara kort från aktuellt drag kan tas bort)
 - Ny logik i `src/training/` med tester (`training.test.ts`), nya komponenter i `src/components/training/`. Solver-motorn är orörd
+- **Solvern: låsta drag.** Ny valfri `SolverOptions.pinned` (lista av kompletta drag, `row: 'discard'` = kastas). Låsta drag går alltid vidare från grovsållningen, slås aldrig ut, räknas inte in i 12-taket och simuleras klart på samma blandningar som ledaren. `DetailedPlacementOption` har nya valfria fälten `finalist`, `pinned` och `evDiffSE`. Utan `pinned` blir resultatet identiskt med förut (kontrollerat). `src/training/pinned.ts` har fått den nya formen (flaggan `SOLVER_HAS_PINNED` är fortfarande `false`). Nya tester i `core.test.ts`
+- **Träning: låsta drag påslagna.** `SOLVER_HAS_PINNED = true`: sållades ditt drag bort körs bedömningen om med draget låst, och notisen om osäker EV försvinner. `wasScreenedEarly` använder solverns `finalist` (tumregeln "färre än hälften så många simuleringar" används bara när fältet saknas, t.ex. i Fantasy Land). Väntevyn visar "Räknar om ditt drag lika noga som bästa draget" under omräkningen. Nya tester i `training.test.ts`
+
+## 2026-10-12 — Jämn progress i solvern
+
+- `evaluateCandidates` (`src/core/sim.ts`): progress går nu jämnt och aldrig bakåt. Grovsållningen rapporterar 0–20 % medan den pågår och huvudloopen fortsätter 20–100 % (utan sållning 0–100 % som förut). Samma procent skickas aldrig två gånger i rad. Nytt test i `core.test.ts`
+- `SolverProgress` (`ResultsPanel.tsx`): hacket som visade "högsta värdet hittills" är borttaget, värdet från solvern visas direkt
 
 ## 2026-10-12 — Publicering på GitHub Pages
 
@@ -23,11 +30,11 @@ Hela UI:t är omgjort med samma designspråk som Bokis (gradienter, glaskort, mj
 - **Bara Solvern kvar**: Poängräknare och Bokföring är borttagna (finns i BlackBook)
 - **Nya spelkort** (`PlayingCard`, `SuitIcon`): fyrfärgslek med pastellbakgrund per färg, stor valör, centrerad färgsymbol som vattenstämpel och lätt glans. Symbolerna ritas som SVG (inga emoji-hjärtan på iPhone). Jokern har guldstjärna
 - **Brädet** (`BoardView`) är ett ljust mintfilt-bord. Lediga platser andas i guld när ett kort är valt, korten snäpper på plats, royalties visas live per rad. Tryck på ett lagt kort två gånger för att ta bort det
-- **Dra-och-släpp** (`dnd/`) med pointer events: fungerar med touch och mus, det dragna kortet svävar ovanför fingret
+- **Dra-och-släpp** (`dnd/`) med pointer events: fungerar med touch och mus, det dragna kortet svävar ovanför fingret. Man kan dra kort både till brädet och till "Din hand" (öppningshand och Fantasy Land-hand), som lyser upp i guld när kortet svävar över den
 - **Kortinmatning**: kompakt 4×13-rutnät i en svävande glaspanel längst ner + jokerknapp med räknare (2 jokrar)
 - **Öppningen är inget eget läge längre**: lägena är "Vanlig hand" och "Fantasy Land". Med tomt bräde är det öppningshand: välj upp till 5 kort, "Bästa öppning" + "Lägg så här" lägger ut alla, sedan ett kort i taget. En rad ovanför brädet visar "Öppningshand" / "5 av 13 kort"
 - **Resultat**: förslaget visas som spökkort direkt på brädet. Bästa draget i guldkort med skimrande list och EV som räknas upp; övriga alternativ fälls ut. Öppning/FL visar minibräde med royalties
-- **Progress** med snurrande logga, gradient-bar och Avbryt
+- **Progress** med snurrande logga, gradient-bar och Avbryt. Siffran går aldrig bakåt (se "Jämn progress i solvern")
 - **Inställningsark** (variant, simuleringsnivå, husregler) som stängs med ✕-knappen, svep ner eller tryck utanför
 - Följer telefonens ljusa/mörka läge. Liggande telefon och desktop får två kolumner
 - Nya store-actions `addSelectedCard` / `removeSelectedCardAt` (för två jokrar i handen). Befintliga actions är oförändrade

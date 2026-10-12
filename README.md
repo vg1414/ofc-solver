@@ -23,7 +23,7 @@ En webbaserad solver för Open Face Chinese Poker (OFC) med stöd för hemspels-
 
 ## Träna
 
-- **Scenarion (poängjakt):** riktiga lägen som datorn spelar fram. Lägg dina kort; solvern (Noggrann) bedömer draget. Max 100 p per scenario (100 − EV-förlust × 100), gradering Perfekt / Bra / Miss och en sammanfattning med sämsta beslutet
+- **Scenarion (poängjakt):** riktiga lägen som datorn spelar fram. Lägg dina kort; solvern (Noggrann) bedömer draget. Sållades ditt drag bort tidigt räknas det om, lika noga som bästa draget och på samma kortlekar, så att poängen blir rättvis. Max 100 p per scenario (100 − EV-förlust × 100), gradering Perfekt / Bra / Miss och en sammanfattning med sämsta beslutet
 - **Hel hand mot datorn:** spela 5/10/20 händer med husreglerna, inklusive Fantasy Land. Datorn spelar med solvern. Valfritt coach-läge visar EV-förlusten efter varje drag
 - **Topplistor** sparas lokalt i webbläsaren (topp 10 per läge, variant och antal)
 
@@ -53,6 +53,7 @@ En webbaserad solver för Open Face Chinese Poker (OFC) med stöd för hemspels-
 1. **Vanligt drag / öppningshand:** varje möjlig placering spelas klart hundratals till tusentals gånger. Korten kommer ett i taget och en simulerad spelare placerar dem (`src/core/lookahead.ts`), som för varje kort provar några möjliga framtider. EV = snittpoäng mot en pool av färdigspelade motståndarhänder (`src/core/poolData.ts`), plus värdet av Fantasy Land.
 2. **Fantasy Land:** alla uppställningar gås igenom exakt (`src/core/fl.ts`).
 3. **FL-värde:** uträknat med `scripts/computeFlValue.ts` och sparat i `src/core/flValue.ts`.
+4. **Låsta drag (`options.pinned`):** ett eller flera kompletta drag kan låsas. De sållas aldrig bort och räknas lika noga som bästa draget, på samma blandade kortlekar. Varje svar har `finalist` (räknat till slutet) och, för finalister, `evDiffSE` (standardfelet för EV-skillnaden mot bästa draget, räknat parvis).
 
 ## Teknik
 

@@ -3,8 +3,9 @@
 // ============================================================
 //
 // Layout (mobil, stående):
-//   [Läge: Normal | Öppning | Fantasy Land]
-//   [Bräde (eller "Din hand" i Öppning/FL)]
+//   [Läge: Vanlig hand | Fantasy Land]
+//   [Bräde (eller "Din hand" i FL)]
+//   Öppningen är inget eget läge: tomt bräde = öppningshand (upp till 5 kort).
 //   ─── fast panel längst ner ("dock") ───
 //   [Din hand]  [4×13-rutnät]  [Joker] [Beräkna]
 //   Under beräkning: progress + Avbryt. Efter: resultatlistan.
@@ -137,7 +138,7 @@ export default function SolverView({ simulations }: SolverViewProps) {
 
   const tapCard = (card: Card) => {
     haptic(5);
-    // Öppning / Fantasy Land: bygg en hand
+    // Fantasy Land: bygg en hand
     if (!normal) {
       if (card.kind === 'joker') {
         if (jokersLeft > 0 && !handFull) addSelectedCard(card);
@@ -205,7 +206,26 @@ export default function SolverView({ simulations }: SolverViewProps) {
   const onDrop = useCallback(
     (card: Card, t: DropTarget) => {
       const st = useGameStore.getState();
-      if (st.solverMode !== 'normal') return false;
+
+      // Släppt på "Din hand": lägg till kortet i handen (öppningshand eller FL-hand)
+      if (t.hand) {
+        const fl = st.solverMode === 'fantasyLand';
+        const accepts = fl || (st.solverMode === 'normal' && st.activePlayer === 'me' && countPlaced(st.myBoard) === 0);
+        if (!accepts) return false;
+        const max = fl ? st.flCardCount : 5;
+        if (card.kind === 'card' && st.selectedCards.some((c) => sameCard(c, card))) return false;
+        if (card.kind === 'joker' && st.usedJokers + st.selectedCards.filter((c) => c.kind === 'joker').length >= 2) return false;
+        if (st.selectedCards.length >= max) {
+          setFlash('Handen är full');
+          haptic([4, 30, 4]);
+          return false;
+        }
+        st.addSelectedCard(card);
+        haptic(12);
+        return true;
+      }
+
+      if (st.solverMode !== 'normal' || !t.row) return false;
       const board = st.activePlayer === 'me' ? st.myBoard : st.opponentBoard;
       const slot = t.slot ?? board[t.row].cards.findIndex((c) => c === null);
       if (slot < 0) {
@@ -297,7 +317,7 @@ export default function SolverView({ simulations }: SolverViewProps) {
   const showResults = !!result && !isLoading;
   const resultsScrollRef = useRef<HTMLDivElement>(null);
   const flLabel: Record<FLCardCount, string> = { 13: 'QQ', 14: 'KK', 15: 'AA', 16: 'Triss' };
-  const runLabel = normal ? (placed === 0 && handCards.length > 1 ? 'Bästa öppning' : 'Beräkna bästa drag') : solverMode === 'opening' ? 'Analysera öppning' : 'Lös Fantasy Land';
+  const runLabel = normal ? (placed === 0 && handCards.length > 1 ? 'Bästa öppning' : 'Beräkna bästa drag') : 'Lös Fantasy Land';
   const needed = solverMode === 'fantasyLand' ? flCardCount : 5;
 
   const hint = (() => {
@@ -328,8 +348,7 @@ export default function SolverView({ simulations }: SolverViewProps) {
             }}
             disabled={isLoading}
             options={[
-              { value: 'normal', label: 'Normal' },
-              { value: 'opening', label: 'Öppning' },
+              { value: 'normal', label: 'Vanlig hand' },
               { value: 'fantasyLand', label: 'Fantasy Land' },
             ]}
           />
@@ -375,6 +394,11 @@ export default function SolverView({ simulations }: SolverViewProps) {
                 </button>
               </div>
 
+              {onMine && (
+                <div className="px-1 -mb-1">
+                  <span className="eyebrow">{placed === 0 ? 'Öppningshand' : placed === 13 ? 'Klar hand' : `${placed} av 13 kort`}</span>
+                </div>
+              )}
               <div ref={boardWrapRef}>
               <BoardView
                 key={activePlayer}
@@ -457,7 +481,7 @@ export default function SolverView({ simulations }: SolverViewProps) {
               )}
               <div className="glass rounded-[24px] p-4">
                 <div className="mb-2.5 flex items-baseline justify-between">
-                  <h2 className="title-serif text-[21px]">{solverMode === 'opening' ? 'Din öppningshand' : 'Din Fantasy Land-hand'}</h2>
+                  <h2 className="title-serif text-[21px]">Din Fantasy Land-hand</h2>
                   <span className="text-[12px] font-bold tabular text-ink-3">
                     {selectedCards.length}/{needed}
                   </span>
@@ -466,8 +490,9 @@ export default function SolverView({ simulations }: SolverViewProps) {
                   cards={selectedCards}
                   capacity={needed}
                   onTapCard={tapHandCard}
+                  dropZone
                   wrap
-                  cardWidth={solverMode === 'opening' ? 'min(58px, calc((100vw - 80px) / 5))' : 'min(44px, calc((100vw - 100px) / 8))'}
+                  cardWidth="min(44px, calc((100vw - 100px) / 8))"
                 />
                 <div className="mt-2.5 flex items-center justify-between text-[11px] text-ink-3">
                   <span>Tryck på ett kort för att ta bort det</span>
@@ -536,12 +561,13 @@ export default function SolverView({ simulations }: SolverViewProps) {
                           capacity={trayActive ? trayCapacity : 1}
                           heldIndex={selectedCard ? handCards.findIndex((c) => sameCard(c, selectedCard)) : -1}
                           draggable
+                          dropZone={trayActive && placed === 0}
                           onTapCard={tapHandCard}
                           cardWidth="32px"
                         />
                       )}
                       {normal && handCards.length === 0 && placed === 0 && onMine && (
-                        <HandTray cards={[]} capacity={5} onTapCard={() => {}} cardWidth="32px" />
+                        <HandTray cards={[]} capacity={5} onTapCard={() => {}} cardWidth="32px" dropZone />
                       )}
                       {!normal && selectedCards.length > 0 && (
                         <div className="flex -space-x-3">
@@ -558,7 +584,7 @@ export default function SolverView({ simulations }: SolverViewProps) {
                       </span>
                     </div>
 
-                    <CardGrid stateOf={stateOf} onTap={tapCard} draggable={normal} />
+                    <CardGrid stateOf={stateOf} onTap={tapCard} draggable />
 
                     {error && (
                       <div className="rounded-2xl bg-danger-soft px-3.5 py-2.5 text-[13px] font-semibold text-danger animate-fade-in">{error}</div>
@@ -568,7 +594,7 @@ export default function SolverView({ simulations }: SolverViewProps) {
                       <JokerButton
                         left={Math.max(0, jokersLeft)}
                         state={normal && heldIsJoker && !trayActive ? 'held' : 'free'}
-                        draggable={normal && !trayActive}
+                        draggable
                         onTap={tapCard}
                       />
                       <button

@@ -3,13 +3,14 @@
 // ============================================================
 import { describe, it, expect } from 'vitest';
 import { rowValues, settle, royaltyOf, catOf, scoreVs, flEntryCards, qualifiesRepeat,
-  HC, PAIR, STRAIGHT, FLUSH, FIVE_KIND, ROYAL, STRAIGHT_FLUSH } from './eval';
+  HC, PAIR, STRAIGHT, FLUSH, FIVE_KIND, ROYAL, STRAIGHT_FLUSH, toInt } from './eval';
 import { solveFantasyLand } from './fl';
-import { opponentPool } from './sim';
+import { opponentPool, evaluateCandidates } from './sim';
 import { parseCard } from '../engine/card';
 import { createEmptyBoard } from '../engine/types';
-import type { Board } from '../engine/types';
-import { solveFromBoard } from '../solver/solver';
+import type { Board, RowName } from '../engine/types';
+import { solveFromBoard, solveOpeningHand } from '../solver/solver';
+import type { PinnedMove } from '../solver/solver';
 
 const R = '23456789TJQKA', S = 'cdhs';
 let jk = 0;
@@ -127,5 +128,72 @@ describe('solvern', () => {
     const bd = board('2c 7d', '9s 9d', 'Ah Jh 8h 4h');
     const r = solveFromBoard(bd, [parseCard('3h')], [], 'regular', { simulations: 800 });
     expect(r.best.primaryRow).toBe('bottom');
+  });
+});
+
+describe('progress', () => {
+  it('går aldrig bakåt och slutar på 100 (öppningshand med grovsållning)', () => {
+    const seen: number[] = [];
+    const cards = 'Ah Kd 7c 7s 2h'.split(' ').map((x) => parseCard(x));
+    solveOpeningHand(cards, [], { simulations: 100, maxMs: 4000, onProgress: (p) => seen.push(p) });
+    expect(seen.length).toBeGreaterThan(2);
+    for (let i = 1; i < seen.length; i++) expect(seen[i]).toBeGreaterThan(seen[i - 1]);
+    expect(seen.some((p) => p > 0 && p < 20)).toBe(true); // rapporterar under sållningen
+    expect(seen[seen.length - 1]).toBe(100);
+  });
+});
+
+describe('låsta drag (pinned)', () => {
+  const cards = 'Ah Kd 7c 7s 2h'.split(' ').map((x) => parseCard(x));
+  // Uppenbart dåligt: paret delas, A och K på toppen
+  const rows: RowName[] = ['top', 'top', 'middle', 'bottom', 'middle'];
+  const bad: PinnedMove = cards.map((card, k) => ({ card, row: rows[k] }));
+  const sameMove = (o: { placements: { row: RowName }[] }) => o.placements.every((p, k) => p.row === rows[k]);
+
+  it('dåligt låst drag räknas lika noga som bästa draget, och nära en separat körning', () => {
+    const r = solveOpeningHand(cards, [], { simulations: 300, maxMs: 60000, pinned: [bad] });
+    const mine = r.options.find((o) => o.pinned)!;
+    expect(sameMove(mine)).toBe(true);
+    expect(mine.finalist).toBe(true);
+    expect(mine.simulations).toBe(r.best.simulations);
+    expect(mine.ev).toBeLessThan(r.best.ev);
+    expect(r.best.evDiffSE).toBe(0);
+    expect(mine.evDiffSE!).toBeGreaterThan(0);
+    // Separat körning med bara det draget (samma blandningar, frö i sim.ts)
+    const hand = cards.map((c) => toInt(c));
+    const unseen = Array.from({ length: 54 }, (_, i) => i).filter((i) => !hand.includes(i));
+    const alone = evaluateCandidates(
+      { rows: [[], [], []], hand, unseen, variant: 'regular', maxSims: 300, maxMs: 60000 },
+      [{ assign: rows.map((x) => ['top', 'middle', 'bottom'].indexOf(x)), pinned: true }],
+    )[0];
+    expect(alone.sims).toBe(mine.simulations);
+    expect(Math.abs(alone.ev - mine.ev)).toBeLessThan(1);
+  }, 120000);
+
+  it('utan pinned: inga låsta, finalist-flaggan finns', () => {
+    const bd = board('2c 7d', '9s 9d', 'Ah Jh 8h 4h');
+    const r = solveFromBoard(bd, [parseCard('3h')], [], 'regular', { simulations: 200 });
+    expect(r.options.some((o) => o.pinned)).toBe(false);
+    expect(r.best.finalist).toBe(true);
+    expect(r.options.every((o) => typeof o.finalist === 'boolean')).toBe(true);
+  });
+
+  it('Pineapple: låst drag med kast följer med till slutet', () => {
+    const bd = board('2c 7d', '9s 9d 5c', 'Ah Jh 8h 4h');
+    const hand = '3h Kc Qs'.split(' ').map((x) => parseCard(x));
+    const pin: PinnedMove = [{ card: hand[0], row: 'top' }, { card: hand[1], row: 'middle' }, { card: hand[2], row: 'discard' }];
+    const r = solveFromBoard(bd, hand, [], 'pineapple', { simulations: 200, maxMs: 30000, pinned: [pin] });
+    const mine = r.options.find((o) => o.pinned)!;
+    expect(mine.discards).toEqual([hand[2]]);
+    expect(mine.finalist).toBe(true);
+    expect(mine.simulations).toBe(r.best.simulations);
+  }, 60000);
+
+  it('ogiltigt låst drag ger tydligt fel', () => {
+    const bd = board('2c 7d', '9s 9d', 'Ah Jh 8h 4h');
+    expect(() => solveFromBoard(bd, [parseCard('3h')], [], 'regular', { pinned: [[{ card: parseCard('4h'), row: 'bottom' }]] })).toThrow();
+    // Raden är full
+    const full = board('2c 7d', '9s 9d', 'Ah Jh 8h 4h 5h');
+    expect(() => solveFromBoard(full, [parseCard('3h')], [], 'regular', { pinned: [[{ card: parseCard('3h'), row: 'bottom' }]] })).toThrow();
   });
 });
