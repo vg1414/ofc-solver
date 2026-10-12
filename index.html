@@ -22,8 +22,14 @@
       rel="stylesheet"
     />
     <title>OFC Solver</title>
+    <!-- Splashens bakgrund syns direkt, innan JavaScript har laddats (animationen: src/splash/) -->
+    <style>
+      #splash { position: fixed; inset: 0; z-index: 9999; background: #fbf7f1; }
+      @media (prefers-color-scheme: dark) { #splash { background: #12100e; } }
+    </style>
   </head>
   <body>
+    <div id="splash" aria-hidden="true"></div>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

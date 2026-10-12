@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="sv">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="color-scheme" content="light dark" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Outfit:wght@400;500;600;700;800&family=Playfair+Display:wght@700;800&display=swap"
+      rel="stylesheet"
+    />
+    <title>Splash-demo — OFC</title>
+    <!-- Bara för utveckling: körs med npm run dev på /splash-demo.html. Byggs inte med appen. -->
+    <style>
+      .demo-bar {
+        position: fixed; left: 0; right: 0; bottom: 0; z-index: 10000;
+        display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; align-items: center;
+        padding: 10px 16px calc(10px + env(safe-area-inset-bottom));
+        background: rgba(30, 24, 20, 0.82); backdrop-filter: blur(8px);
+        font: 600 0.85rem Outfit, system-ui, sans-serif; color: #fff;
+      }
+      .demo-bar button { border: 0; border-radius: 999px; padding: 7px 14px; font: inherit; cursor: pointer; background: rgba(255,255,255,0.14); color: #fff; }
+      .demo-bar label { display: flex; align-items: center; gap: 6px; }
+      .demo-bar input[type=range] { width: 110px; }
+      .demo-bar output { min-width: 3.4em; font-variant-numeric: tabular-nums; }
+    </style>
+  </head>
+  <body>
+    <div id="splash" data-demo="1" aria-hidden="true"></div>
+    <div class="demo-bar">
+      <button id="play">Spela igen</button>
+      <label>Tempo <input id="k" type="range" min="0.6" max="2" step="0.05" value="1" /><output id="kv">1.00</output></label>
+      <label>Tid <input id="seek" type="range" min="0" max="5400" step="10" value="0" /><output id="sv">0</output></label>
+    </div>
+    <script type="module">
+      import './src/index.css';
+      import { runSplash, T } from './src/splash/splash.ts';
+      const splash = document.getElementById('splash');
+      const k = document.getElementById('k');
+      const seek = document.getElementById('seek');
+      seek.max = T.end;
+      let ctl;
+      const start = () => {
+        splash.style.setProperty('--splash-k', k.value);
+        ctl = runSplash(splash, { demo: true });
+      };
+      document.getElementById('play').onclick = start;
+      k.oninput = () => { document.getElementById('kv').textContent = (+k.value).toFixed(2); start(); };
+      seek.oninput = () => { document.getElementById('sv').textContent = seek.value; ctl.seek(+seek.value); };
+      start();
+    </script>
+  </body>
+</html>
