@@ -10,7 +10,8 @@
 //
 //  - Datorns tur: en effekt startar solvern (Normal, 3 s max) i en egen
 //    worker, lägger draget och går vidare efter en kort paus så att man
-//    hinner se korten landa.
+//    hinner se korten landa. Solverns foul-risk och FL-chans för draget
+//    visas bredvid "Datorn" (samma mätare som för dig).
 //  - Din tur: du lägger korten och trycker Klar.
 //  - Coach-läge: en tredje worker bedömer varje drag du gör (Normal-nivå)
 //    i en kö. Resultatet dyker upp som en liten bricka när det är klart,
@@ -32,7 +33,6 @@ import type { SolverOptions } from '../../solver/solver';
 import {
   CPU_OPTIONS,
   applyToSeat,
-  computerMove,
   newDeck,
   newSeat,
   settleHand,
@@ -125,6 +125,8 @@ export default function HandRun({ variant, settings, active = true, onExit, onRe
   const [coachLog, setCoachLog] = useState<CoachEntry[]>([]);
   const [toast, setToast] = useState<CoachEntry | null>(null);
   const [review, setReview] = useState<CoachEntry | null>(null);
+  /** Datorns foul-risk och FL-chans efter dess senaste drag */
+  const [cpuRisk, setCpuRisk] = useState<{ hand: number; foul: number | null; fl: number | null } | null>(null);
   /** Foul-risk och FL-chans efter ditt senaste drag (null = räknar) */
   const [risk, setRisk] = useState<{ key: string; hand: number; foul: number | null; fl: number | null } | null>(null);
   const [cpuError, setCpuError] = useState<string | null>(null);
@@ -149,18 +151,26 @@ export default function HandRun({ variant, settings, active = true, onExit, onRe
     let alive = true;
     let finished = false;
     setCpuError(null);
-    computerMove(cpuSolve, {
-      seat: h.seats[1],
-      cards: h.dealt,
-      variant,
-      opponent: h.seats[0].fl > 0 ? undefined : h.seats[0].board,
-      fl: turn.fl,
-      options: CPU_OPTIONS,
-    })
-      .then(async (move) => {
+    const lastMove = countPlaced(h.seats[1].board) + turn.place >= 13;
+    cpuSolve(
+      solverInput({
+        seat: h.seats[1],
+        cards: h.dealt,
+        variant,
+        opponent: h.seats[0].fl > 0 ? undefined : h.seats[0].board,
+        fl: turn.fl,
+        options: CPU_OPTIONS,
+      }),
+    )
+      .then(async (res) => {
         finished = true;
+        const b = res.best;
+        const move: Move = { placements: b.placements.map((p) => ({ ...p })), discards: [...b.discards] };
         await new Promise((r) => setTimeout(r, CPU_PAUSE_MS));
-        if (alive) setH((prev) => (prev.no === h.no && prev.idx === h.idx ? played(prev, 1, move) : prev));
+        if (!alive) return;
+        // Datorns risk efter draget (inte i FL eller när brädet är fullt)
+        if (!turn.fl && !lastMove) setCpuRisk({ hand: h.no, foul: b.foulProbability ?? null, fl: b.flProbability ?? null });
+        setH((prev) => (prev.no === h.no && prev.idx === h.idx ? played(prev, 1, move) : prev));
       })
       .catch((e: Error) => {
         finished = true;
@@ -367,9 +377,10 @@ export default function HandRun({ variant, settings, active = true, onExit, onRe
         <HandStrip records={records} onOpen={() => setScoreOpen(true)} />
 
         {/* Datorns bräde */}
-        <div className="flex items-center gap-2 px-1 -mb-1">
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 px-1 -mb-1">
           <span className="eyebrow">Datorn</span>
           {h.seats[1].fl > 0 && <FlChip n={h.seats[1].fl} />}
+          {cpuRisk && cpuRisk.hand === h.no && !h.outcome && !hidden && cpuRisk.foul !== null && <RiskMeter foul={cpuRisk.foul} fl={cpuRisk.fl} />}
           {cpuThinking && <span className="think text-accent-ink" aria-label="Datorn tänker"><span /><span /><span /></span>}
           {h.first === 1 && <span className="ml-auto text-[10.5px] font-bold text-ink-3">börjar</span>}
         </div>
@@ -433,7 +444,7 @@ export default function HandRun({ variant, settings, active = true, onExit, onRe
   );
 }
 
-/** Löpande foul-risk och FL-chans för ditt bräde efter senaste draget */
+/** Löpande foul-risk och FL-chans för ett bräde efter senaste draget (ditt eller datorns) */
 function RiskMeter({ foul, fl }: { foul: number | null; fl: number | null }) {
   const pct = (p: number) => `${Math.round(p * 100)} %`;
   if (foul === null && fl === null) {
@@ -447,7 +458,7 @@ function RiskMeter({ foul, fl }: { foul: number | null; fl: number | null }) {
   const f = foul ?? 0;
   const danger = f >= 0.25;
   return (
-    <span className="flex items-center gap-1 animate-badge-in" aria-live="polite" title="Räknat från ditt bräde efter senaste draget">
+    <span className="flex items-center gap-1 animate-badge-in" aria-live="polite" title="Räknat från brädet efter senaste draget">
       <span
         className={`flex items-center gap-1 rounded-full px-2 py-[1px] text-[10.5px] font-extrabold tabular ${danger ? 'bg-danger-soft text-danger' : 'bg-sunken text-ink-2'}`}
       >

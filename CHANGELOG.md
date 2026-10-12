@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-10-12 — Hel hand: foul/FL-mätare även för datorn
+
+- Bredvid "Datorn" visas nu foul-risk och FL-chans efter varje datordrag, samma mätare som för dig. Siffrorna kommer direkt från solverns beräkning av datorns valda drag, så det kostar ingen extra räkning. Döljs när datorn spelar Fantasy Land (brädet är dolt) och när brädet är fullt
+
 ## 2026-10-12 — Hel hand: sessioner, ställning, bättre coach och foul/FL-mätare
 
 - **Sessioner** (`src/training/session.ts`): välj längd som antal händer (5/10/20 eller eget 1–99), minuter (10/20/30 eller eget 5–180) eller fritt spel. I tidsläget räknas klockan ner i toppraden och står still när appen inte syns. Handen som pågår spelas alltid klart
