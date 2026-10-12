@@ -41,6 +41,8 @@ const BUFFER = 2;
 
 interface ScenarioRunProps {
   variant: GameVariant;
+  /** Jokerträning: minst en joker i handen i varje scenario */
+  jokers?: boolean;
   count: number;
   onExit: () => void;
   onRestart: () => void;
@@ -48,7 +50,7 @@ interface ScenarioRunProps {
 
 type Phase = 'loading' | 'play' | 'judging' | 'feedback' | 'summary';
 
-export default function ScenarioRun({ variant, count, onExit, onRestart }: ScenarioRunProps) {
+export default function ScenarioRun({ variant, jokers = false, count, onExit, onRestart }: ScenarioRunProps) {
   const gen = useSolverJobs();
   const ev = useSolverJobs();
 
@@ -79,7 +81,7 @@ export default function ScenarioRun({ variant, count, onExit, onRestart }: Scena
           continue;
         }
         try {
-          const s = await generateScenario(genSolve, variant, isAlive);
+          const s = await generateScenario(genSolve, variant, isAlive, Math.random, { jokers });
           if (!alive) return;
           made.current++;
           bufLen.current++;
@@ -98,7 +100,7 @@ export default function ScenarioRun({ variant, count, onExit, onRestart }: Scena
       wake.current?.();
       genCancel();
     };
-  }, [count, variant, genSolve, genCancel]);
+  }, [count, variant, jokers, genSolve, genCancel]);
 
   // ---------- Bedömning ----------
   const { solve: evSolve, cancel: evCancel } = ev;
@@ -168,7 +170,7 @@ export default function ScenarioRun({ variant, count, onExit, onRestart }: Scena
   const shownTotal = useCountUp(total);
 
   if (phase === 'summary') {
-    return <ScenarioSummary done={done} variant={variant} count={count} onRestart={onRestart} onExit={onExit} />;
+    return <ScenarioSummary done={done} mode={jokers ? 'joker' : 'scenario'} variant={variant} count={count} onRestart={onRestart} onExit={onExit} />;
   }
 
   const header = (

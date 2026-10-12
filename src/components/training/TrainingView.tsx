@@ -32,7 +32,7 @@ function loadConfig(): Config {
   try {
     const v = JSON.parse(localStorage.getItem(CFG_KEY) ?? '{}') as Partial<Config>;
     return {
-      mode: v.mode === 'hand' ? 'hand' : 'scenario',
+      mode: v.mode === 'hand' || v.mode === 'joker' ? v.mode : 'scenario',
       count: COUNTS.includes(v.count as 5) ? (v.count as number) : def.count,
       coach: typeof v.coach === 'boolean' ? v.coach : def.coach,
     };
@@ -62,8 +62,8 @@ export default function TrainingView() {
   const exit = () => setRunning(null);
 
   if (running) {
-    return cfg.mode === 'scenario' ? (
-      <ScenarioRun key={running.id} variant={running.variant} count={cfg.count} onExit={exit} onRestart={start} />
+    return cfg.mode !== 'hand' ? (
+      <ScenarioRun key={running.id} variant={running.variant} jokers={cfg.mode === 'joker'} count={cfg.count} onExit={exit} onRestart={start} />
     ) : (
       <HandRun key={running.id} variant={running.variant} count={cfg.count} coach={cfg.coach} onExit={exit} onRestart={start} />
     );
@@ -85,7 +85,7 @@ function Setup({
   setVariant: (v: GameVariant) => void;
   onStart: () => void;
 }) {
-  const scen = cfg.mode === 'scenario';
+  const scen = cfg.mode !== 'hand';
   const entries = loadBoard(boardKey(cfg.mode, variant, cfg.count));
   const unit = scen ? 'scenarion' : 'händer';
 
@@ -107,13 +107,24 @@ function Setup({
           }}
           options={[
             { value: 'scenario', label: 'Scenarion' },
+            { value: 'joker', label: '★ Joker' },
             { value: 'hand', label: 'Hel hand' },
           ]}
         />
 
         {/* Beskrivning av läget */}
         <div key={cfg.mode} className="glass rounded-[24px] p-4 animate-fade-in">
-          {scen ? (
+          {cfg.mode === 'joker' ? (
+            <>
+              <div className="font-serif text-[18px] font-extrabold text-ink">Jokerträning</div>
+              <ul className="mt-1.5 flex flex-col gap-1 text-[13px] text-ink-2">
+                <li>• Varje scenario har minst en joker i handen — ibland båda.</li>
+                <li>• Blandat: öppningshänder och drag mitt i handen, riktiga bräden.</li>
+                <li>• Var gör jokern mest nytta: draw, Fantasy Land eller säkerhet?</li>
+                <li>• Samma poäng som Scenarion (max 100 p), egen topplista.</li>
+              </ul>
+            </>
+          ) : scen ? (
             <>
               <div className="font-serif text-[18px] font-extrabold text-ink">Poängjakt</div>
               <ul className="mt-1.5 flex flex-col gap-1 text-[13px] text-ink-2">
@@ -201,7 +212,7 @@ function Setup({
         <div className="mb-1.5 flex items-baseline justify-between px-1">
           <h2 className="title-serif text-[21px]">Topplista</h2>
           <span className="text-[11px] font-bold text-ink-3">
-            {cfg.count} {unit} · {variant === 'regular' ? 'Vanlig' : 'Pineapple'}
+            {cfg.mode === 'joker' ? '★ Joker · ' : ''}{cfg.count} {unit} · {variant === 'regular' ? 'Vanlig' : 'Pineapple'}
           </span>
         </div>
         <Leaderboard entries={entries} format={(s) => (scen ? `${s} p` : `${s > 0 ? '+' : ''}${s}`)} />

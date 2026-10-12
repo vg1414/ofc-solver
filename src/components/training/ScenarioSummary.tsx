@@ -10,7 +10,7 @@ import { useState } from 'react';
 import type { GameVariant } from '../../engine/types';
 import { GRADE_LABEL, type Grade, type Judgement, type Move } from '../../training/moves';
 import { scenarioLabel, type Scenario } from '../../training/scenarios';
-import { boardKey } from '../../training/leaderboard';
+import { boardKey, type TrainingMode } from '../../training/leaderboard';
 import { useLeaderboardRun } from '../../training/useLeaderboardRun';
 import BottomSheet from '../ui/BottomSheet';
 import Footer from '../layout/Footer';
@@ -29,13 +29,14 @@ export interface ScenarioDone {
 
 interface Props {
   done: ScenarioDone[];
+  mode: TrainingMode;
   variant: GameVariant;
   count: number;
   onRestart: () => void;
   onExit: () => void;
 }
 
-export default function ScenarioSummary({ done, variant, count, onRestart, onExit }: Props) {
+export default function ScenarioSummary({ done, mode, variant, count, onRestart, onExit }: Props) {
   const total = done.reduce((n, d) => n + d.j.points, 0);
   const max = count * 100;
   const shown = useCountUp(total, 1200, 0);
@@ -47,14 +48,14 @@ export default function ScenarioSummary({ done, variant, count, onRestart, onExi
   const worst = done[worstIdx];
   const [review, setReview] = useState<number | null>(null);
 
-  const lb = useLeaderboardRun(boardKey('scenario', variant, count), total, true);
+  const lb = useLeaderboardRun(boardKey(mode, variant, count), total, true);
 
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-3 pb-4">
       {/* Totalpoäng */}
       <div className="glass relative overflow-hidden rounded-[28px] p-5 text-center animate-rise-in">
         <div className="gold-strip absolute inset-x-0 top-0" />
-        <div className="eyebrow inline-block">Omgången klar · {variant === 'regular' ? 'Vanlig' : 'Pineapple'}</div>
+        <div className="eyebrow inline-block">{mode === 'joker' ? 'Jokerträning' : 'Omgången klar'} · {variant === 'regular' ? 'Vanlig' : 'Pineapple'}</div>
         <div className="mt-2 font-serif text-[64px] font-extrabold leading-none tabular text-gold">{Math.round(shown)}</div>
         <div className="mt-1 text-[13px] font-bold text-ink-3 tabular">av {max} poäng</div>
         <div className="mx-auto mt-3 h-2.5 max-w-[320px] overflow-hidden rounded-full bg-sunken">
@@ -113,7 +114,7 @@ export default function ScenarioSummary({ done, variant, count, onRestart, onExi
       <div className="glass rounded-[24px] p-3.5 animate-rise-in" style={{ animationDelay: '0.2s' }}>
         <div className="mb-1.5 flex items-baseline justify-between px-1">
           <h2 className="title-serif text-[21px]">Topplista</h2>
-          <span className="text-[11px] font-bold text-ink-3">{count} scenarion · {variant === 'regular' ? 'Vanlig' : 'Pineapple'}</span>
+          <span className="text-[11px] font-bold text-ink-3">{mode === 'joker' ? '★ Joker · ' : ''}{count} scenarion · {variant === 'regular' ? 'Vanlig' : 'Pineapple'}</span>
         </div>
         <Leaderboard entries={lb.entries} highlightId={lb.highlightId} format={(s) => `${s} p`} />
       </div>

@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-10-12 — Jokerträning
+
+- **Nytt läge "★ Joker"** i Träna-fliken (bredvid Scenarion och Hel hand) med egen topplista. Varje scenario har minst en joker i handen, ungefär var tredje hand med plats för det får båda. Blandat öppningshänder och drag mitt i handen
+- Generatorn (`placeJokers` i `src/training/scenarios.ts`) flyttar jokrarna till de platser i leken där din hand delas ut, innan datorn spelar fram brädena — så lägena är lika realistiska som vanliga scenarion
+- Nytt test i `training.test.ts`
+
 ## 2026-10-12 — Träningsläge: "Träna"-flik med scenarion och hela händer mot datorn
 
 - **Ny flik "Träna"** bredvid Solvern (flikar i sidhuvudet). Träningen monteras först när fliken öppnas och ligger sedan kvar, så en pågående omgång inte försvinner

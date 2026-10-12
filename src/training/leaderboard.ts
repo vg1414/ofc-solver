@@ -9,7 +9,7 @@
 
 import type { GameVariant } from '../engine/types';
 
-export type TrainingMode = 'scenario' | 'hand';
+export type TrainingMode = 'scenario' | 'joker' | 'hand';
 
 export interface LeaderboardEntry {
   id: string;

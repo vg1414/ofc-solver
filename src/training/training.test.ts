@@ -166,3 +166,19 @@ describe('visningsordning', () => {
     expect(s.options.map((o) => o.rank)).toEqual([1, 2, 3]);
   });
 });
+
+describe('jokerträning', () => {
+  it('placeJokers flyttar jokrar till handens platser', async () => {
+    const { placeJokers } = await import('./scenarios');
+    const { buildDeck } = await import('../engine/deck');
+    const deck = buildDeck(); // jokrarna ligger sist (52, 53)
+    placeJokers(deck, 10, 2);
+    expect(deck[10].kind).toBe('joker');
+    expect(deck[11].kind).toBe('joker');
+    expect(deck.filter((c) => c.kind === 'joker')).toHaveLength(2);
+    const d2 = buildDeck();
+    placeJokers(d2, 0, 1);
+    expect(d2[0].kind).toBe('joker');
+    expect(d2.filter((c) => c.kind === 'joker')).toHaveLength(2);
+  });
+});

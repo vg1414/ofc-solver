@@ -10,6 +10,10 @@
 //      motståndarens — med solvern (snabb nivå). Då ser brädena ut som
 //      i ett riktigt parti: par i botten, draws, ibland en svag topp.
 //   4. Korten du får = nästa kort i leken.
+// Jokerläget: innan datorn börjar flyttas en joker (ibland båda) till de
+// platser i leken där din hand kommer att delas ut. Allt annat är som
+// vanligt, så brädena ser lika realistiska ut. Den andra jokern ligger
+// kvar slumpvis — ibland har någon redan fått den på brädet.
 // Triviala lägen (bara en rad ledig för ett kort) slängs och görs om.
 // ============================================================
 
@@ -51,6 +55,21 @@ function pickRound(variant: GameVariant, rand: () => number): number {
 
 let seq = 0;
 
+/** Flytta `want` jokrar till lekens platser start … start+want-1 */
+export function placeJokers(deck: Card[], start: number, want: number): void {
+  for (let k = 0; k < want; k++) {
+    const at = start + k;
+    if (deck[at].kind === 'joker') continue;
+    const j = deck.findIndex((c, i) => c.kind === 'joker' && (i < start || i > at));
+    if (j >= 0) [deck[at], deck[j]] = [deck[j], deck[at]];
+  }
+}
+
+export interface ScenarioOptions {
+  /** Jokerträning: minst en joker i handen */
+  jokers?: boolean;
+}
+
 /**
  * Spela fram ett scenario. `alive()` kollas mellan dragen så att
  * genereringen kan avbrytas direkt (t.ex. när du lämnar träningen).
@@ -60,6 +79,7 @@ export async function generateScenario(
   variant: GameVariant,
   alive: () => boolean = () => true,
   rand: () => number = Math.random,
+  opts: ScenarioOptions = {},
 ): Promise<Scenario> {
   for (let attempt = 0; attempt < 5; attempt++) {
     const deck = newDeck();
@@ -68,6 +88,12 @@ export async function generateScenario(
     const turns = turnOrder(variant, first);
     const stopRound = pickRound(variant, rand);
     const stop = turns.findIndex((t) => t.seat === 0 && t.round === stopRound);
+    if (opts.jokers) {
+      const start = turns.slice(0, stop).reduce((n, t) => n + t.count, 0);
+      const size = turns[stop].count;
+      // Ungefär var tredje hand med plats för det får båda jokrarna
+      placeJokers(deck, start, size >= 2 && rand() < 0.3 ? 2 : 1);
+    }
     const seats: [Seat, Seat] = [newSeat(), newSeat()];
 
     for (let i = 0; i < stop; i++) {
