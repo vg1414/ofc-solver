@@ -161,33 +161,23 @@
   color: #fffdf9;
 }
 
-/* Ringarna: en kraftig vid klicket (.sp-burst), sedan lugna pulser */
-.sp-ring {
-  width: calc(var(--s) * 0.7);
-  height: calc(var(--s) * 0.7);
-  margin: calc(var(--s) * -0.35) 0 0 calc(var(--s) * -0.35);
-  border-radius: 50%;
-  border: 2px solid var(--accent);
+/* Färgsymbolerna som sprutar ut ur leken vid klicket (♠♥♦♣) */
+.sp-spark {
+  width: calc(var(--s) * 0.09);
+  height: calc(var(--s) * 0.09);
+  margin: calc(var(--s) * -0.045) 0 0 calc(var(--s) * -0.045);
   opacity: 0;
 }
-.sp-burst {
-  border-width: 3px;
-}
 
-/* ---------- Text under scenen ---------- */
+/* ---------- Rubriken: kort som snäpper fast och löses upp till text ---------- */
 .sp-text {
   position: relative;
-  height: 4rem;
   width: 100%;
-  text-align: center;
-  margin-top: 0.4rem;
-}
-.sp-text > * {
-  position: absolute;
-  inset-inline: 0;
+  height: 4.5rem;
+  display: grid;
+  place-items: center;
 }
 .sp-title {
-  top: 0;
   margin: 0;
   font-family: var(--font-serif);
   font-weight: 800;
@@ -196,16 +186,51 @@
   letter-spacing: -0.01em;
   color: var(--ink);
 }
-.sp-title span {
-  background: var(--grad);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
+.sp-ch {
+  display: inline-block;
+  opacity: 0;
 }
-/* Rubriken avtäcks av ett lutande penndrag (--wipe sätts från JS) */
-.sp-title {
-  -webkit-mask-image: linear-gradient(105deg, #000 calc(var(--wipe, -25%) - 12%), transparent calc(var(--wipe, -25%) + 12%));
-  mask-image: linear-gradient(105deg, #000 calc(var(--wipe, -25%) - 12%), transparent calc(var(--wipe, -25%) + 12%));
+.sp-letters {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.sp-lt {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: var(--lw);
+  height: calc(var(--lw) * 1.4);
+  margin: calc(var(--lw) * -0.7) 0 0 calc(var(--lw) * -0.5);
+  font-size: var(--lw);
+  opacity: 0;
+  will-change: transform, opacity;
+}
+.sp-lt .sp-front {
+  display: grid;
+  place-items: center;
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: inset 0 0 0 1px var(--line-strong), var(--shadow-card);
+}
+.sp-lt .sp-front span {
+  /* Exakt samma typsnitt och storlek som rubriken, så bytet syns inte */
+  position: relative;
+  z-index: 1;
+  font-family: var(--font-serif);
+  font-weight: 800;
+  font-size: var(--tfs);
+  line-height: 1.1;
+}
+/* Liten färgsymbol i hörnet, som på ett riktigt spelkort */
+.sp-lt .sp-front svg {
+  position: absolute;
+  right: 0.07em;
+  bottom: 0.07em;
+  width: 0.22em;
+  height: 0.22em;
+  color: var(--fg);
+  opacity: 0.6;
 }
 
 @media (prefers-reduced-motion: reduce) {

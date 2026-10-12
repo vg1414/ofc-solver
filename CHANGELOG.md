@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-10-12 — Splash: rubriken delas ut som kort
+
+- "OFC Solver" skrivs inte längre fram med ett penndrag. I stället delar ikonkortet ut nio små kort som flyger i en båge, snäpper fast med en studs över varje bokstav, vänds och "puffar" bort så att rubriken blir kvar som text ("Solver" i appens gröna gradient)
+- Pulsringarna vid klicket är ersatta av färgsymboler (♠♥♦♣) som sprutar ut ur leken och faller undan
+- Räknaren "2 000 simuleringar" och underraden är borttagna
+
 ## 2026-10-12 — Splash: tusentals framtider blir ett drag
 
 - **Ny splash vid varje start (ca 5 s):** 13 kort delas ut på brädet och vänds i en våg till en riktig hand (QQ i toppen glöder guld för Fantasy Land). Sedan lyfter korten till en ring som snurrar allt fortare medan valörerna flimrar (solverns simuleringar). Ringen rusar ihop med ett fjädrande klick och en pulsring, det översta kortet växer till appikonen och "OFC Solver" skrivs fram med ett penndrag

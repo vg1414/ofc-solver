@@ -8,9 +8,12 @@
 //  3. Simulering: korten lyfter till en ring som snurrar allt fortare medan
 //     valörerna flimrar (slumpade framtider).
 //  4. Klick: korten vänds tillbaka, rusar in mot mitten och slår ihop till en
-//     lek med ett fjädrande tvärstopp och en pulsring. Det översta kortet —
-//     grönt med vit spader — växer och blir appikonen. Ett penndrag skriver
-//     fram "OFC Solver". Budskapet: tusentals framtider blir ett svar.
+//     lek med ett fjädrande tvärstopp, och färgsymboler (♠♥♦♣) sprutar ut.
+//     Det översta kortet — grönt med vit spader — växer och blir appikonen.
+//  5. Rubriken: ikonen delar ut nio små kort som snäpper fast där bokstäverna
+//     ska stå. Varje kort vänds, visar sin bokstav och löses upp — kvar blir
+//     rubriken "OFC Solver" som vanlig text.
+//     Budskapet: tusentals framtider blir ett svar.
 //
 // Allt ritas som vanliga DOM-element vars transform sätts varje bildruta
 // (requestAnimationFrame) från en enda tidslinje render(t). Därför går det
@@ -54,7 +57,9 @@ export const T = {
   back0: 2820, backGap: 18, backDur: 260,  // korten vänds tillbaka
   conv0: 2950, click: 3380,                // ringen rusar ihop … klick!
   grow0: 3430, grow1: 3980,                // översta kortet blir ikonen
-  write0: 3850, write1: 4550,              // penndraget skriver "OFC Solver"
+  letters0: 3800, letterGap: 75,          // bokstavskorten delas ut ur ikonen
+  letterFly: 380, letterFlip: 240,         // … flyger, snäpper fast och vänds
+  letterFade: 280,                         // … och löses upp till text
   end: 5400,                               // börja tona ut
 };
 
@@ -74,6 +79,14 @@ const spring = (dt: number, amp: number) => (dt <= 0 ? 0 : amp * Math.sin(dt / 4
 const rnd = (n: number) => {
   const x = Math.sin(n * 12.9898) * 43758.5453;
   return x - Math.floor(x);
+};
+
+// Blandar två hex-färger, u = 0 → a, u = 1 → b
+const mix = (a: string, b: string, u: number) => {
+  const pa = parseInt(a.slice(1), 16);
+  const pb = parseInt(b.slice(1), 16);
+  const ch = (sh: number) => Math.round(lerp((pa >> sh) & 255, (pb >> sh) & 255, u));
+  return `rgb(${ch(16)}, ${ch(8)}, ${ch(0)})`;
 };
 
 const svgIcon = (path: string, cls = '') =>
@@ -108,17 +121,15 @@ export function runSplash(splash: HTMLElement, opts: SplashOptions = {}) {
   splash.innerHTML = `
     <div class="sp-stage">
       <div class="sp-felt"></div>
-      <div class="sp-ring"></div><div class="sp-ring"></div><div class="sp-ring sp-burst"></div>
       <div class="sp-hero">${svgIcon(SUIT_PATH.spades)}</div>
     </div>
-    <div class="sp-text">
-      <h1 class="sp-title">OFC <span>Solver</span></h1>
-    </div>`;
+    <div class="sp-text"><h1 class="sp-title">${[...'OFC Solver'].map((ch) => (ch === ' ' ? ' ' : `<span class="sp-ch">${ch}</span>`)).join('')}</h1></div>
+    <div class="sp-letters"></div>`;
   const stage = splash.querySelector<HTMLElement>('.sp-stage')!;
   const felt = splash.querySelector<HTMLElement>('.sp-felt')!;
-  const rings = splash.querySelectorAll<HTMLElement>('.sp-ring');
   const hero = splash.querySelector<HTMLElement>('.sp-hero')!;
-  const title = splash.querySelector<HTMLElement>('.sp-title')!;
+  const text = splash.querySelector<HTMLElement>('.sp-text')!;
+  const lettersLayer = splash.querySelector<HTMLElement>('.sp-letters')!;
 
   // Scenens storlek: ryms både på smal telefon och i liggande läge
   const S = Math.min(window.innerWidth * 0.92, 420, window.innerHeight * 0.58);
@@ -141,7 +152,7 @@ export function runSplash(splash: HTMLElement, opts: SplashOptions = {}) {
     const front = inner.firstElementChild as HTMLElement;
     front.innerHTML = faceHTML(rank, suit);
     setSuitVars(front, suit);
-    stage.insertBefore(el, rings[0]);
+    stage.insertBefore(el, hero);
     return {
       el, inner, front, rank, suit, row, col, shown: `${rank}${suit}`, faceUp: false,
       x: (col - (n - 1) / 2) * (CW + gap),
@@ -151,6 +162,62 @@ export function runSplash(splash: HTMLElement, opts: SplashOptions = {}) {
     };
   });
   const deckY = S * 0.78;   // leken ligger nedanför brädet
+
+  // Färgsymbolerna som sprutar ut vid klicket: tolv stycken, tre av varje färg
+  const sparks = Array.from({ length: 12 }, (_, i) => {
+    const suit = SUITS[i % 4];
+    const el = document.createElement('div');
+    el.className = 'sp-spark';
+    el.style.color = `var(--${SUIT_VAR[suit]}-fg)`;
+    el.innerHTML = svgIcon(SUIT_PATH[suit]);
+    stage.insertBefore(el, hero);
+    return {
+      el,
+      ang: (i / 12) * Math.PI * 2 + (rnd(i + 200) - 0.5) * 0.4,
+      dist: S * (0.42 + rnd(i + 210) * 0.2),
+      spin: (rnd(i + 220) - 0.5) * 220,
+    };
+  });
+
+  // Bokstavskorten: ett kort per bokstav i rubriken. Varje kort landar exakt
+  // över sin bokstav (uppmätt på skärmen), så när kortet löses upp står
+  // bokstaven redan på rätt plats under det.
+  const box = splash.getBoundingClientRect();
+  const st = stage.getBoundingClientRect();
+  const from = { x: st.left + st.width / 2 - box.left, y: st.top + st.height / 2 - box.top };
+  const glyphs = [...text.querySelectorAll<HTMLElement>('.sp-ch')];
+  const fontPx = parseFloat(getComputedStyle(glyphs[0]).fontSize);
+  splash.style.setProperty('--lw', `${fontPx * 0.74}px`);
+  splash.style.setProperty('--tfs', `${fontPx}px`);
+  // "Solver" får appens gröna gradient, bokstav för bokstav
+  const GREEN = ['#3cc48f', '#17996b', '#0f7653'];
+  const greenAt = (u: number) => (u < 0.5 ? mix(GREEN[0], GREEN[1], u * 2) : mix(GREEN[1], GREEN[2], u * 2 - 1));
+  const letters = glyphs.map((g, n) => {
+    const color = n < 3 ? '' : greenAt((n - 3) / 5);
+    if (color) g.style.color = color;
+    const el = document.createElement('div');
+    el.className = 'sp-lt';
+    const suit = SUITS[n % 4];
+    el.innerHTML = `<div class="sp-inner"><div class="sp-face sp-front" style="--fg:var(--${SUIT_VAR[suit]}-fg)"><span${color ? ` style="color:${color}"` : ''}>${g.textContent}</span>${svgIcon(SUIT_PATH[suit])}</div><div class="sp-face sp-back">${svgIcon(SUIT_PATH.spades)}</div></div>`;
+    lettersLayer.appendChild(el);
+    return {
+      el, glyph: g, inner: el.firstElementChild as HTMLElement, faceUp: false,
+      x: 0,
+      y: 0,
+      tilt: (rnd(n + 300) - 0.5) * 50,
+    };
+  });
+  // Mät var bokstäverna står. Görs igen när typsnitten har laddats,
+  // eftersom Playfair Display har andra bredder än reservtypsnittet.
+  const measure = () => {
+    letters.forEach((L) => {
+      const r = L.glyph.getBoundingClientRect();
+      L.x = r.left + r.width / 2 - box.left;
+      L.y = r.top + r.height / 2 - box.top;
+    });
+  };
+  measure();
+  document.fonts?.ready.then(measure);
 
   // Ringens vinkel: accelererar hela vägen fram till klicket (som Bokis-visarna)
   const spinE = (t: number) => Math.pow(seg(t, T.swirl0, T.click), 2.4);
@@ -260,20 +327,47 @@ export function runSplash(splash: HTMLElement, opts: SplashOptions = {}) {
     hero.style.setProperty('--sheen', String(lerp(-1, 1, easeInOut(seg(t, T.grow1 - 100, T.grow1 + 600)))));
     hero.style.setProperty('--glow', String(easeOutCubic(g)));
 
-    // Ringar: en kraftig vid klicket, sedan lugna pulser medan rubriken skrivs (som Bokis)
-    const burst = seg(dc, 0, 750);
-    rings[2].style.opacity = String(dc >= 0 && burst < 1 ? 0.9 * (1 - burst) : 0);
-    rings[2].style.transform = `scale(${lerp(0.3, 1.25, easeOutCubic(burst))})`;
-    [0, 1].forEach((k) => {
-      const dd = dc - 650 - k * 900;
-      const ph = dd >= 0 ? (dd % 1800) / 1800 : -1;
-      rings[k].style.opacity = String(ph >= 0 ? 0.45 * (1 - ph) : 0);
-      rings[k].style.transform = `scale(${lerp(0.75, 1.3, Math.max(0, ph))})`;
+    // Färgsymbolerna sprutar ut ur leken vid klicket och faller lite medan de tonar bort
+    const sp = seg(dc, 0, 900);
+    sparks.forEach((k) => {
+      if (dc < 0 || sp >= 1) { k.el.style.opacity = '0'; return; }
+      const e = easeOutCubic(sp);
+      const x = Math.cos(k.ang) * k.dist * e;
+      const y = Math.sin(k.ang) * k.dist * e + S * 0.12 * sp * sp;
+      k.el.style.opacity = String(Math.min(1, sp * 8) * (1 - seg(sp, 0.45, 1)));
+      k.el.style.transform = `translate(${x}px, ${y}px) rotate(${k.spin * e}deg) scale(${lerp(0.4, 1, e)})`;
     });
 
-    // Penndraget: ett lutande svep från vänster till höger avtäcker rubriken
-    const w = seg(t, T.write0, T.write1);
-    title.style.setProperty('--wipe', `${lerp(-25, 125, lerp(w, easeInOut(w), 0.5)).toFixed(1)}%`);
+    // Bokstavskorten: delas ut ur ikonen i en båge, snäpper fast med en studs,
+    // vänds och löses upp så att bokstaven under blir kvar
+    letters.forEach((L, n) => {
+      const l0 = T.letters0 + n * T.letterGap;
+      const fly = seg(t, l0, l0 + T.letterFly);
+      const landed = t - (l0 + T.letterFly);
+      const e = easeOutCubic(fly);
+      const x = lerp(from.x, L.x, e);
+      const y = lerp(from.y, L.y, e) - Math.sin(Math.PI * fly) * S * 0.18;
+      const rot = lerp(L.tilt, 0, e) + spring(landed, 7);
+      // Snäppet: kortet trycks ihop på höjden och fjädrar tillbaka
+      const sx = lerp(0.55, 1, e) * (1 + spring(landed, 0.1));
+      const sy = lerp(0.55, 1, e) * (1 - spring(landed, 0.16));
+      const f0 = l0 + T.letterFly - 40;
+      const flipEnd = f0 + T.letterFlip;
+      // Upplösningen: kortet tonar bort och sväller lite, som ett "puff"
+      const fade = easeOutCubic(seg(t, flipEnd + 60, flipEnd + 60 + T.letterFade));
+      L.el.style.opacity = String(seg(t, l0, l0 + 60) * (1 - fade));
+      L.el.style.transform = `translate(${x}px, ${y}px) rotate(${rot}deg) scale(${sx * (1 + 0.25 * fade)}, ${sy * (1 + 0.25 * fade)})`;
+      const turn = Math.PI * (1 - easeInOut(seg(t, f0, flipEnd)));
+      L.inner.style.transform = `scaleX(${Math.max(0.001, Math.abs(Math.cos(turn))).toFixed(3)})`;
+      const up = Math.cos(turn) > 0;
+      if (up !== L.faceUp) {
+        L.faceUp = up;
+        L.inner.classList.toggle('sp-up', up);
+      }
+      // Bokstaven under: syns så fort kortet har vänt och studsar till när kortet släpper den
+      L.glyph.style.opacity = t >= flipEnd ? '1' : '0';
+      L.glyph.style.transform = `scale(${1 + spring(t - flipEnd - 60, 0.12)})`;
+    });
   }
 
   // --- Uppspelning och avslut ---
