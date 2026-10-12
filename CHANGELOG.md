@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-10-13 — Säkrare Fantasy Land-värden
+
+- `FL_VALUE` (`src/core/flValue.ts`) omräknat med 1000 händer per kortantal i stället för 60: 13 kort 19 → 19,5 p, 14 kort 28 → 25,9 p, 15 kort 35 → 33,3 p, 16 kort 41 → 41,4 p. Värdet inkluderar upprepade repeat-FL (geometrisk serie). Repeat-chans: 30 % / 41 % / 52 % / 67 %. Påverkar både solvern, FL-lösaren och träningens bedömning
+
 ## 2026-10-12 — Hel hand: välj datorns styrka, räkna om coachen noggrant
 
 - **Datorns styrka** i Hel hand-inställningarna: Snabb (300 sim, ≤ 3 s), Normal (800 sim, ≤ 3 s) eller Noggrann (2000 sim, ≤ 10 s per drag). Tidigare spelade datorn alltid Normal, och nivåvalet uppe till höger påverkar fortfarande bara Solver-fliken
