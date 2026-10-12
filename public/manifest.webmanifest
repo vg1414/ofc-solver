@@ -1,0 +1,16 @@
+{
+  "name": "OFC Solver",
+  "short_name": "OFC",
+  "description": "Solver och träning för Open Face Chinese Poker",
+  "lang": "sv",
+  "start_url": ".",
+  "scope": ".",
+  "display": "standalone",
+  "background_color": "#fbf7f1",
+  "theme_color": "#0B5E41",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

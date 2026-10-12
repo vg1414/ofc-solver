@@ -1,5 +1,10 @@
 # Changelog
 
+## 2026-10-12 — Egen appikon och hemskärms-app
+
+- Ny ikon (grönt kort med vit spader på krämvit botten) ersätter Vites standardikon: `favicon.svg`, `favicon.ico` (16/32/48 px), `apple-touch-icon.png` (180 px) och `icon-192/512.png` + `icon-maskable-512.png` för Android
+- Ny `manifest.webmanifest`: appen kan läggas till på hemskärmen som "OFC" och öppnas då i helskärm utan webbläsarens adressfält
+
 ## 2026-10-12 — Projektbeskrivning för Claude
 
 - Ny `CLAUDE.md`: kort beskrivning av alla funktioner, mappar, husregler, hur solvern räknar, träningslägena, designregler och arbetsrutin. Claude Code läser den automatiskt vid varje ny session i projektet
