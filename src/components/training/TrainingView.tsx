@@ -147,7 +147,7 @@ function Setup({
             <>
               <div className="font-serif text-[18px] font-extrabold text-ink">Mot datorn</div>
               <ul className="mt-1.5 flex flex-col gap-1 text-[13px] text-ink-2">
-                <li>• Hela händer med 54 kort. Datorn spelar med solvern (Snabb).</li>
+                <li>• Hela händer med 54 kort. Datorn spelar med solvern (Normal).</li>
                 <li>• Husreglerna: 1 p/rad, scoop +3, royalties (mitten dubbelt), foul.</li>
                 <li>• Fantasy Land: QQ 13 · KK 14 · AA 15 · triss 16 kort, repeat-FL.</li>
               </ul>

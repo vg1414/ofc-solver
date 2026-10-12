@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-10-12 — Datorn i Hel hand spelar på Normal-nivå
+
+- `CPU_OPTIONS` (`src/training/game.ts`): 800 sim, max 3 s per drag (tidigare 300 sim). Samma nivå som scenariogeneratorn, där mätningen visade ungefär en femtedel så stora misstag. Varje datordrag tar nu 1–3 s
+
 ## 2026-10-12 — Scenariokö, bättre spelad dator och Perfekt = 100 p
 
 - **Scenariokö** (`src/training/useScenarioPool.ts`): 3 scenarion hålls redo per variant och läge. Kön fylls redan på startsidan (prickar visar hur många som är redo), så första scenariot visas direkt. Överblivna scenarion sparas till nästa omgång, och kön pausas när Solver-fliken visas

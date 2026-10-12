@@ -8,7 +8,7 @@
 // Varje gång en tur är klar skapas ett nytt HandState med nextTurn(),
 // som delar ut korten till nästa tur — eller räknar poäng när alla är klara.
 //
-//  - Datorns tur: en effekt startar solvern (Snabb, 3 s max) i en egen
+//  - Datorns tur: en effekt startar solvern (Normal, 3 s max) i en egen
 //    worker, lägger draget och går vidare efter en kort paus så att man
 //    hinner se korten landa.
 //  - Din tur: du lägger korten och trycker Klar.
