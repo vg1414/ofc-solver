@@ -21,6 +21,12 @@ En webbaserad solver för Open Face Chinese Poker (OFC) med stöd för hemspels-
 - **Solverns förslag visas som spökkort direkt på brädet**, med EV, FL-chans, foul-risk och "↻ FL igen"
 - Följer telefonens ljusa/mörka läge. Ark sveps ner för att stängas
 
+## Träna
+
+- **Scenarion (poängjakt):** riktiga lägen som datorn spelar fram. Lägg dina kort; solvern (Noggrann) bedömer draget. Max 100 p per scenario (100 − EV-förlust × 100), gradering Perfekt / Bra / Miss och en sammanfattning med sämsta beslutet
+- **Hel hand mot datorn:** spela 5/10/20 händer med husreglerna, inklusive Fantasy Land. Datorn spelar med solvern. Valfritt coach-läge visar EV-förlusten efter varje drag
+- **Topplistor** sparas lokalt i webbläsaren (topp 10 per läge, variant och antal)
+
 ## Specialregler (hemspel)
 
 - **Jokrar:** Helt vilda, kan vara vilket kort som helst (även dubletter). Jokern väljs så att handen inte foulear

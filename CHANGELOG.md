@@ -1,5 +1,15 @@
 # Changelog
 
+## 2026-10-12 — Träningsläge: "Träna"-flik med scenarion och hela händer mot datorn
+
+- **Ny flik "Träna"** bredvid Solvern (flikar i sidhuvudet). Träningen monteras först när fliken öppnas och ligger sedan kvar, så en pågående omgång inte försvinner
+- **Scenarioträning (poängjakt):** 5/10/20 scenarion. Datorn spelar fram båda bräden med solvern (öppningshänder ≈ 25 %, annars en senare runda; Pineapple: lägg 2, kasta 1). Max 100 p per scenario = 100 − EV-förlust × 100. Gradering Perfekt ≤ 0,05 / Bra ≤ 0,5 / Miss. Bedömning på Noggrann nivå som startar i bakgrunden direkt. Feedback med animerad bricka, ditt drag mot bästa draget (spökkort), notis när draget sållades bort tidigt. Sammanfattning med snitt, sämsta beslutet och alla scenarion (tryck för att se igen)
+- **Hel hand mot datorn:** 5/10/20 händer, 54 kort, Vanlig eller Pineapple. Datorn spelar med solvern (Snabb, max 3 s). Poäng med `src/engine/scoring.ts`, Fantasy Land (QQ/KK/AA/triss, repeat-FL). Valfritt coach-läge som visar EV-förlusten per drag
+- **Lokala topplistor** (topp 10 per läge × variant × antal) med namn-ark och animerad markering av nytt resultat
+- Förberett för solverns kommande `pinned`-fält (`src/training/pinned.ts`, flaggan `SOLVER_HAS_PINNED`)
+- `BoardView`: ny valfri prop `canRemove` (bara kort från aktuellt drag kan tas bort)
+- Ny logik i `src/training/` med tester (`training.test.ts`), nya komponenter i `src/components/training/`. Solver-motorn är orörd
+
 ## 2026-10-12 — Publicering på GitHub Pages
 
 - `.github/workflows/deploy.yml`: bygger, testar och publicerar appen automatiskt vid varje push till main

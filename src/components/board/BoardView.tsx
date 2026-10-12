@@ -43,6 +43,8 @@ interface BoardViewProps {
   interactive?: boolean;
   onPlace?: (row: RowName, slot: number) => void;
   onRemove?: (row: RowName, slot: number) => void;
+  /** Får just detta kort tas bort? (utelämnas → alla kort, om onRemove finns) */
+  canRemove?: (row: RowName, slot: number) => boolean;
   ghosts?: CardPlacement[];
   fouled?: boolean;
   /** Visa royalties per rad (beräknas live när raden är full) */
@@ -57,6 +59,7 @@ export default function BoardView({
   interactive = false,
   onPlace,
   onRemove,
+  canRemove,
   ghosts = [],
   fouled = false,
   showRoyalties = true,
@@ -75,7 +78,7 @@ export default function BoardView({
   }, [armed]);
 
   const tapCard = (row: RowName, slot: number) => {
-    if (!onRemove) return;
+    if (!onRemove || (canRemove && !canRemove(row, slot))) return;
     if (armed?.row === row && armed.slot === slot) {
       onRemove(row, slot);
       setArmed(null);
@@ -139,7 +142,7 @@ export default function BoardView({
                           tapCard(name, i);
                         }}
                         className={`relative rounded-[calc(var(--card-w)*0.14)] transition-transform duration-200 active:scale-95 ${isArmed ? 'animate-wiggle' : ''}`}
-                        disabled={!onRemove}
+                        disabled={!onRemove || (canRemove ? !canRemove(name, i) : false)}
                       >
                         <PlayingCard card={card} snap />
                         {isArmed && (

@@ -1,0 +1,99 @@
+// ============================================================
+// scenarios.ts — Realistiska träningsscenarion
+// ============================================================
+//
+// Ett scenario = ett läge mitt i en riktig hand där det är din tur.
+// I stället för att slumpa kort på platser spelar datorn fram läget:
+//   1. Blanda en 54-kortslek och räkna ut turordningen (vem börjar slumpas).
+//   2. Välj var vi stannar: öppningshanden (≈ 25 %) eller en senare runda.
+//   3. Datorn spelar ALLA drag fram till dess — både "ditt" bräde och
+//      motståndarens — med solvern (snabb nivå). Då ser brädena ut som
+//      i ett riktigt parti: par i botten, draws, ibland en svag topp.
+//   4. Korten du får = nästa kort i leken.
+// Triviala lägen (bara en rad ledig för ett kort) slängs och görs om.
+// ============================================================
+
+import type { Board, Card, GameVariant } from '../engine/types';
+import { ROWS, countPlaced } from './moves';
+import { GEN_OPTIONS, applyToSeat, computerMove, newDeck, newSeat, roundsFor, turnOrder, type Seat, type SeatId, type Solve } from './game';
+
+export interface Scenario {
+  id: string;
+  variant: GameVariant;
+  round: number;
+  board: Board;
+  opponentBoard: Board;
+  hand: Card[];
+  /** Dina egna kastade kort (Pineapple) */
+  deadCards: Card[];
+  /** Antal kort som ska läggas (resten kastas) */
+  place: number;
+}
+
+export function scenarioLabel(s: Scenario): string {
+  if (s.round === 1) return 'Öppningshand · lägg 5 kort';
+  if (s.variant === 'pineapple') return `Runda ${s.round} · lägg 2, kasta 1`;
+  return `Runda ${s.round} · ${countPlaced(s.board)} av 13 kort ute`;
+}
+
+/** Bara en rad har plats för ett enda kort → inget val att göra */
+function isTrivial(board: Board, place: number, hand: number): boolean {
+  if (place !== hand || hand !== 1) return false;
+  return ROWS.filter((r) => board[r].cards.some((c) => c === null)).length <= 1;
+}
+
+function pickRound(variant: GameVariant, rand: () => number): number {
+  if (rand() < 0.25) return 1;
+  // Vanlig: runda 2–8 (runda 9 = sista kortet, nästan alltid givet)
+  const last = variant === 'regular' ? roundsFor(variant) - 1 : roundsFor(variant);
+  return 2 + Math.floor(rand() * (last - 1));
+}
+
+let seq = 0;
+
+/**
+ * Spela fram ett scenario. `alive()` kollas mellan dragen så att
+ * genereringen kan avbrytas direkt (t.ex. när du lämnar träningen).
+ */
+export async function generateScenario(
+  solve: Solve,
+  variant: GameVariant,
+  alive: () => boolean = () => true,
+  rand: () => number = Math.random,
+): Promise<Scenario> {
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const deck = newDeck();
+    let pos = 0;
+    const first: SeatId = rand() < 0.5 ? 0 : 1;
+    const turns = turnOrder(variant, first);
+    const stopRound = pickRound(variant, rand);
+    const stop = turns.findIndex((t) => t.seat === 0 && t.round === stopRound);
+    const seats: [Seat, Seat] = [newSeat(), newSeat()];
+
+    for (let i = 0; i < stop; i++) {
+      if (!alive()) throw new Error('cancelled');
+      const t = turns[i];
+      const cards = deck.slice(pos, pos + t.count);
+      pos += t.count;
+      const me = seats[t.seat];
+      const opp = seats[t.seat === 0 ? 1 : 0];
+      const move = await computerMove(solve, { seat: me, cards, variant, opponent: opp.board, fl: false, options: GEN_OPTIONS });
+      seats[t.seat] = applyToSeat(me, move);
+    }
+
+    const t = turns[stop];
+    const hand = deck.slice(pos, pos + t.count);
+    if (isTrivial(seats[0].board, t.place, hand.length)) continue;
+    return {
+      id: `s${Date.now()}-${seq++}`,
+      variant,
+      round: t.round,
+      board: seats[0].board,
+      opponentBoard: seats[1].board,
+      hand,
+      deadCards: seats[0].discards,
+      place: t.place,
+    };
+  }
+  throw new Error('Kunde inte skapa ett scenario');
+}
