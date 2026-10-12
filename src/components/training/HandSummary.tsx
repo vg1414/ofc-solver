@@ -1,37 +1,49 @@
 // ============================================================
 // HandSummary.tsx — Slutresultat efter alla händer mot datorn
 // ============================================================
+// Topplistan gäller bara sessioner med ett antal händer som spelats
+// hela vägen (complete). Tid och fritt spel visar speltid och snitt.
+// ============================================================
 
 import type { GameVariant } from '../../engine/types';
-import type { HandOutcome } from '../../training/game';
 import { boardKey } from '../../training/leaderboard';
 import { useLeaderboardRun } from '../../training/useLeaderboardRun';
 import Footer from '../layout/Footer';
 import Leaderboard, { NameSheet } from './Leaderboard';
-import type { CoachEntry } from './HandRun';
+import type { CoachEntry } from './CoachReview';
+import { HandList, sign, type HandRecord } from './Scoreboard';
 import { evFmt } from './ReviewBoard';
 import { useCountUp } from './TrainingBits';
+import { clockText, leaderboardCount, lengthLabel, type HandSettings } from '../../training/session';
 
-export interface HandRecord {
-  no: number;
-  net: number;
-  outcome: HandOutcome;
-  /** FL-kort denna hand [du, datorn] */
-  fl: [number, number];
-}
+export type { HandRecord };
 
 interface Props {
   records: HandRecord[];
   coachLog: CoachEntry[];
   variant: GameVariant;
-  count: number;
+  settings: HandSettings;
+  /** Speltid i ms */
+  elapsed: number;
+  /** Sessionen spelades hela vägen (inte avbruten) */
+  complete: boolean;
   onRestart: () => void;
   onExit: () => void;
 }
 
-const sign = (n: number) => `${n > 0 ? '+' : ''}${n}`;
 
-export default function HandSummary({ records, coachLog, variant, count, onRestart, onExit }: Props) {
+const avgFmt = new Intl.NumberFormat('sv-SE', { minimumFractionDigits: 1, maximumFractionDigits: 1, signDisplay: 'exceptZero' });
+
+export default function HandSummary({ records, coachLog, variant, settings, elapsed, complete, onRestart, onExit }: Props) {
+  const len = settings.length;
+  const count = leaderboardCount(len);
+  const extraHands = count !== null ? Math.max(0, records.length - count) : 0;
+  const variantName = variant === 'regular' ? 'Vanlig' : 'Pineapple';
+  const handsText = `${records.length} ${records.length === 1 ? 'hand' : 'händer'}`;
+  const heading =
+    len.kind === 'hands'
+      ? `${complete ? lengthLabel(len) : `${handsText} av ${len.n}`}${extraHands ? ` + ${extraHands} FL` : ''} mot datorn`
+      : `${lengthLabel(len)} · ${handsText}`;
   const total = records.reduce((n, r) => n + r.net, 0);
   const shown = useCountUp(total, 1200, 0);
   const wins = records.filter((r) => r.net > 0).length;
@@ -43,13 +55,15 @@ export default function HandSummary({ records, coachLog, variant, count, onResta
   const coachAvg = judged.length ? judged.reduce((n, c) => n + (c.j?.diff ?? 0), 0) / judged.length : null;
   const pending = coachLog.length - judged.length;
 
-  const lb = useLeaderboardRun(boardKey('hand', variant, count), total, true);
+  const onBoard = count !== null && complete;
+  const lb = useLeaderboardRun(boardKey('hand', variant, count ?? 0), total, onBoard);
+  const avg = records.length ? total / records.length : 0;
 
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-3 pb-4">
       <div className="glass relative overflow-hidden rounded-[28px] p-5 text-center animate-rise-in">
         <div className="gold-strip absolute inset-x-0 top-0" />
-        <div className="eyebrow inline-block">{count} händer mot datorn · {variant === 'regular' ? 'Vanlig' : 'Pineapple'}</div>
+        <div className="eyebrow inline-block">{heading} · {variantName}</div>
         <div className={`mt-2 font-serif text-[64px] font-extrabold leading-none tabular ${total > 0 ? 'text-accent-ink' : total < 0 ? 'text-danger' : 'text-ink-2'}`}>
           {total > 0 ? '+' : ''}
           {Math.round(shown)}
@@ -60,6 +74,11 @@ export default function HandSummary({ records, coachLog, variant, count, onResta
           <Stat label="Royalties" value={`+${royalties}`} />
           <Stat label={flHands ? 'FL-händer' : 'Foul'} value={String(flHands || fouls)} />
         </div>
+        <div className="mt-2 flex items-center justify-center gap-3 text-[12px] font-bold text-ink-3 tabular">
+          <span>⏱ {clockText(elapsed)} speltid</span>
+          <span className="h-1 w-1 rounded-full bg-line-strong" />
+          <span>{avgFmt.format(avg)} p per hand</span>
+        </div>
         {coachAvg !== null && (
           <div className="mt-3 rounded-[16px] bg-accent-soft px-3 py-2 text-[12.5px] font-bold text-accent-ink">
             Coach: snitt {coachAvg > 0.0001 ? evFmt.format(-coachAvg) : '0,00'} EV per drag ({judged.length} drag)
@@ -68,27 +87,20 @@ export default function HandSummary({ records, coachLog, variant, count, onResta
         )}
       </div>
 
-      <div className="glass overflow-hidden rounded-[24px] divide-y divide-line animate-rise-in" style={{ animationDelay: '0.1s' }}>
-        {records.map((r) => (
-          <div key={r.no} className="flex items-center gap-3 px-3.5 py-2.5">
-            <span className="flex h-7 w-7 items-center justify-center rounded-full bg-sunken text-[12px] font-extrabold text-ink-2 tabular">{r.no}</span>
-            <div className="min-w-0 flex-1 text-[12.5px] text-ink-2">
-              {r.outcome.score.p1Foul ? 'Foul' : r.outcome.score.p1Scoop ? 'Scoop' : `${r.outcome.score.p1RowWins}–${r.outcome.score.p2RowWins} i rader`}
-              {r.outcome.score.p1Royalties.total > 0 && <span className="text-gold"> · +{r.outcome.score.p1Royalties.total} royalties</span>}
-              {r.fl[0] > 0 && <span className="font-bold text-fl"> · ★ FL</span>}
-            </div>
-            <span className={`text-[16px] font-extrabold tabular ${r.net > 0 ? 'text-accent-ink' : r.net < 0 ? 'text-danger' : 'text-ink-3'}`}>{sign(r.net)}</span>
-          </div>
-        ))}
+      <div className="glass overflow-hidden rounded-[24px] animate-rise-in" style={{ animationDelay: '0.1s' }}>
+        <HandList records={records} />
       </div>
 
-      <div className="glass rounded-[24px] p-3.5 animate-rise-in" style={{ animationDelay: '0.2s' }}>
-        <div className="mb-1.5 flex items-baseline justify-between px-1">
-          <h2 className="title-serif text-[21px]">Topplista</h2>
-          <span className="text-[11px] font-bold text-ink-3">{count} händer · {variant === 'regular' ? 'Vanlig' : 'Pineapple'}</span>
+      {count !== null && (
+        <div className="glass rounded-[24px] p-3.5 animate-rise-in" style={{ animationDelay: '0.2s' }}>
+          <div className="mb-1.5 flex items-baseline justify-between px-1">
+            <h2 className="title-serif text-[21px]">Topplista</h2>
+            <span className="text-[11px] font-bold text-ink-3">{lengthLabel(len)} · {variantName}</span>
+          </div>
+          {!complete && <div className="mb-2 rounded-[14px] bg-sunken px-3 py-2 text-[12px] font-semibold text-ink-3">Avbruten session — kommer inte med på listan.</div>}
+          <Leaderboard entries={lb.entries} highlightId={lb.highlightId} format={sign} />
         </div>
-        <Leaderboard entries={lb.entries} highlightId={lb.highlightId} format={sign} />
-      </div>
+      )}
 
       <div className="flex gap-2">
         <button type="button" onClick={onExit} className="btn-ghost h-12 flex-1 rounded-full text-[14px] font-bold">

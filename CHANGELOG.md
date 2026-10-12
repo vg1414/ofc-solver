@@ -1,5 +1,15 @@
 # Changelog
 
+## 2026-10-12 — Hel hand: sessioner, ställning, bättre coach och foul/FL-mätare
+
+- **Sessioner** (`src/training/session.ts`): välj längd som antal händer (5/10/20 eller eget 1–99), minuter (10/20/30 eller eget 5–180) eller fritt spel. I tidsläget räknas klockan ner i toppraden och står still när appen inte syns. Handen som pågår spelas alltid klart
+- **Fantasy Land i slutet:** "Spelas ut" (FL och repeat-FL spelas klart först, som vid bordet, lila "★ FL spelas ut") eller "Får sluta i FL"
+- **Inställningar** bakom kugghjulet på startsidan för Hel hand (bottenark med längd, FL-regel och coach-läge)
+- **Ställning under sessionen:** varje hands poäng står som små brickor under poängraden. Tryck på poängen (eller "Ställning") för ett ark med Du mot Datorn, vinster och alla händer med poäng och löpande total. Tryck på en hand för att se båda slutbrädena
+- **Coachen visar bästa draget:** brickan visar solverns kort per rad direkt, och ett tryck öppnar ett ark där man växlar mellan "Ditt drag" och "Bästa draget" på brädet. Efter handen finns en prick per drag att trycka på
+- **Foul-risk och FL-chans** bredvid "Du" efter varje drag (räknas även utan coach, då på Snabb-nivå)
+- ✕ under en session frågar: visa resultat, fortsätt eller avsluta utan resultat. Topplistan gäller bara fullständiga sessioner med antal händer. Slutresultatet visar speltid och poäng per hand
+
 ## 2026-10-12 — Datorn i Hel hand spelar på Normal-nivå
 
 - `CPU_OPTIONS` (`src/training/game.ts`): 800 sim, max 3 s per drag (tidigare 300 sim). Samma nivå som scenariogeneratorn, där mätningen visade ungefär en femtedel så stora misstag. Varje datordrag tar nu 1–3 s

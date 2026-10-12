@@ -1,8 +1,9 @@
 // ============================================================
 // TrainingView.tsx — "Träna"-fliken: startsida + de två lägena
 // ============================================================
-// Startsidan: välj läge (Scenarion / Hel hand), variant, antal och
-// ev. coach-läge. Topplistan för just det valet visas direkt under.
+// Startsidan: välj läge (Scenarion / Hel hand), variant och antal.
+// Hel hand har egna inställningar (längd, FL i slutet, coach) i ett ark
+// bakom kugghjulet. Topplistan för just det valet visas direkt under.
 // Valen sparas i localStorage så att de är kvar till nästa gång.
 // "Spela igen" byter `runId`, vilket monterar om omgången från noll.
 // ============================================================
@@ -18,25 +19,28 @@ import Leaderboard from './Leaderboard';
 import ScenarioRun from './ScenarioRun';
 import HandRun from './HandRun';
 import { POOL_SIZE, useScenarioPool } from '../../training/useScenarioPool';
+import HandSettingsSheet, { SettingsSummary } from './HandSettingsSheet';
+import { leaderboardCount, lengthLabel, sanitizeHandSettings, type HandSettings } from '../../training/session';
 
 const COUNTS = [5, 10, 20] as const;
 const CFG_KEY = 'ofc-train-config';
 
 interface Config {
   mode: TrainingMode;
+  /** Antal scenarion */
   count: number;
-  coach: boolean;
+  /** Hel hand: längd, FL i slutet, coach */
+  hand: HandSettings;
 }
 
 function loadConfig(): Config {
-  const def: Config = { mode: 'scenario', count: 10, coach: true };
+  const def: Config = { mode: 'scenario', count: 10, hand: sanitizeHandSettings(null) };
   try {
-    const v = JSON.parse(localStorage.getItem(CFG_KEY) ?? '{}') as Partial<Config>;
-    return {
-      mode: v.mode === 'hand' || v.mode === 'joker' ? v.mode : 'scenario',
-      count: COUNTS.includes(v.count as 5) ? (v.count as number) : def.count,
-      coach: typeof v.coach === 'boolean' ? v.coach : def.coach,
-    };
+    const v = JSON.parse(localStorage.getItem(CFG_KEY) ?? '{}') as Partial<Config> & { coach?: boolean };
+    const count = COUNTS.includes(v.count as 5) ? (v.count as number) : def.count;
+    // Äldre sparade val hade coach + antal direkt i config — ta med dem
+    const hand = sanitizeHandSettings(v.hand ?? { length: { kind: 'hands', n: count }, coach: v.coach });
+    return { mode: v.mode === 'hand' || v.mode === 'joker' ? v.mode : 'scenario', count, hand };
   } catch {
     return def;
   }
@@ -71,7 +75,7 @@ export default function TrainingView({ active = true }: { active?: boolean }) {
     return cfg.mode !== 'hand' ? (
       <ScenarioRun key={running.id} variant={running.variant} jokers={cfg.mode === 'joker'} pool={pool} count={cfg.count} onExit={exit} onRestart={start} />
     ) : (
-      <HandRun key={running.id} variant={running.variant} count={cfg.count} coach={cfg.coach} onExit={exit} onRestart={start} />
+      <HandRun key={running.id} variant={running.variant} settings={cfg.hand} active={active} onExit={exit} onRestart={start} />
     );
   }
 
@@ -95,8 +99,16 @@ function Setup({
   ready: number | null;
 }) {
   const scen = cfg.mode !== 'hand';
-  const entries = loadBoard(boardKey(cfg.mode, variant, cfg.count));
+  const [sheet, setSheet] = useState(false);
+  // Hel hand: topplista bara för antal händer
+  const lbCount = scen ? cfg.count : leaderboardCount(cfg.hand.length);
+  const entries = lbCount === null ? [] : loadBoard(boardKey(cfg.mode, variant, lbCount));
   const unit = scen ? 'scenarion' : 'händer';
+  const startLabel = scen
+    ? `${cfg.count} ${unit}`
+    : cfg.hand.length.kind === 'free'
+      ? 'fritt spel'
+      : lengthLabel(cfg.hand.length);
 
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-3 wide:grid wide:max-w-6xl wide:grid-cols-[minmax(0,1fr)_minmax(300px,420px)] wide:items-start wide:gap-5">
@@ -150,6 +162,7 @@ function Setup({
                 <li>• Hela händer med 54 kort. Datorn spelar med solvern (Normal).</li>
                 <li>• Husreglerna: 1 p/rad, scoop +3, royalties (mitten dubbelt), foul.</li>
                 <li>• Fantasy Land: QQ 13 · KK 14 · AA 15 · triss 16 kort, repeat-FL.</li>
+                <li>• Spela flera händer i rad — välj antal händer, minuter eller fritt spel.</li>
               </ul>
             </>
           )}
@@ -172,47 +185,25 @@ function Setup({
               ]}
             />
           </div>
-          <div>
-            <div className="mb-1.5 px-1 text-[11px] font-extrabold uppercase tracking-[0.08em] text-ink-3">Antal {unit}</div>
-            <Segmented<number>
-              size="sm"
-              ariaLabel={`Antal ${unit}`}
-              value={cfg.count}
-              onChange={(n) => {
-                haptic(4);
-                setCfg({ ...cfg, count: n });
-              }}
-              options={COUNTS.map((n) => ({ value: n, label: String(n), sub: unit }))}
-            />
-          </div>
-          {!scen && (
-            <button
-              type="button"
-              role="switch"
-              aria-checked={cfg.coach}
-              onClick={() => {
-                haptic(4);
-                setCfg({ ...cfg, coach: !cfg.coach });
-              }}
-              className="flex items-center gap-3 rounded-[18px] px-1 py-1 text-left"
-            >
-              <div className="flex-1">
-                <div className="text-[14px] font-bold text-ink">Coach-läge</div>
-                <div className="text-[12px] text-ink-3">Visar EV-förlusten mot solverns bästa drag efter varje drag</div>
-              </div>
-              <span
-                className="relative h-7 w-12 shrink-0 rounded-full transition-colors duration-300"
-                style={{ background: cfg.coach ? 'var(--grad)' : 'var(--line-strong)', boxShadow: cfg.coach ? 'var(--glow)' : undefined }}
-              >
-                <span
-                  className="absolute top-[3px] h-[22px] w-[22px] rounded-full bg-white shadow-[0_2px_6px_rgba(0,0,0,0.2)] transition-transform duration-[400ms] ease-[cubic-bezier(0.34,1.56,0.64,1)]"
-                  style={{ transform: `translateX(${cfg.coach ? 23 : 3}px)` }}
-                />
-              </span>
-            </button>
+          {scen ? (
+            <div>
+              <div className="mb-1.5 px-1 text-[11px] font-extrabold uppercase tracking-[0.08em] text-ink-3">Antal {unit}</div>
+              <Segmented<number>
+                size="sm"
+                ariaLabel={`Antal ${unit}`}
+                value={cfg.count}
+                onChange={(n) => {
+                  haptic(4);
+                  setCfg({ ...cfg, count: n });
+                }}
+                options={COUNTS.map((n) => ({ value: n, label: String(n), sub: unit }))}
+              />
+            </div>
+          ) : (
+            <SettingsSummary value={cfg.hand} onOpen={() => setSheet(true)} />
           )}
           <button type="button" onClick={onStart} className="btn-primary h-13 rounded-full py-3.5 text-[16px] font-bold">
-            ★ Starta {cfg.count} {unit}
+            ★ Starta {startLabel}
           </button>
           {ready !== null && (
             <div className="-mt-1 flex items-center justify-center gap-1.5 text-[11.5px] font-bold text-ink-3" aria-live="polite">
@@ -233,11 +224,20 @@ function Setup({
         <div className="mb-1.5 flex items-baseline justify-between px-1">
           <h2 className="title-serif text-[21px]">Topplista</h2>
           <span className="text-[11px] font-bold text-ink-3">
-            {cfg.mode === 'joker' ? '★ Joker · ' : ''}{cfg.count} {unit} · {variant === 'regular' ? 'Vanlig' : 'Pineapple'}
+            {cfg.mode === 'joker' ? '★ Joker · ' : ''}{scen ? `${cfg.count} ${unit}` : lengthLabel(cfg.hand.length)} · {variant === 'regular' ? 'Vanlig' : 'Pineapple'}
           </span>
         </div>
-        <Leaderboard entries={entries} format={(s) => (scen ? `${s} p` : `${s > 0 ? '+' : ''}${s}`)} />
+        {lbCount === null ? (
+          <div className="px-1 py-6 text-center text-[13px] font-semibold text-ink-3">
+            Topplistan gäller sessioner med ett antal händer.
+            <br />
+            <span className="text-[12px] font-medium">Tid och fritt spel räknas inte.</span>
+          </div>
+        ) : (
+          <Leaderboard entries={entries} format={(s) => (scen ? `${s} p` : `${s > 0 ? '+' : ''}${s}`)} />
+        )}
       </div>
+      {!scen && <HandSettingsSheet open={sheet} onClose={() => setSheet(false)} value={cfg.hand} onChange={(hand) => setCfg({ ...cfg, hand })} />}
       <Footer className="wide:col-span-2" />
     </div>
   );

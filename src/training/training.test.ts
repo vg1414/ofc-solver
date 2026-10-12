@@ -184,3 +184,34 @@ describe('jokerträning', () => {
     expect(d2.filter((c) => c.kind === 'joker')).toHaveLength(2);
   });
 });
+
+describe('träning: session mot datorn', () => {
+  const base = { flEnd: 'playout' as const, coach: false };
+  it('antal händer: slut efter n händer, men FL spelas ut först', async () => {
+    const { sessionOver } = await import('./session');
+    const s = { ...base, length: { kind: 'hands' as const, n: 10 } };
+    expect(sessionOver(s, 9, 0, [0, 0])).toBe(false);
+    expect(sessionOver(s, 10, 0, [0, 0])).toBe(true);
+    expect(sessionOver(s, 10, 0, [14, 0])).toBe(false); // du har FL → en hand till
+    expect(sessionOver(s, 11, 0, [0, 13])).toBe(false); // datorn repeat-FL → en till
+    expect(sessionOver(s, 12, 0, [0, 0])).toBe(true);
+    expect(sessionOver({ ...s, flEnd: 'stop' }, 10, 0, [14, 0])).toBe(true);
+  });
+
+  it('minuter: slut när tiden är ute, fritt spel tar aldrig slut', async () => {
+    const { sessionOver } = await import('./session');
+    const m = { ...base, length: { kind: 'minutes' as const, n: 20 } };
+    expect(sessionOver(m, 30, 19 * 60_000, [0, 0])).toBe(false);
+    expect(sessionOver(m, 3, 20 * 60_000, [0, 0])).toBe(true);
+    expect(sessionOver(m, 3, 20 * 60_000, [0, 15])).toBe(false);
+    expect(sessionOver({ ...base, length: { kind: 'free' } }, 500, 1e9, [0, 0])).toBe(false);
+  });
+
+  it('sparade inställningar läses säkert', async () => {
+    const { sanitizeHandSettings, clockText } = await import('./session');
+    expect(sanitizeHandSettings({ length: { kind: 'minutes', n: 999 }, flEnd: 'stop', coach: false })).toEqual({ length: { kind: 'minutes', n: 180 }, flEnd: 'stop', coach: false });
+    expect(sanitizeHandSettings('skräp').length).toEqual({ kind: 'hands', n: 10 });
+    expect(clockText(754_000)).toBe('12:34');
+    expect(clockText(0)).toBe('0:00');
+  });
+});

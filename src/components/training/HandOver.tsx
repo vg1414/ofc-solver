@@ -5,10 +5,12 @@
 // nettopoäng för handen och om någon går till Fantasy Land.
 // Poängen räknas av appens egen motor (src/engine/scoring.ts):
 // 1 p per rad, +3 för scoop, royalties (mitten dubbelt), foul = 6 p + royalties.
+// I slutet av en session: "FL spelas ut" (en hand till) eller en notis om
+// att FL inte spelas ut. Fritt spel får en "Avsluta här"-knapp.
 // ============================================================
 
 import type { HandOutcome } from '../../training/game';
-import type { CoachEntry } from './HandRun';
+import { CoachDots, type CoachEntry } from './CoachReview';
 import { evFmt } from './ReviewBoard';
 import { useCountUp } from './TrainingBits';
 
@@ -17,12 +19,24 @@ const ROW_LABEL = { top: 'Topp', middle: 'Mitt', bottom: 'Botten' } as const;
 interface Props {
   outcome: HandOutcome;
   last: boolean;
+  /** Sessionens längd är nådd, men FL spelas ut med en hand till */
+  playOutFl?: boolean;
+  /** Längden är nådd och FL spelas inte ut (inställning) */
+  flSkipped?: boolean;
   coachLog: CoachEntry[];
+  /** Öppna coachens ark för ett drag */
+  onReview?: (e: CoachEntry) => void;
+  /** Öppna ställningen för hela sessionen */
+  onScore?: () => void;
   onNext: () => void;
+  /** Fritt spel: avsluta efter den här handen */
+  onStop?: () => void;
+  /** FL måste spelas ut innan man får sluta */
+  stopBlocked?: boolean;
   top?: React.ReactNode;
 }
 
-export default function HandOver({ outcome, last, coachLog, onNext, top }: Props) {
+export default function HandOver({ outcome, last, playOutFl, flSkipped, coachLog, onReview, onScore, onNext, onStop, stopBlocked, top }: Props) {
   const s = outcome.score;
   const net = s.p1Net;
   const shown = useCountUp(net, 800, 0);
@@ -70,6 +84,15 @@ export default function HandOver({ outcome, last, coachLog, onNext, top }: Props
         )}
       </div>
 
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        {onReview ? <CoachDots entries={coachLog} onOpen={onReview} /> : <span />}
+        {onScore && (
+          <button type="button" onClick={onScore} className="flex items-center gap-1 rounded-full bg-sunken px-2.5 py-1 text-[11.5px] font-bold text-ink-2 transition-transform active:scale-95">
+            ▤ Ställning ›
+          </button>
+        )}
+      </div>
+
       {outcome.nextFl[0] > 0 && !last && (
         <div className="rounded-2xl px-3.5 py-2 text-[13.5px] font-bold text-white shadow-[var(--glow-fl)] animate-badge-in" style={{ background: 'var(--grad-fl)' }}>
           ★ Fantasy Land! Du får {outcome.nextFl[0]} kort nästa hand.
@@ -79,9 +102,32 @@ export default function HandOver({ outcome, last, coachLog, onNext, top }: Props
         <div className="rounded-2xl bg-fl-soft px-3.5 py-2 text-[12.5px] font-bold text-fl">★ Datorn går till Fantasy Land ({outcome.nextFl[1]} kort).</div>
       )}
 
-      <button type="button" onClick={onNext} className="btn-primary h-12 w-full rounded-full text-[15px] font-bold">
-        {last ? 'Visa resultat ★' : 'Nästa hand →'}
-      </button>
+      {playOutFl && (
+        <div className="flex items-center gap-2 rounded-2xl border border-fl/30 bg-fl-soft px-3.5 py-2 text-[12.5px] font-semibold text-fl animate-badge-in">
+          <span className="text-[16px]">★</span>
+          <span>Sessionen är slut — men Fantasy Land spelas ut först.</span>
+        </div>
+      )}
+      {flSkipped && last && (
+        <div className="rounded-2xl bg-sunken px-3.5 py-2 text-[12px] font-semibold text-ink-3">Sessionen slutar här — FL spelas inte ut (inställning).</div>
+      )}
+
+      <div className="flex gap-2">
+        {onStop && !last && (
+          <button
+            type="button"
+            onClick={onStop}
+            disabled={stopBlocked}
+            className="btn-ghost h-12 flex-1 rounded-full text-[14px] font-bold disabled:opacity-50"
+            title={stopBlocked ? 'Fantasy Land måste spelas ut först' : undefined}
+          >
+            {stopBlocked ? 'FL först' : 'Avsluta här'}
+          </button>
+        )}
+        <button type="button" onClick={onNext} className="btn-primary h-12 flex-[2] rounded-full text-[15px] font-bold">
+          {last ? 'Visa resultat ★' : playOutFl ? '★ Spela ut FL →' : 'Nästa hand →'}
+        </button>
+      </div>
     </div>
   );
 }
