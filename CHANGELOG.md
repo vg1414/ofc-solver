@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-10-12 — Projektbeskrivning för Claude
+
+- Ny `CLAUDE.md`: kort beskrivning av alla funktioner, mappar, husregler, hur solvern räknar, träningslägena, designregler och arbetsrutin. Claude Code läser den automatiskt vid varje ny session i projektet
+
 ## 2026-10-12 — Jokerträning
 
 - **Nytt läge "★ Joker"** i Träna-fliken (bredvid Scenarion och Hel hand) med egen topplista. Varje scenario har minst en joker i handen, ungefär var tredje hand med plats för det får båda. Blandat öppningshänder och drag mitt i handen
