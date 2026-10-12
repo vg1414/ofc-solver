@@ -16,7 +16,8 @@
 //  - Coach-läge: en tredje worker bedömer varje drag du gör (Normal-nivå)
 //    i en kö. Resultatet dyker upp som en liten bricka när det är klart,
 //    med solverns bästa drag som minikort. Ett tryck öppnar ett ark där
-//    man växlar mellan sitt drag och bästa draget på brädet.
+//    man växlar mellan sitt drag och bästa draget på brädet. Ditt drag
+//    låses i solvern (pinned.ts) så att det räknas lika noga som solverns val.
 //  - Den som börjar växlar varje hand. Fantasy Land-brädet syns inte
 //    för motståndaren förrän handen är slut (som vid ett riktigt bord).
 //  - Sessionen (session.ts): antal händer, minuter eller fritt spel.
@@ -44,6 +45,7 @@ import {
   type Turn,
 } from '../../training/game';
 import { countPlaced, judge, type Move } from '../../training/moves';
+import { pinnedOptions } from '../../training/pinned';
 import { CANCELLED, useSolverJobs } from '../../training/useSolverJobs';
 import { useMoveBuilder } from '../../training/useMoveBuilder';
 import { useRevealAboveDock } from '../../training/useRevealAboveDock';
@@ -205,7 +207,10 @@ export default function HandRun({ variant, settings, active = true, onExit, onRe
           variant,
           opponent: h.seats[1].fl > 0 ? undefined : h.seats[1].board,
           fl: turn.fl,
-          options: turn.fl ? {} : coach ? COACH_OPTIONS : RISK_OPTIONS,
+          // Ditt drag låses (pinned): det sållas aldrig bort och räknas lika noga
+          // som solverns val, på samma blandningar — annars kan ett bortsållat
+          // drag få en slumpmässigt för hög/låg EV och foul-procent
+          options: turn.fl ? {} : pinnedOptions(coach ? COACH_OPTIONS : RISK_OPTIONS, move),
         }),
       )
         .then((res) => {

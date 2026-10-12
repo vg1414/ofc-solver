@@ -57,7 +57,8 @@ export default function ReviewBoard({ board, move, judgement, maxCardWidth = 92 
           }}
           options={[
             { value: 'mine', label: 'Ditt drag', sub: evFmt.format(judgement.playerEv) },
-            { value: 'best', label: '★ Bästa draget', sub: evFmt.format(judgement.bestEv) },
+            // Fick ditt drag högre EV är skillnaden slumpbrus — då är det "solverns val", inte bättre
+            { value: 'best', label: judgement.playerEv > judgement.bestEv ? 'Solverns val' : '★ Bästa draget', sub: evFmt.format(judgement.bestEv) },
           ]}
         />
       )}
@@ -65,6 +66,11 @@ export default function ReviewBoard({ board, move, judgement, maxCardWidth = 92 
         <BoardView key="mine" board={applyMove(board, move.placements)} maxCardWidth={maxCardWidth} />
       ) : (
         <BoardView key="best" board={board} ghosts={placementsOn(board, best.placements)} maxCardWidth={maxCardWidth} />
+      )}
+      {judgement.playerEv > judgement.bestEv && (
+        <p className="rounded-[14px] bg-accent-soft px-3 py-2 text-[11.5px] font-semibold leading-snug text-accent-ink">
+          ✓ Ditt drag fick lite högre EV än solverns val. Skillnaden ryms i slumpens felmarginal, så räkna dem som lika bra.
+        </p>
       )}
       <Discards cards={view === 'mine' ? move.discards : best.discards} label={view === 'mine' ? 'Du kastade' : 'Bästa kastar'} />
     </div>

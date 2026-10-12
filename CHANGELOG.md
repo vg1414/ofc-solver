@@ -1,5 +1,10 @@
 # Changelog
 
+## 2026-10-12 — Coachen i Hel hand räknar ditt drag lika noga som solverns
+
+- Ditt drag låses nu i solvern (`pinned`) när coachen och foul/FL-mätaren räknar. Tidigare kunde ditt drag sållas bort tidigt med få simuleringar och då få en slumpmässigt för hög EV, så att "Ditt drag" visades som bättre än "Bästa draget"
+- Får ditt drag ändå lite högre EV (slumpbrus) heter alternativet "Solverns val" i stället för "Bästa draget", med en notis om att dragen är lika bra
+
 ## 2026-10-12 — Hel hand: foul/FL-mätare även för datorn
 
 - Bredvid "Datorn" visas nu foul-risk och FL-chans efter varje datordrag, samma mätare som för dig. Siffrorna kommer direkt från solverns beräkning av datorns valda drag, så det kostar ingen extra räkning. Döljs när datorn spelar Fantasy Land (brädet är dolt) och när brädet är fullt
