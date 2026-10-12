@@ -8,7 +8,7 @@
 // Varje gång en tur är klar skapas ett nytt HandState med nextTurn(),
 // som delar ut korten till nästa tur — eller räknar poäng när alla är klara.
 //
-//  - Datorns tur: en effekt startar solvern (Normal, 3 s max) i en egen
+//  - Datorns tur: en effekt startar solvern (nivå från inställningarna) i en egen
 //    worker, lägger draget och går vidare efter en kort paus så att man
 //    hinner se korten landa. Solverns foul-risk och FL-chans för draget
 //    visas bredvid "Datorn" (samma mätare som för dig).
@@ -32,7 +32,6 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Card, GameVariant } from '../../engine/types';
 import type { SolverOptions } from '../../solver/solver';
 import {
-  CPU_OPTIONS,
   applyToSeat,
   newDeck,
   newSeat,
@@ -56,7 +55,7 @@ import PlayDock from './PlayDock';
 import { useCountUp } from './TrainingBits';
 import SessionHeader, { type Dot } from './SessionHeader';
 import BottomSheet from '../ui/BottomSheet';
-import { flPending, sessionOver, targetReached, type HandSettings } from '../../training/session';
+import { CPU_LEVELS, flPending, sessionOver, targetReached, type HandSettings } from '../../training/session';
 import { usePlayClock } from '../../training/usePlayClock';
 import { CoachPill, CoachSheet, type CoachEntry } from './CoachReview';
 import HandOver from './HandOver';
@@ -66,6 +65,8 @@ import { HandStrip, ScoreSheet, type HandRecord } from './Scoreboard';
 /** Coachen: Normal-nivå, men max 10 s per drag så att den hänger med */
 const COACH_OPTIONS: SolverOptions = { simulations: 800, maxMs: 10000 };
 const CPU_PAUSE_MS = 450;
+/** "Räkna om noggrant" i coach-arket: Noggrann-nivå (2000 sim) */
+const THOROUGH_OPTIONS: SolverOptions = { simulations: 2000 };
 /** Risk-mätaren utan coach: Snabb-nivå räcker för en ungefärlig procentsats */
 const RISK_OPTIONS: SolverOptions = { simulations: 300, maxMs: 3000 };
 
@@ -161,7 +162,7 @@ export default function HandRun({ variant, settings, active = true, onExit, onRe
         variant,
         opponent: h.seats[0].fl > 0 ? undefined : h.seats[0].board,
         fl: turn.fl,
-        options: CPU_OPTIONS,
+        options: { simulations: CPU_LEVELS[settings.cpuLevel].simulations, maxMs: CPU_LEVELS[settings.cpuLevel].maxMs },
       }),
     )
       .then(async (res) => {
@@ -197,22 +198,24 @@ export default function HandRun({ variant, settings, active = true, onExit, onRe
     // Draget bedöms alltid när det finns något att visa: coachen och/eller
     // risk-mätaren (foul/FL). Utan coach räcker en snabbare räkning.
     if (coach || (!turn.fl && !last)) {
-      const entry: CoachEntry = { key, hand: h.no, round: turn.round, fl: turn.fl, board: h.seats[0].board, move, j: null };
+      const input = solverInput({
+        seat: h.seats[0],
+        cards: h.dealt,
+        variant,
+        opponent: h.seats[1].fl > 0 ? undefined : h.seats[1].board,
+        fl: turn.fl,
+        options: {},
+      });
+      const entry: CoachEntry = { key, hand: h.no, round: turn.round, fl: turn.fl, board: h.seats[0].board, move, input, j: null };
       if (coach) setCoachLog((l) => [...l, entry]);
       if (!turn.fl && !last) setRisk({ key, hand: h.no, foul: null, fl: null });
-      coachSolve(
-        solverInput({
-          seat: h.seats[0],
-          cards: h.dealt,
-          variant,
-          opponent: h.seats[1].fl > 0 ? undefined : h.seats[1].board,
-          fl: turn.fl,
-          // Ditt drag låses (pinned): det sållas aldrig bort och räknas lika noga
-          // som solverns val, på samma blandningar — annars kan ett bortsållat
-          // drag få en slumpmässigt för hög/låg EV och foul-procent
-          options: turn.fl ? {} : pinnedOptions(coach ? COACH_OPTIONS : RISK_OPTIONS, move),
-        }),
-      )
+      coachSolve({
+        ...input,
+        // Ditt drag låses (pinned): det sållas aldrig bort och räknas lika noga
+        // som solverns val, på samma blandningar — annars kan ett bortsållat
+        // drag få en slumpmässigt för hög/låg EV och foul-procent
+        options: turn.fl ? {} : pinnedOptions(coach ? COACH_OPTIONS : RISK_OPTIONS, move),
+      })
         .then((res) => {
           const j = judge(res, move);
           if (!turn.fl && !last) {
@@ -231,6 +234,23 @@ export default function HandRun({ variant, settings, active = true, onExit, onRe
     }
     mbReset();
     setH((prev) => played(prev, 0, move));
+  };
+
+  // Coach-arket: "Räkna om noggrant" kör samma drag på Noggrann nivå (2000 sim,
+  // solverns vanliga tidsgräns) med ditt drag låst, och ersätter bedömningen
+  const [rechecking, setRechecking] = useState<string | null>(null);
+  const recheck = (e: CoachEntry) => {
+    if (e.fl || rechecking) return;
+    setRechecking(e.key);
+    coachSolve({ ...e.input, options: pinnedOptions(THOROUGH_OPTIONS, e.move) })
+      .then((res) => {
+        const done: CoachEntry = { ...e, j: judge(res, e.move), thorough: true };
+        setCoachLog((l) => l.map((x) => (x.key === e.key ? done : x)));
+        setReview((r) => (r?.key === e.key ? done : r));
+        setToast((t) => (t?.key === e.key ? done : t));
+      })
+      .catch(() => {})
+      .finally(() => setRechecking(null));
   };
 
   // Coach-brickan försvinner efter en stund (längre om det fanns ett bättre drag att titta på)
@@ -420,7 +440,7 @@ export default function HandRun({ variant, settings, active = true, onExit, onRe
         </div>
       </DockLayout>
 
-      <CoachSheet entry={review} onClose={() => setReview(null)} />
+      <CoachSheet entry={review} onClose={() => setReview(null)} onRecheck={recheck} rechecking={!!review && rechecking === review.key} />
       <ScoreSheet open={scoreOpen} onClose={() => setScoreOpen(false)} records={records} current={h.no} />
 
       <BottomSheet open={exitOpen} onClose={() => setExitOpen(false)} title="Avsluta sessionen?">

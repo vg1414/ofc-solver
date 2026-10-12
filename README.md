@@ -27,7 +27,7 @@ En webbaserad solver för Open Face Chinese Poker (OFC) med stöd för hemspels-
 
 - **Scenarion (poängjakt):** riktiga lägen som datorn spelar fram. Lägg dina kort; solvern (Noggrann) bedömer draget. Sållades ditt drag bort tidigt räknas det om, lika noga som bästa draget och på samma kortlekar, så att poängen blir rättvis. Max 100 p per scenario (100 − EV-förlust × 100), gradering Perfekt / Bra / Miss och en sammanfattning med sämsta beslutet
 - **★ Joker:** samma poängjakt, men varje scenario har minst en joker i handen (ibland båda) — öva på var jokern gör mest nytta
-- **Hel hand mot datorn:** spela sessioner med husreglerna, inklusive Fantasy Land. Längd: antal händer, minuter eller fritt spel. Välj om FL måste spelas ut i slutet. Ställningen och varje hands poäng syns under spelet, och foul-risk och FL-chans visas efter varje drag, både för dig och datorn. Valfritt coach-läge visar EV-förlusten och bästa draget
+- **Hel hand mot datorn:** spela sessioner med husreglerna, inklusive Fantasy Land. Längd: antal händer, minuter eller fritt spel. Välj om FL måste spelas ut i slutet. Ställningen och varje hands poäng syns under spelet, och foul-risk och FL-chans visas efter varje drag, både för dig och datorn. Datorns styrka går att välja (Snabb/Normal/Noggrann). Valfritt coach-läge visar EV-förlusten och bästa draget, och ett drag kan räknas om noggrant
 - **Topplistor** sparas lokalt i webbläsaren (topp 10 per läge, variant och antal)
 
 ## Specialregler (hemspel)

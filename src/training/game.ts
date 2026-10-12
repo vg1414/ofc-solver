@@ -90,11 +90,8 @@ export function applyToSeat(seat: Seat, move: Move): Seat {
 
 export type Solve = (input: SolverInput) => Promise<DetailedSolverResult>;
 
-/**
- * Datorn i helhandsläget: Normal-nivå (800 sim, max 3 s per drag) — samma
- * som scenariogeneratorn (se mätningen nedan). Tar 1–3 s per drag.
- */
-export const CPU_OPTIONS: SolverOptions = { simulations: 800, maxMs: 3000 };
+// Datorn i helhandsläget: nivån väljs i inställningarna (CPU_LEVELS i session.ts).
+// Normal = 800 sim, max 3 s per drag — samma som scenariogeneratorn nedan.
 /**
  * Datorn när den spelar fram scenarion: Normal-nivå (800 sim, max 3 s).
  * Mätt mot noggrann omräkning: snittförlust ≈ 0,24 EV på öppningar och

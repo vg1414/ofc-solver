@@ -5,7 +5,7 @@
 // (TrainingView lägger dem i localStorage), så "Klar" stänger bara.
 //  - Längd: Händer / Minuter / Fritt. Snabbval + en stegare för eget värde.
 //  - Fantasy Land i slutet: spelas ut eller får sluta i FL.
-//  - Coach-läge.
+//  - Datorns styrka (Snabb / Normal / Noggrann) och coach-läge.
 // SettingsSummary är raden på startsidan som visar valen och öppnar arket.
 // ============================================================
 
@@ -19,6 +19,8 @@ import {
   MINUTE_PRESETS,
   MINUTES_RANGE,
   lengthLabel,
+  CPU_LEVELS,
+  type CpuLevel,
   type FlEnd,
   type HandSettings,
   type SessionLength,
@@ -95,6 +97,21 @@ export default function HandSettingsSheet({ open, onClose, value, onChange }: Pr
             />
             <FlOption active={value.flEnd === 'stop'} onClick={() => set({ flEnd: 'stop' as FlEnd })} title="Får sluta i FL" sub="Sessionen slutar direkt, FL går förlorat" />
           </div>
+        </Section>
+
+        <Section label="Datorns styrka">
+          <Segmented<CpuLevel>
+            size="sm"
+            ariaLabel="Datorns styrka"
+            value={value.cpuLevel}
+            onChange={(cpuLevel) => set({ cpuLevel })}
+            options={(['fast', 'normal', 'thorough'] as const).map((l) => ({
+              value: l,
+              label: CPU_LEVELS[l].label,
+              sub: `${CPU_LEVELS[l].simulations} sim · ≤ ${CPU_LEVELS[l].maxMs / 1000} s`,
+            }))}
+          />
+          <p className="mt-1.5 px-1 text-[11.5px] text-ink-3">Gäller bara datorn här. Solver-flikens nivå ändras inte.</p>
         </Section>
 
         <Section label="Hjälp">
@@ -231,7 +248,7 @@ export function Switch({ on, onToggle, title, sub }: { on: boolean; onToggle: ()
 
 /** Raden på startsidan: visar valen som små pills, ett tryck öppnar arket */
 export function SettingsSummary({ value, onOpen }: { value: HandSettings; onOpen: () => void }) {
-  const pills = [lengthLabel(value.length), value.flEnd === 'playout' ? '★ FL spelas ut' : 'Får sluta i FL', value.coach ? 'Coach på' : 'Coach av'];
+  const pills = [lengthLabel(value.length), value.flEnd === 'playout' ? '★ FL spelas ut' : 'Får sluta i FL', `Dator: ${CPU_LEVELS[value.cpuLevel].label}`, value.coach ? 'Coach på' : 'Coach av'];
   return (
     <button
       type="button"

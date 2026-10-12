@@ -186,7 +186,7 @@ describe('jokerträning', () => {
 });
 
 describe('träning: session mot datorn', () => {
-  const base = { flEnd: 'playout' as const, coach: false };
+  const base = { flEnd: 'playout' as const, coach: false, cpuLevel: 'normal' as const };
   it('antal händer: slut efter n händer, men FL spelas ut först', async () => {
     const { sessionOver } = await import('./session');
     const s = { ...base, length: { kind: 'hands' as const, n: 10 } };
@@ -209,7 +209,8 @@ describe('träning: session mot datorn', () => {
 
   it('sparade inställningar läses säkert', async () => {
     const { sanitizeHandSettings, clockText } = await import('./session');
-    expect(sanitizeHandSettings({ length: { kind: 'minutes', n: 999 }, flEnd: 'stop', coach: false })).toEqual({ length: { kind: 'minutes', n: 180 }, flEnd: 'stop', coach: false });
+    expect(sanitizeHandSettings({ length: { kind: 'minutes', n: 999 }, flEnd: 'stop', coach: false })).toEqual({ length: { kind: 'minutes', n: 180 }, flEnd: 'stop', coach: false, cpuLevel: 'normal' });
+    expect(sanitizeHandSettings({ cpuLevel: 'thorough' }).cpuLevel).toBe('thorough');
     expect(sanitizeHandSettings('skräp').length).toEqual({ kind: 'hands', n: 10 });
     expect(clockText(754_000)).toBe('12:34');
     expect(clockText(0)).toBe('0:00');

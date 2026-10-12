@@ -8,16 +8,26 @@
 // FL i slutet: "playout" = Fantasy Land som någon har vunnit (även
 // repeat-FL) spelas ut innan sessionen tar slut, "stop" = man får
 // sluta direkt även om någon står på FL.
+// Datorns styrka: Snabb / Normal / Noggrann (simuleringar + max tid per drag).
 // Allt här är ren logik utan React, så det går att testa.
 // ============================================================
 
 export type SessionLength = { kind: 'hands'; n: number } | { kind: 'minutes'; n: number } | { kind: 'free' };
 export type FlEnd = 'playout' | 'stop';
+export type CpuLevel = 'fast' | 'normal' | 'thorough';
+
+/** Datorns solverinställning per nivå. Noggrann får ta max 10 s per drag */
+export const CPU_LEVELS: Record<CpuLevel, { label: string; simulations: number; maxMs: number }> = {
+  fast: { label: 'Snabb', simulations: 300, maxMs: 3000 },
+  normal: { label: 'Normal', simulations: 800, maxMs: 3000 },
+  thorough: { label: 'Noggrann', simulations: 2000, maxMs: 10000 },
+};
 
 export interface HandSettings {
   length: SessionLength;
   flEnd: FlEnd;
   coach: boolean;
+  cpuLevel: CpuLevel;
 }
 
 export const HAND_PRESETS = [5, 10, 20] as const;
@@ -25,7 +35,7 @@ export const MINUTE_PRESETS = [10, 20, 30] as const;
 export const HANDS_RANGE = { min: 1, max: 99, step: 1 };
 export const MINUTES_RANGE = { min: 5, max: 180, step: 5 };
 
-export const DEFAULT_HAND_SETTINGS: HandSettings = { length: { kind: 'hands', n: 10 }, flEnd: 'playout', coach: true };
+export const DEFAULT_HAND_SETTINGS: HandSettings = { length: { kind: 'hands', n: 10 }, flEnd: 'playout', coach: true, cpuLevel: 'normal' };
 
 const clamp = (n: number, r: { min: number; max: number }) => Math.min(r.max, Math.max(r.min, Math.round(n)));
 
@@ -43,6 +53,7 @@ export function sanitizeHandSettings(v: unknown): HandSettings {
     length,
     flEnd: o.flEnd === 'stop' ? 'stop' : 'playout',
     coach: typeof o.coach === 'boolean' ? o.coach : d.coach,
+    cpuLevel: o.cpuLevel === 'fast' || o.cpuLevel === 'thorough' ? o.cpuLevel : 'normal',
   };
 }
 

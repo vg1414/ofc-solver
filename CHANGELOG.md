@@ -1,5 +1,10 @@
 # Changelog
 
+## 2026-10-12 — Hel hand: välj datorns styrka, räkna om coachen noggrant
+
+- **Datorns styrka** i Hel hand-inställningarna: Snabb (300 sim, ≤ 3 s), Normal (800 sim, ≤ 3 s) eller Noggrann (2000 sim, ≤ 10 s per drag). Tidigare spelade datorn alltid Normal, och nivåvalet uppe till höger påverkar fortfarande bara Solver-fliken
+- **"Räkna om noggrant"** i coach-arket: räknar om just det draget på Noggrann nivå (2000 sim) med ditt drag låst och ersätter bedömningen. Coachen räknar annars på Normal som förut
+
 ## 2026-10-12 — Coachen i Hel hand räknar ditt drag lika noga som solverns
 
 - Ditt drag låses nu i solvern (`pinned`) när coachen och foul/FL-mätaren räknar. Tidigare kunde ditt drag sållas bort tidigt med få simuleringar och då få en slumpmässigt för hög EV, så att "Ditt drag" visades som bättre än "Bästa draget"

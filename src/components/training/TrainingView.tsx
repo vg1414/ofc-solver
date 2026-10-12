@@ -20,7 +20,7 @@ import ScenarioRun from './ScenarioRun';
 import HandRun from './HandRun';
 import { POOL_SIZE, useScenarioPool } from '../../training/useScenarioPool';
 import HandSettingsSheet, { SettingsSummary } from './HandSettingsSheet';
-import { leaderboardCount, lengthLabel, sanitizeHandSettings, type HandSettings } from '../../training/session';
+import { CPU_LEVELS, leaderboardCount, lengthLabel, sanitizeHandSettings, type HandSettings } from '../../training/session';
 
 const COUNTS = [5, 10, 20] as const;
 const CFG_KEY = 'ofc-train-config';
@@ -159,7 +159,7 @@ function Setup({
             <>
               <div className="font-serif text-[18px] font-extrabold text-ink">Mot datorn</div>
               <ul className="mt-1.5 flex flex-col gap-1 text-[13px] text-ink-2">
-                <li>• Hela händer med 54 kort. Datorn spelar med solvern (Normal).</li>
+                <li>• Hela händer med 54 kort. Datorn spelar med solvern ({CPU_LEVELS[cfg.hand.cpuLevel].label}).</li>
                 <li>• Husreglerna: 1 p/rad, scoop +3, royalties (mitten dubbelt), foul.</li>
                 <li>• Fantasy Land: QQ 13 · KK 14 · AA 15 · triss 16 kort, repeat-FL.</li>
                 <li>• Spela flera händer i rad — välj antal händer, minuter eller fritt spel.</li>

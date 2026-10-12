@@ -6,10 +6,12 @@
 //    tryck öppnar arket.
 //  - CoachSheet: ark med betyg, EV och brädet där man växlar mellan
 //    "Ditt drag" och "Bästa draget" (samma ReviewBoard som Scenarion).
+//    Knappen "Räkna om noggrant" kör om draget på Noggrann nivå.
 //  - CoachDots: en prick per bedömt drag i handen, tryck för att se det.
 // ============================================================
 
 import type { Board, RowName } from '../../engine/types';
+import type { SolverInput } from '../../hooks/useSolver';
 import { GRADE_LABEL, type Judgement, type Move } from '../../training/moves';
 import PlayingCard from '../cards/PlayingCard';
 import BottomSheet from '../ui/BottomSheet';
@@ -25,7 +27,11 @@ export interface CoachEntry {
   /** Brädet innan draget */
   board: Board;
   move: Move;
+  /** Solverinput för draget (utan options) — för omräkning */
+  input: SolverInput;
   j: Judgement | null;
+  /** Omräknad på Noggrann nivå */
+  thorough?: boolean;
 }
 
 const ROW_SHORT: Record<RowName, string> = { top: 'T', middle: 'M', bottom: 'B' };
@@ -91,7 +97,17 @@ export function CoachPill({ entry, onOpen }: { entry: CoachEntry; onOpen: (e: Co
   );
 }
 
-export function CoachSheet({ entry, onClose }: { entry: CoachEntry | null; onClose: () => void }) {
+export function CoachSheet({
+  entry,
+  onClose,
+  onRecheck,
+  rechecking,
+}: {
+  entry: CoachEntry | null;
+  onClose: () => void;
+  onRecheck?: (e: CoachEntry) => void;
+  rechecking?: boolean;
+}) {
   const j = entry?.j;
   return (
     <BottomSheet open={!!j} onClose={onClose} title="Coach">
@@ -110,7 +126,33 @@ export function CoachSheet({ entry, onClose }: { entry: CoachEntry | null; onClo
               </div>
             </div>
           </div>
-          <ReviewBoard board={entry.board} move={entry.move} judgement={j} maxCardWidth={60} />
+          <ReviewBoard key={entry.thorough ? 't' : 'n'} board={entry.board} move={entry.move} judgement={j} maxCardWidth={60} />
+          {!entry.fl &&
+            (entry.thorough ? (
+              <div className="self-start rounded-full bg-accent-soft px-2.5 py-1 text-[11.5px] font-bold text-accent-ink">✓ Noggrann (2000 sim, ditt drag låst)</div>
+            ) : (
+              onRecheck && (
+                <button
+                  type="button"
+                  disabled={rechecking}
+                  onClick={() => {
+                    haptic(6);
+                    onRecheck(entry);
+                  }}
+                  className="btn-ghost flex h-11 items-center justify-center gap-2 rounded-full text-[13.5px] font-bold disabled:opacity-80"
+                >
+                  {rechecking ? (
+                    <>
+                      <span className="h-2 w-2 rounded-full animate-pulse" style={{ background: 'var(--accent)' }} />
+                      Räknar noggrant… (kan ta upp till 45 s)
+                    </>
+                  ) : (
+                    <>Räkna om noggrant (2000 sim)</>
+                  )}
+                </button>
+              )
+            ))}
+          {!entry.thorough && !entry.fl && <p className="-mt-1 px-1 text-[11px] text-ink-3">Coachen räknar på Normal (800 sim). Noggrann ger säkrare EV.</p>}
           {j.screened && (
             <p className="rounded-[14px] bg-fl-soft px-3 py-2 text-[11.5px] font-semibold leading-snug text-fl">
               ⓘ Solvern sållade bort ditt drag tidigt, så dess EV är osäkrare och kan vara lite för låg.
