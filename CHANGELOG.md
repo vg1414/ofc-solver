@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-10-13 — Spela: stor nedräkning innan Fantasy Land
+
+- När nästa spelare ska lägga sin Fantasy Land täcks hela skärmen av en stor nedräkning (5 s) med "Ge telefonen till Anna", så att den som just tryckt Klar inte ser FL-korten. Korten visas när nedräkningen är slut, eller direkt med "Jag är Anna — visa nu" (`FlHandoff.tsx`)
+
 ## 2026-10-13 — Test: Fantasy Land dolt tills båda lagt klart
 
 - Nytt test som låser regeln att ett FL-bräde är dolt för motståndaren tills båda spelarna lagt klart sina händer (oavsett vem som börjar). Regeln gäller redan i Spela och Hel hand mot datorn

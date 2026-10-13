@@ -90,7 +90,7 @@ En `useSolver()` = en egen worker, och den räknar en sak i taget. Träningen an
 
 ## Spela-fliken (`src/components/play/`, logik i `src/match/`)
 
-- `PlayView.tsx` startsida (namn, variant, längd/FL via `HandSettingsSheet duel`, "Fortsätt" för sparat parti), `DuelRun.tsx` partiet, `DuelSummary.tsx` slutresultat.
+- `PlayView.tsx` startsida (namn, variant, längd/FL via `HandSettingsSheet duel`, "Fortsätt" för sparat parti), `DuelRun.tsx` partiet, `DuelSummary.tsx` slutresultat, `FlHandoff.tsx` helskärmsnedräkning (5 s) innan en FL-hand visas.
 - **Online-förberedelse:** allt går via `applyAction(state, action)`. Actions bär handens nummer + turens index så gamla/dubbla avvisas, och `validateMove` kontrollerar kort, antal och tur. UI ritar från `viewFor(state, seat)`, som döljer kortleken, motståndarens kast, motståndarens öppning under runda 1 (husregel) och FL-bräde till handens slut. `MatchState` är ren JSON. En framtida `useOnlineMatch` ska ha samma `{ state, dispatch }` som `useLocalMatch`.
 - Spelarfärger: `--p1*` (grön) och `--p2*` (blå) i `index.css`. `HandOver`, `Scoreboard` och `SessionHeader` tar `names` / `p1`/`p2`-prickar för 2-spelarläget.
 - Ingen solverhjälp i 2-spelarläget.

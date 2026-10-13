@@ -34,7 +34,7 @@ En webbaserad solver för Open Face Chinese Poker (OFC) med stöd för hemspels-
 
 - **Två spelare på samma telefon:** skriv in namnen, välj variant och längd (händer, minuter eller fritt, och om FL ska spelas ut). Skicka telefonen mellan er
 - **Tydligt vems tur det är:** stor banner i spelarens färg (grön = spelare 1, blå = spelare 2), skärmkanten lyser i samma färg, och Klar-knappen säger "ge till Anna" när telefonen ska lämnas över. Den som har turen ser alltid sitt bräde nederst
-- **Dolt det som ska vara dolt:** öppningshänderna läggs dolt och visas när båda lagt sin, kastade kort (Pineapple) visas aldrig för motståndaren, och Fantasy Land-brädet är dolt tills handen är klar. FL-spelaren trycker själv "visa mina kort"
+- **Dolt det som ska vara dolt:** öppningshänderna läggs dolt och visas när båda lagt sin, kastade kort (Pineapple) visas aldrig för motståndaren, och Fantasy Land-brädet är dolt tills handen är klar. Innan någon lägger sin FL täcks skärmen av en stor nedräkning (5 s) så att telefonen kan lämnas över utan att korten syns
 - Ställning, handlista med slutbräden och ett slutresultat med vinnaren. Partiet sparas efter varje drag, så det går att fortsätta om appen stängs
 - **Förberett för online:** spelmotorn (`src/match/`) tar emot drag som "actions", kontrollerar dem och visar varje spelare bara sin egen vy — samma kod kan senare köras på en server
 
