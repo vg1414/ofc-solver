@@ -23,6 +23,8 @@ export interface PlayingCardProps extends React.HTMLAttributes<HTMLDivElement> {
   lifted?: boolean;
   /** Lagt i senaste draget: streckad ram, men kortet syns som vanligt */
   recent?: boolean;
+  /** Del av öppningshanden: fast mörk ram */
+  opening?: boolean;
   /** Spela "snäpp"-animation när kortet dyker upp */
   snap?: boolean;
   /** Ta bort valör-text på jokern (för mycket små kort) */
@@ -35,6 +37,7 @@ export default function PlayingCard({
   ghost = false,
   lifted = false,
   recent = false,
+  opening = false,
   snap = false,
   compact = false,
   className = '',
@@ -54,8 +57,8 @@ export default function PlayingCard({
       : lifted
         ? `inset 0 0 0 1px ${v.line}, 0 0 0 2px var(--accent), var(--shadow-lift)`
         : `inset 0 0 0 1px ${v.line}, var(--shadow-card)`,
-    outline: ghost || recent ? '2px dashed var(--accent)' : undefined,
-    outlineOffset: ghost || recent ? '-1px' : undefined,
+    outline: ghost || recent ? '2px dashed var(--accent)' : opening ? '2px solid var(--ink)' : undefined,
+    outlineOffset: ghost || recent || opening ? '-1px' : undefined,
     ...style,
   } as React.CSSProperties;
 

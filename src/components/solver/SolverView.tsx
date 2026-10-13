@@ -29,6 +29,9 @@ import { useSwipeDown } from '../../hooks/useSwipeDown';
 import { DragProvider } from '../dnd/DragContext';
 import type { BoardSlot, DropTarget } from '../dnd/dragCore';
 import BoardView from '../board/BoardView';
+import ShareBoards from '../share/ShareBoards';
+import type { ShareBoard, ShareHand } from '../../share/boardImage';
+import { applyMove as applyPlacements, placementsOn } from '../../training/moves';
 import CardGrid, { JokerButton, type TileState } from '../cards/CardGrid';
 import HandTray from '../cards/HandTray';
 import SortButtons from '../cards/SortButtons';
@@ -350,6 +353,48 @@ export default function SolverView({ simulations }: SolverViewProps) {
   // Spökkort för förhandsvisat alternativ (bara Normal-läget, på mitt bräde)
   const ghosts = normal && onMine && result && !isLoading ? (result.options[previewIndex]?.placements ?? []) : [];
 
+  // ---------- Dela som bild ----------
+  // Med ett förslag: förslaget inlagt på mitt bräde (streckade kort) + EV.
+  // Utan förslag: läget + korten att lägga, som ett pussel ("Hur lägger du?").
+  const shareBoards = (): ShareBoard[] => {
+    const opt = showResults ? result?.options[previewIndex] : undefined;
+    const mine: ShareBoard = opt
+      ? {
+          name: 'Du',
+          board: opt.resultBoard ?? applyPlacements(myBoard, opt.placements),
+          // Öppning / Fantasy Land = hela brädet nytt, då streckas inget
+          recent: normal && placed > 0 ? placementsOn(myBoard, opt.placements).map((p) => ({ row: p.row, slot: p.slotIndex })) : undefined,
+        }
+      : { name: 'Du', board: myBoard, fouled: myFouled };
+    return [mine, ...(oppPlaced > 0 ? [{ name: 'Motståndare', board: opponentBoard }] : [])];
+  };
+  const shareHand = (): ShareHand | undefined => {
+    const opt = showResults ? result?.options[previewIndex] : undefined;
+    if (opt) {
+      const ev = new Intl.NumberFormat('sv-SE', { signDisplay: 'always', minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(opt.ev);
+      const pct = (p?: number) => (p === undefined ? '' : `${Math.round(p * 100)} %`);
+      return {
+        prefix: 'SOLVERNS FÖRSLAG',
+        label: [
+          `EV ${ev}`,
+          normal && opt.flProbability !== undefined ? `FL ${pct(opt.flProbability)}` : '',
+          normal && opt.foulProbability !== undefined ? `Foul ${pct(opt.foulProbability)}` : '',
+          opt.discards.length ? 'kastar' : '',
+        ]
+          .filter(Boolean)
+          .join(' · '),
+        cards: opt.discards,
+        note: previewIndex === 0 ? '★ Bästa draget' : `Alternativ ${previewIndex + 1}`,
+      };
+    }
+    if (handCards.length === 0) return undefined;
+    const n = handCards.length;
+    return {
+      cards: handCards,
+      label: !normal ? `Fantasy Land · ${n} kort` : variant === 'pineapple' && placed > 0 ? 'Lägg 2, kasta 1' : `Lägg ${n === 1 ? '1 kort' : `${n} kort`}`,
+    };
+  };
+
   // ---------- Dock: mät höjd så att sidan får plats ovanför ----------
 
   const dockRef = useRef<HTMLDivElement>(null);
@@ -454,7 +499,8 @@ export default function SolverView({ simulations }: SolverViewProps) {
                   <span className="eyebrow">{placed === 0 ? 'Öppningshand' : placed === 13 ? 'Klar hand' : `${placed} av 13 kort`}</span>
                 </div>
               )}
-              <div ref={boardWrapRef}>
+              <div ref={boardWrapRef} className="relative">
+              {(placed > 0 || oppPlaced > 0 || handCards.length > 0) && <ShareBoards boards={shareBoards} hand={shareHand} />}
               <BoardView
                 key={activePlayer}
                 board={onMine ? myBoard : opponentBoard}

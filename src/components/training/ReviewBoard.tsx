@@ -11,7 +11,7 @@
 
 import { useState } from 'react';
 import type { Board, Card } from '../../engine/types';
-import { moveKey, placementsOn, type Judgement, type Move } from '../../training/moves';
+import { applyMove, countPlaced, moveKey, placementsOn, type Judgement, type Move } from '../../training/moves';
 import BoardView from '../board/BoardView';
 import PlayingCard from '../cards/PlayingCard';
 import Segmented from '../ui/Segmented';
@@ -65,7 +65,12 @@ export default function ReviewBoard({ board, move, judgement, maxCardWidth = 92 
         />
       )}
       {view === 'mine' ? (
-        <BoardView key="mine" board={board} ghosts={placementsOn(board, move.placements)} maxCardWidth={maxCardWidth} />
+        // Öppningshand: alla kort är nya, så de visas som vanliga kort
+        countPlaced(board) === 0 ? (
+          <BoardView key="mine" board={applyMove(board, move.placements)} maxCardWidth={maxCardWidth} />
+        ) : (
+          <BoardView key="mine" board={board} ghosts={placementsOn(board, move.placements)} maxCardWidth={maxCardWidth} />
+        )
       ) : (
         <BoardView key="best" board={board} ghosts={placementsOn(board, best.placements)} maxCardWidth={maxCardWidth} />
       )}

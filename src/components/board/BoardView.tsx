@@ -15,6 +15,7 @@
 //  - Spökkort: solverns förslag visas genomskinligt med streckad ram.
 //  - `recent`: kort från senaste draget får en streckad ram (men syns
 //    som vanligt), så att man ser vilka kort som just lades.
+//  - `opening`: öppningshandens kort får en fast mörk ram hela handen.
 //
 // Kortstorlek: brädet är en "container" och kortbredden räknas ut från
 // brädets egen bredd (cqw), så 5 kort alltid får plats — oavsett skärm.
@@ -55,6 +56,7 @@ function PlacedCard({
   hidden,
   swapTarget,
   recent,
+  opening,
   onTap,
 }: {
   card: Card;
@@ -68,6 +70,8 @@ function PlacedCard({
   swapTarget: boolean;
   /** Lagt i senaste draget (streckad ram) */
   recent: boolean;
+  /** Del av öppningshanden (mörk ram) */
+  opening: boolean;
   onTap: () => void;
 }) {
   const drag = useDraggable(removable ? card : null, onTap, !removable, { row, slot });
@@ -89,7 +93,7 @@ function PlacedCard({
       } ${swapTarget ? 'scale-[1.06] shadow-[0_0_0_2.5px_#e8a828,0_0_16px_rgba(245,184,61,0.6)]' : ''}`}
       disabled={!removable}
     >
-      <PlayingCard card={card} snap recent={recent} />
+      <PlayingCard card={card} snap recent={recent} opening={opening} />
       {armed && (
         <span className="absolute inset-0 flex items-center justify-center rounded-[calc(var(--card-w)*0.14)] bg-[rgba(208,68,63,0.78)] text-white text-xl font-bold backdrop-blur-[1px] animate-badge-in">
           ✕
@@ -112,6 +116,8 @@ interface BoardViewProps {
   ghosts?: CardPlacement[];
   /** Platser som fylldes i senaste draget (streckad ram) */
   recent?: { row: RowName; slot: number }[];
+  /** Öppningshandens platser (mörk ram) */
+  opening?: { row: RowName; slot: number }[];
   fouled?: boolean;
   /** Visa royalties per rad (beräknas live när raden är full) */
   showRoyalties?: boolean;
@@ -130,6 +136,7 @@ export default function BoardView({
   canRemove,
   ghosts = [],
   recent,
+  opening,
   fouled = false,
   showRoyalties = true,
   earnedRoyalties,
@@ -216,6 +223,7 @@ export default function BoardView({
                         hidden={isSource}
                         swapTarget={removable && !!drag?.source && !isSource && isOverRow && drag?.over?.filled === i}
                         recent={!!recent?.some((r) => r.row === name && r.slot === i)}
+                        opening={!!opening?.some((r) => r.row === name && r.slot === i)}
                         onTap={() => tapCard(name, i)}
                       />
                     );

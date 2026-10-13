@@ -34,7 +34,7 @@ export default function ShareBoards({
 }: {
   boards: () => ShareBoard[];
   /** Korten som ska läggas (dela läget som pussel) */
-  hand?: () => ShareHand;
+  hand?: () => ShareHand | undefined;
   className?: string;
   title?: string;
 }) {

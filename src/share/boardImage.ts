@@ -25,6 +25,8 @@ export interface ShareBoard {
   royalties?: Record<RowName, number>;
   /** Kort från senaste draget (ritas med streckad ram) */
   recent?: { row: RowName; slot: number }[];
+  /** Öppningshandens kort (fast mörk ram) */
+  opening?: { row: RowName; slot: number }[];
 }
 
 const SCALE = 2;
@@ -167,6 +169,11 @@ function drawPanel(ctx: CanvasRenderingContext2D, b: ShareBoard, x: number, y: n
           roundRect(ctx, cx + 1, ry + 1, CARD_W - 2, CARD_H - 2, CARD_W * 0.13);
           ctx.stroke();
           ctx.restore();
+        } else if (b.opening?.some((x) => x.row === r.name && x.slot === k)) {
+          ctx.lineWidth = 2;
+          ctx.strokeStyle = '#2a241f';
+          roundRect(ctx, cx + 1, ry + 1, CARD_W - 2, CARD_H - 2, CARD_W * 0.13);
+          ctx.stroke();
         }
       }
       else {
@@ -196,9 +203,13 @@ export interface ShareHand {
   cards: Card[];
   /** T.ex. "Lägg 1 kort" eller "Lägg 2, kasta 1" */
   label: string;
+  /** Text till höger (standard "Hur lägger du?") */
+  note?: string;
+  /** Rubrik före label (standard "DIN TUR") */
+  prefix?: string;
 }
 
-const HAND_H = CARD_H + 38;
+const handH = (hand: ShareHand) => (hand.cards.length ? CARD_H + 38 : 54);
 
 /** Rita brädena (1 eller 2), ev. med korten som ska läggas, som PNG */
 export async function renderBoardsImage(boards: ShareBoard[], hand?: ShareHand): Promise<Blob> {
@@ -208,7 +219,7 @@ export async function renderBoardsImage(boards: ShareBoard[], hand?: ShareHand):
   const icon = await loadIcon();
 
   const w = PAD * 2 + boards.length * PANEL_W + (boards.length - 1) * GAP;
-  const h = PAD + HEADER_H + PANEL_H + (hand ? GAP + HAND_H : 0) + PAD;
+  const h = PAD + HEADER_H + PANEL_H + (hand ? GAP + handH(hand) : 0) + PAD;
   const canvas = document.createElement('canvas');
   canvas.width = w * SCALE;
   canvas.height = h * SCALE;
@@ -235,7 +246,8 @@ export async function renderBoardsImage(boards: ShareBoard[], hand?: ShareHand):
 
   if (hand) {
     const y = PAD + HEADER_H + PANEL_H + GAP;
-    roundRect(ctx, PAD, y, w - PAD * 2, HAND_H, 22);
+    const hh = handH(hand);
+    roundRect(ctx, PAD, y, w - PAD * 2, hh, hand.cards.length ? 22 : 18);
     ctx.fillStyle = '#ffffff';
     ctx.fill();
     ctx.lineWidth = 1;
@@ -243,14 +255,27 @@ export async function renderBoardsImage(boards: ShareBoard[], hand?: ShareHand):
     ctx.stroke();
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
-    ctx.font = '800 13px "Outfit", system-ui, sans-serif';
-    ctx.fillStyle = '#b07a0c';
-    ctx.fillText(`DIN TUR · ${hand.label.toUpperCase()}`, PAD + PANEL_PAD + 2, y + 18);
+    const head = `${hand.prefix ?? 'DIN TUR'} · ${hand.label.toUpperCase()}`;
+    // Krymp texten tills den får plats (bilden är smal med bara ett bräde)
+    const maxW = w - PAD * 2 - PANEL_PAD * 2 - 4;
+    let fs = 13;
+    do {
+      ctx.font = `800 ${fs}px "Outfit", system-ui, sans-serif`;
+    } while (ctx.measureText(head).width > maxW && --fs > 8);
+    // Delarna ritas var för sig: FL i lila, Foul i rött, resten guld
+    let hx = PAD + PANEL_PAD + 2;
+    head.split(' · ').forEach((part, i) => {
+      const t = (i ? ' · ' : '') + part;
+      ctx.fillStyle = part.startsWith('FL ') ? '#7a4fd0' : part.startsWith('FOUL ') ? '#d0443f' : '#b07a0c';
+      ctx.fillText(t, hx, y + 18);
+      hx += ctx.measureText(t).width;
+    });
     hand.cards.forEach((c, i) => drawCard(ctx, c, PAD + PANEL_PAD + i * (CARD_W + CARD_GAP + 2), y + 30));
-    ctx.textAlign = 'right';
     ctx.font = '600 12px "Outfit", system-ui, sans-serif';
     ctx.fillStyle = '#7a6f65';
-    ctx.fillText('Hur lägger du?', w - PAD - PANEL_PAD, y + 30 + CARD_H / 2);
+    // Med kort: noten till höger om korten. Utan kort: på en egen rad under (bilden kan vara smal)
+    ctx.textAlign = hand.cards.length ? 'right' : 'left';
+    ctx.fillText(hand.note ?? 'Hur lägger du?', hand.cards.length ? w - PAD - PANEL_PAD : PAD + PANEL_PAD + 2, hand.cards.length ? y + 30 + CARD_H / 2 : y + 37);
   }
 
   return new Promise((resolve, reject) => canvas.toBlob((blob) => (blob ? resolve(blob) : reject(new Error('Bilden kunde inte skapas'))), 'image/png'));

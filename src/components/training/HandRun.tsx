@@ -22,6 +22,7 @@
 //    finns dessutom i draglistan (MoveHistory), grupperade per hand.
 //  - Senaste dragets kort har streckad ram (useRecentSlots): datorns hela
 //    tiden, dina när du väntar på datorn eller handen är klar.
+//    Öppningshandens kort har en fast mörk ram hela handen.
 //  - ☆ i listan/arket sparar draget för analys senare (savedMoves.ts).
 //    Listan finns även utan coach, då utan betyg, så att man kan spara.
 //  - Den som börjar växlar varje hand. Fantasy Land-brädet syns inte
@@ -108,7 +109,10 @@ export default function HandRun({ variant, settings, active = true, onExit, onRe
   const elapsed = usePlayClock(active && !summary);
 
   const turn = h.outcome ? null : h.turns[h.idx];
-  const [myRecent, cpuRecent] = useRecentSlots(h.no, [h.seats[0].board, h.seats[1].board]);
+  const {
+    recent: [myRecent, cpuRecent],
+    opening: [myOpening, cpuOpening],
+  } = useRecentSlots(h.no, [h.seats[0].board, h.seats[1].board]);
   const myTurn = turn?.seat === 0;
   const mb = useMoveBuilder(h.seats[0].board, myTurn ? h.dealt : [], turn?.place ?? 0);
   const { reset: mbReset } = mb;
@@ -418,7 +422,7 @@ export default function HandRun({ variant, settings, active = true, onExit, onRe
           </div>
         ) : (
           <div className={`transition-opacity duration-300 ${myTurn ? 'opacity-80' : ''}`}>
-            <BoardView board={h.seats[1].board} recent={cpuRecent} maxCardWidth={40} fouled={!!h.outcome?.score.p2Foul} earnedRoyalties={h.outcome?.score.p2Royalties} />
+            <BoardView board={h.seats[1].board} recent={cpuRecent} opening={cpuOpening} maxCardWidth={40} fouled={!!h.outcome?.score.p2Foul} earnedRoyalties={h.outcome?.score.p2Royalties} />
           </div>
         )}
 
@@ -432,13 +436,14 @@ export default function HandRun({ variant, settings, active = true, onExit, onRe
         <div ref={myBoardRef} className="relative">
         <ShareBoards
           boards={() => [
-            { name: 'Du', board: myTurn ? mb.board : h.seats[0].board, fouled: !!h.outcome?.score.p1Foul, royalties: h.outcome?.score.p1Royalties, recent: myTurn ? undefined : myRecent },
-            ...(hidden ? [] : [{ name: 'Datorn', board: h.seats[1].board, fouled: !!h.outcome?.score.p2Foul, royalties: h.outcome?.score.p2Royalties, recent: cpuRecent }]),
+            { name: 'Du', board: myTurn ? mb.board : h.seats[0].board, fouled: !!h.outcome?.score.p1Foul, royalties: h.outcome?.score.p1Royalties, recent: myTurn ? undefined : myRecent, opening: myOpening },
+            ...(hidden ? [] : [{ name: 'Datorn', board: h.seats[1].board, fouled: !!h.outcome?.score.p2Foul, royalties: h.outcome?.score.p2Royalties, recent: cpuRecent, opening: cpuOpening }]),
           ]}
         />
         <BoardView
           board={myTurn ? mb.board : h.seats[0].board}
           recent={myTurn ? undefined : myRecent}
+          opening={myOpening}
           heldCard={myTurn ? mb.heldCard : null}
           interactive={myTurn}
           onPlace={mb.placeAt}
