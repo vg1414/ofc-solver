@@ -7,6 +7,7 @@ import SettingsSheet from './components/solver/SettingsSheet';
 import { simPreset } from './components/solver/simPresets';
 import SuitIcon from './components/cards/SuitIcon';
 import { useGameStore } from './store/gameStore';
+import { useSavedAnalyser } from './training/useSavedAnalyser';
 
 function loadSims() {
   try {
@@ -25,6 +26,8 @@ const TABS: { id: Tab; label: string }[] = [
 ];
 
 export default function App() {
+  // Sparade drag (☆) räknas på Noggrann i bakgrunden, oavsett flik
+  useSavedAnalyser();
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [tab, setTab] = useState<Tab>('solver');
   // Träningen monteras först när fliken besöks (så att den inte räknar i onödan),

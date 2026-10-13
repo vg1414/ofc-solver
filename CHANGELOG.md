@@ -7,6 +7,7 @@
 - Coachbrickan i Hel hand ligger kvar tills nästa drag i stället för att försvinna efter några sekunder
 - **☆ Spara drag för analys** i alla lägen (Hel hand även utan coach, Scenarion, Joker och Spela). Sparade drag finns under **Sparade drag** på Träna-startsidan; saknas bedömning räknar solvern fram den på Noggrann (2000 sim, ditt drag låst). Sparas på enheten (localStorage)
 - Spela: draglista utan betyg för den som har turen, så att drag kan stjärnmärkas
+- **Sparade drag räknas direkt i bakgrunden** på Noggrann nivå (egen worker, oavsett flik), så analysen ligger färdig när du öppnar den. Drag som inte hann räknas tas nästa gång appen öppnas
 
 ## 2026-10-13 — FL-värde omräknat med royalty-regeln
 

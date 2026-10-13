@@ -91,10 +91,14 @@ export function removeSaved(id: string) {
   write(read().filter((s) => s.id !== id));
 }
 
-/** Uppdatera bedömningen för ett sparat drag (gör inget om det inte är sparat) */
+/**
+ * Uppdatera bedömningen för ett sparat drag. Gör inget om draget inte är
+ * sparat, eller om en Normal-bedömning (coachen) skulle ersätta en noggrann.
+ */
 export function updateSavedJudgement(id: string, j: Judgement, thorough: boolean) {
   const list = read();
-  if (!list.some((s) => s.id === id)) return;
+  const cur = list.find((s) => s.id === id);
+  if (!cur || (cur.thorough && cur.j && !thorough)) return;
   write(list.map((s) => (s.id === id ? { ...s, j, thorough } : s)));
 }
 
@@ -111,4 +115,45 @@ export function useSavedMoves(): SavedMove[] {
 /** Unikt id för en omgång (en session eller ett parti) */
 export function newRunId(): string {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+}
+
+// ---------- Bakgrundsanalys (useSavedAnalyser) ----------
+// Varje sparat drag räknas på Noggrann nivå så snart det sparas, så att
+// det ligger färdigt när man öppnar det. Här finns bara statusen, så att
+// "Sparade drag" kan visa vilket drag som räknas och hur långt det kommit.
+
+export interface AnalysisStatus {
+  /** Draget som räknas just nu */
+  id: string | null;
+  progress: number | null;
+  /** Drag där räkningen misslyckades (försök igen = retryAnalysis) */
+  failed: string[];
+}
+
+let status: AnalysisStatus = { id: null, progress: null, failed: [] };
+const statusListeners = new Set<() => void>();
+
+export function setAnalysisStatus(patch: Partial<AnalysisStatus>) {
+  status = { ...status, ...patch };
+  statusListeners.forEach((l) => l());
+}
+
+export function retryAnalysis(id: string) {
+  setAnalysisStatus({ failed: status.failed.filter((f) => f !== id) });
+}
+
+export function useAnalysisStatus(): AnalysisStatus {
+  return useSyncExternalStore(
+    (l) => {
+      statusListeners.add(l);
+      return () => statusListeners.delete(l);
+    },
+    () => status,
+    () => status,
+  );
+}
+
+/** Behöver draget räknas (saknar bedömning eller bara räknat på Normal)? */
+export function needsAnalysis(s: SavedMove): boolean {
+  return !s.j || !s.thorough;
 }

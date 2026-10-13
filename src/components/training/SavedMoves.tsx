@@ -2,57 +2,36 @@
 // SavedMoves.tsx — "Sparade drag" på Träna-startsidan
 // ============================================================
 // Drag som du markerat med ☆ (i Hel hand, Scenarion, ★ Joker eller
-// Spela), senaste först, grupperade per dag. Ett tryck öppnar arket:
-//  - Har draget redan en bedömning visas den direkt.
-//  - Annars räknar solvern fram den på Noggrann nivå (2000 sim) med
-//    ditt drag låst (pinned), och sparar den så att det går fort nästa gång.
-//  - En bedömning från coachen (Normal) kan räknas om noggrant.
+// Spela), senaste först, grupperade per dag. Varje sparat drag räknas
+// på Noggrann nivå (2000 sim, ditt drag låst) i bakgrunden direkt när
+// det sparas (useSavedAnalyser i App), så det oftast ligger färdigt.
+// Ett tryck öppnar arket:
+//  - Klar bedömning visas direkt (med "Varför?").
+//  - Räknas draget fortfarande visas förloppet; arket fylls i när det är klart.
 //  - "Ta bort från sparade" tar bort draget.
-// Solvern körs i en egen worker (useSolverJobs) som bara finns medan
-// startsidan visas.
 // ============================================================
 
-import { useEffect, useState } from 'react';
-import type { SolverOptions } from '../../solver/solver';
-import { countPlaced, judge } from '../../training/moves';
-import { pinnedOptions } from '../../training/pinned';
-import { SOURCE_LABEL, removeSaved, updateSavedJudgement, useSavedMoves, type SavedMove } from '../../training/savedMoves';
-import { CANCELLED, useSolverJobs } from '../../training/useSolverJobs';
+import { useState } from 'react';
+import { countPlaced } from '../../training/moves';
+import { SOURCE_LABEL, needsAnalysis, removeSaved, retryAnalysis, useAnalysisStatus, useSavedMoves } from '../../training/savedMoves';
 import { MoveReviewSheet } from './CoachReview';
 import MoveHistory from './MoveHistory';
 import { OpponentMini, Spinner } from './TrainingBits';
-
-const THOROUGH: SolverOptions = { simulations: 2000 };
 
 const dayFmt = new Intl.DateTimeFormat('sv-SE', { weekday: 'short', day: 'numeric', month: 'short' });
 
 export default function SavedMoves() {
   const saved = useSavedMoves();
-  const jobs = useSolverJobs();
+  const status = useAnalysisStatus();
   const [openId, setOpenId] = useState<string | null>(null);
-  const [busy, setBusy] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
   const opened = saved.find((s) => s.id === openId) ?? null;
 
-  const { solve } = jobs;
-  const analyse = (s: SavedMove) => {
-    setBusy(s.id);
-    setError(null);
-    solve({ ...s.input, options: s.fl ? {} : pinnedOptions(THOROUGH, s.move) })
-      .then((res) => updateSavedJudgement(s.id, judge(res, s.move), !s.fl))
-      .catch((e: Error) => {
-        if (e.message !== CANCELLED) setError(e.message);
-      })
-      .finally(() => setBusy((b) => (b === s.id ? null : b)));
-  };
-
-  // Öppnat drag utan bedömning: räkna fram den direkt
-  useEffect(() => {
-    if (opened && !opened.j && busy !== opened.id && !error) analyse(opened);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [openId, opened?.j]);
-
   if (saved.length === 0) return null;
+
+  const pending = saved.filter(needsAnalysis).length;
+  const openedFailed = !!opened && status.failed.includes(opened.id);
+  // Visa först när den noggranna räkningen är klar (en Normal-bedömning från coachen byts ut strax)
+  const ready = opened && !needsAnalysis(opened) ? opened.j : null;
 
   return (
     <div className="glass rounded-[24px] p-3.5">
@@ -64,43 +43,48 @@ export default function SavedMoves() {
           group: dayFmt.format(new Date(s.savedAt)),
           label: `${SOURCE_LABEL[s.source]} · ${s.label}`,
           move: s.move,
-          j: s.j,
+          j: needsAnalysis(s) ? null : s.j,
           fl: s.fl,
         }))}
-        onOpen={(id) => {
-          setError(null);
-          setOpenId(id);
-        }}
+        onOpen={setOpenId}
         openUnjudged
         saved={new Set(saved.map((s) => s.id))}
         onToggleSave={(id) => removeSaved(id)}
       />
+      {pending > 0 && (
+        <p className="mt-2 flex items-center gap-1.5 px-1 text-[11px] font-semibold text-ink-3" aria-live="polite">
+          <span className="h-1.5 w-1.5 rounded-full animate-pulse" style={{ background: 'var(--accent)' }} />
+          Räknar {pending === 1 ? '1 drag' : `${pending} drag`} noggrant i bakgrunden…
+        </p>
+      )}
       <MoveReviewSheet
         open={!!opened}
         onClose={() => setOpenId(null)}
         title="Analys"
-        itemKey={opened ? `${opened.id}-${opened.thorough}` : ''}
+        itemKey={opened?.id ?? ''}
         subtitle={opened ? `${SOURCE_LABEL[opened.source]} · ${opened.label}` : ''}
         board={opened?.board}
         move={opened?.move}
-        j={opened?.j ?? null}
+        j={ready}
         fl={opened?.fl}
-        thorough={opened?.thorough ? '✓ Noggrann (2000 sim, ditt drag låst)' : undefined}
-        onRecheck={opened ? () => analyse(opened) : undefined}
-        rechecking={!!opened && busy === opened.id}
+        thorough="✓ Noggrann (2000 sim, ditt drag låst)"
         extra={opened?.input.opponentBoard && countPlaced(opened.input.opponentBoard) > 0 ? <OpponentMini board={opened.input.opponentBoard} /> : undefined}
         saved
         onToggleSave={opened ? () => removeSaved(opened.id) : undefined}
         loading={
-          error ? (
+          openedFailed ? (
             <div className="flex items-center gap-2 rounded-2xl bg-danger-soft px-3.5 py-2.5 text-[12.5px] font-semibold text-danger">
-              <span className="flex-1">Solvern: {error}</span>
-              <button type="button" className="font-bold underline" onClick={() => opened && analyse(opened)}>
+              <span className="flex-1">Draget kunde inte räknas.</span>
+              <button type="button" className="font-bold underline" onClick={() => opened && retryAnalysis(opened.id)}>
                 Försök igen
               </button>
             </div>
           ) : (
-            <Spinner title="Analyserar draget…" sub="Noggrann nivå (2000 sim), ditt drag låst" progress={jobs.progress} />
+            <Spinner
+              title="Analyserar draget…"
+              sub={status.id === opened?.id ? 'Noggrann nivå (2000 sim), ditt drag låst' : 'Väntar på sin tur — andra sparade drag räknas först'}
+              progress={status.id === opened?.id ? status.progress : null}
+            />
           )
         }
       />
