@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-10-13 — Jokern räknas rätt vid handens slut
+
+- **Fel foul med joker:** poängräkningen valde jokern för varje rad för sig (t.ex. ★74 i topp blev 77), så brädet kunde räknas som foul fast jokern kunde ha hållit det giltigt (★ = A → A74). Nu väljs jokrarna för hela brädet med samma regel som solvern (`src/engine/resolveJokers.ts`) innan raderna jämförs
+- **Fel Fantasy Land med joker:** FL-kollen läste också toppen för sig, så Q★6 gav QQ och FL. Nu används jokern som husregeln valde (här K → KQ6, ingen FL). Gäller både Hel hand och Solver-fliken
+- Royalties per rad på brädet ("Topp +2p") räknas på samma sätt när brädet är fullt
+
 ## 2026-10-13 — Säkrare Fantasy Land-värden
 
 - `FL_VALUE` (`src/core/flValue.ts`) omräknat med 1000 händer per kortantal i stället för 60: 13 kort 19 → 19,5 p, 14 kort 28 → 25,9 p, 15 kort 35 → 33,3 p, 16 kort 41 → 41,4 p. Värdet inkluderar upprepade repeat-FL (geometrisk serie). Repeat-chans: 30 % / 41 % / 52 % / 67 %. Påverkar både solvern, FL-lösaren och träningens bedömning

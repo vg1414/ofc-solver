@@ -17,6 +17,7 @@ import { buildDeck } from '../engine/deck';
 import { scoreHand, type ScorecardResult } from '../engine/scoring';
 import { isFoul } from '../engine/foulCheck';
 import { calcFantasyLandCards, qualifiesForRepeatFL } from '../engine/gameState';
+import { resolveJokers } from '../engine/resolveJokers';
 import type { SolverInput } from '../hooks/useSolver';
 import type { DetailedSolverResult, SolverOptions } from '../solver/solver';
 import { applyMove, countPlaced, emptyBoard, rowCards, shuffled, type Move } from './moves';
@@ -139,10 +140,10 @@ export interface HandOutcome {
 }
 
 function nextFlFor(seat: Seat): number {
-  const top = rowCards(seat.board, 'top');
-  const mid = rowCards(seat.board, 'middle');
-  const bot = rowCards(seat.board, 'bottom');
-  if (isFoul(top, mid, bot)) return 0;
+  const raw = [rowCards(seat.board, 'top'), rowCards(seat.board, 'middle'), rowCards(seat.board, 'bottom')] as const;
+  if (isFoul(...raw)) return 0;
+  // Jokrarna som husregeln valde (t.ex. ★ = K i topp, inte en dam som ger QQ och foul)
+  const { top, middle: mid, bottom: bot } = resolveJokers(...raw);
   if (seat.fl > 0) return qualifiesForRepeatFL(top, mid, bot) ? calcFantasyLandCards(top, true) : 0;
   return calcFantasyLandCards(top, false);
 }

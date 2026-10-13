@@ -14,14 +14,16 @@
 //   - Middle: evaluate5 → compareHands
 //   - Bottom: evaluate5 → compareHands
 //
-// Joker-hantering: delegeras helt till handEval (wildcards
-// optimeras automatiskt av evaluate3/evaluate5).
+// Joker-hantering: jokrarna bestäms först för hela brädet
+// (resolveJokers, samma val som solvern) så att de inte orsakar
+// foul. Sedan värderas raderna som vanliga kort.
 // ============================================================
 
 import type { Card, HandResult, RoyaltyResult } from './types';
 import { evaluate3, evaluate5, compareHands } from './handEval';
 import { calcAllRoyalties } from './royalties';
 import { isFoulFromResults } from './foulCheck';
+import { resolveJokers } from './resolveJokers';
 
 // ---------------------------------------------------------------
 // Typer
@@ -96,6 +98,10 @@ export function scoreHand(
   p1Top: Card[], p1Middle: Card[], p1Bottom: Card[],
   p2Top: Card[], p2Middle: Card[], p2Bottom: Card[],
 ): ScorecardResult {
+  // 0. Bestäm jokrarna för hela brädet (undviker foul om det går)
+  ({ top: p1Top, middle: p1Middle, bottom: p1Bottom } = resolveJokers(p1Top, p1Middle, p1Bottom));
+  ({ top: p2Top, middle: p2Middle, bottom: p2Bottom } = resolveJokers(p2Top, p2Middle, p2Bottom));
+
   // 1. Evaluera händerna
   const p1TopR    = evaluate3(p1Top);
   const p1MidR    = evaluate5(p1Middle);

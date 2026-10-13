@@ -18,7 +18,7 @@
 import { useEffect, useState } from 'react';
 import type { Board, Card, RowName } from '../../engine/types';
 import type { CardPlacement } from '../../solver/solver';
-import { calcRowRoyalty5, calcTopRoyalty } from '../../engine/royalties';
+import { calcAllRoyalties, calcRowRoyalty5, calcTopRoyalty } from '../../engine/royalties';
 import PlayingCard from '../cards/PlayingCard';
 import { useDragContext } from '../dnd/useDraggable';
 import { haptic } from '../cards/cardStyle';
@@ -29,8 +29,13 @@ const ROWS: { name: RowName; label: string }[] = [
   { name: 'bottom', label: 'Botten' },
 ];
 
-function liveRoyalty(cards: (Card | null)[], row: RowName): number {
-  const filled = cards.filter((c): c is Card => c !== null);
+const filledOf = (cards: (Card | null)[]) => cards.filter((c): c is Card => c !== null);
+
+function liveRoyalty(board: Board, row: RowName): number {
+  const t = filledOf(board.top.cards), m = filledOf(board.middle.cards), b = filledOf(board.bottom.cards);
+  // Fullt bräde: jokrarna väljs för hela brädet (som i poängräkningen)
+  if (t.length === 3 && m.length === 5 && b.length === 5) return calcAllRoyalties(t, m, b)[row];
+  const filled = filledOf(board[row].cards);
   if (row === 'top') return filled.length === 3 ? calcTopRoyalty(filled) : 0;
   return filled.length === 5 ? calcRowRoyalty5(filled, row) : 0;
 }
@@ -105,7 +110,7 @@ export default function BoardView({
           const cards = board[name].cards;
           const hasFree = cards.some((c) => c === null);
           const isOverRow = dragging && drag?.over?.row === name;
-          const roy = showRoyalties ? liveRoyalty(cards, name) : 0;
+          const roy = showRoyalties ? liveRoyalty(board, name) : 0;
 
           return (
             <div

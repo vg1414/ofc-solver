@@ -4,6 +4,7 @@ import { createEmptyBoard } from '../engine/types';
 import { isFoul } from '../engine/foulCheck';
 import { calcAllRoyalties } from '../engine/royalties';
 import { getFantasyLandEntryCards } from '../engine/gameState';
+import { resolveJokers } from '../engine/resolveJokers';
 import { evaluate3, evaluate5 } from '../engine/handEval';
 
 // ============================================================
@@ -190,12 +191,14 @@ export const useGameStore = create<GameStore>((set, get) => ({
           ? { top: 0, middle: 0, bottom: 0, total: 0 }
           : calcAllRoyalties(topCards, midCards, botCards);
 
-        const topDesc = evaluate3(topCards).description;
-        const midDesc = evaluate5(midCards).description;
-        const botDesc = evaluate5(botCards).description;
+        // Jokrarna som husregeln valde för hela brädet
+        const r = resolveJokers(topCards, midCards, botCards);
+        const topDesc = evaluate3(r.top).description;
+        const midDesc = evaluate5(r.middle).description;
+        const botDesc = evaluate5(r.bottom).description;
 
         // Kolla FL-inträde
-        const flCards = getFantasyLandEntryCards(topCards);
+        const flCards = getFantasyLandEntryCards(r.top);
 
         updates.myFouled = fouled;
         updates.myRoyalties = royalties;
