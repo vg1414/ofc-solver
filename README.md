@@ -64,7 +64,7 @@ En webbaserad solver för Open Face Chinese Poker (OFC) med stöd för hemspels-
 
 1. **Vanligt drag / öppningshand:** varje möjlig placering spelas klart hundratals till tusentals gånger. Korten kommer ett i taget och en simulerad spelare placerar dem (`src/core/lookahead.ts`), som för varje kort provar några möjliga framtider. EV = snittpoäng mot en pool av färdigspelade motståndarhänder (`src/core/poolData.ts`), plus värdet av Fantasy Land.
 2. **Fantasy Land:** alla uppställningar gås igenom exakt (`src/core/fl.ts`).
-3. **FL-värde:** vad Fantasy Land är värt i poäng (13 kort 19,5 · 14 kort 25,9 · 15 kort 33,3 · 16 kort 41,4). Uträknat med `scripts/computeFlValue.ts`, som löser 1000 slumpade FL-händer per kortantal exakt, och sparat i `src/core/flValue.ts`. Chansen att stanna kvar i FL räknas in, även flera repeat i rad: värde = snittvinst ÷ (1 − repeat-chans). Räkna om med `sh scripts/run.sh scripts/computeFlValue.ts 1000` (tar ca 2 timmar).
+3. **FL-värde:** vad Fantasy Land är värt i poäng (13 kort 19,7 · 14 kort 26,3 · 15 kort 33,8 · 16 kort 42,2). Uträknat med `scripts/computeFlValue.ts`, som löser 1000 slumpade FL-händer per kortantal exakt, och sparat i `src/core/flValue.ts`. Chansen att stanna kvar i FL räknas in, även flera repeat i rad: värde = snittvinst ÷ (1 − repeat-chans). Räkna om med `sh scripts/run.sh scripts/computeFlValue.ts 1000` (tar ca 2 timmar).
 4. **Låsta drag (`options.pinned`):** ett eller flera kompletta drag kan låsas. De sållas aldrig bort och räknas lika noga som bästa draget, på samma blandade kortlekar. Varje svar har `finalist` (räknat till slutet) och, för finalister, `evDiffSE` (standardfelet för EV-skillnaden mot bästa draget, räknat parvis).
 
 ## Teknik

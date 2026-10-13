@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-10-13 — FL-värde omräknat med royalty-regeln
+
+- `FL_VALUE` omräknat med husregeln att royalty bara går till radens vinnare (1000 händer per kortantal, 3 varv): 13 kort 19,5 → 19,7 p, 14 kort 25,9 → 26,3 p, 15 kort 33,3 → 33,8 p, 16 kort 41,4 → 42,2 p. Nästan oförändrat, eftersom en FL-hand vinner de flesta rader och då ändå får sina royalties
+
 ## 2026-10-13 — Dra lagda kort + sortera Fantasy Land-handen
 
 - **Dra ett lagt kort:** till en ledig plats = flytta, på ett annat eget kort = byt plats, utanför brädet (eller till handen) = ta bort. Släpps det på brädet mellan raderna händer ingenting. Gäller Solver, Träna och Spela (där bara kort från det aktuella draget). Två tryck för att ta bort finns kvar
