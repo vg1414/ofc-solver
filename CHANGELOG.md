@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-10-13 — Test: Fantasy Land dolt tills båda lagt klart
+
+- Nytt test som låser regeln att ett FL-bräde är dolt för motståndaren tills båda spelarna lagt klart sina händer (oavsett vem som börjar). Regeln gäller redan i Spela och Hel hand mot datorn
+
 ## 2026-10-13 — Ny flik: Spela (2 spelare)
 
 - **2 spelare på samma telefon** i en ny tredje flik "Spela": namn, variant, längd och FL-regel. Turbanner och skärmkant i spelarens färg (grön/blå), eget bräde alltid nederst, "Klar – ge till …"

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { buildDeck } from '../engine/deck';
 import type { Board, Card, RowName } from '../engine/types';
 import type { Move } from '../training/moves';
+import { startHand } from '../training/game';
 import { applyAction, createMatch, currentTurn, MatchError, parseMatch, totals, viewFor, type MatchConfig, type MatchState } from './match';
 
 const CFG: MatchConfig = { variant: 'regular', names: ['David', 'Anna'], length: { kind: 'hands', n: 2 }, flEnd: 'stop' };
@@ -86,6 +87,25 @@ describe('2 spelare: spelmotorn', () => {
     s = playTurn(s); // spelare 2 lägger sin öppning → runda 2, allt syns
     expect(viewFor(s, 0).seats[1].hidden).toBeNull();
     expect(viewFor(s, 1).seats[0].hidden).toBeNull();
+  });
+
+  it('Fantasy Land-brädet är dolt tills båda spelarna lagt klart sina händer', () => {
+    for (const first of [0, 1] as const) {
+      const base = createMatch({ ...CFG, variant: 'pineapple' }, { first, deck: buildDeck() });
+      // Spelare 2 i FL med 14 kort, spelare 1 spelar vanligt
+      let s: MatchState = { ...base, hand: startHand(1, first, [0, 14], 'pineapple', buildDeck()) };
+      let flPlaced = false;
+      while (currentTurn(s)) {
+        if (currentTurn(s)!.seat === 1) flPlaced = true;
+        // Varje gång spelare 1 tittar (eller telefonen ligger hos dem) är FL-brädet dolt
+        expect(viewFor(s, 0).seats[1]).toMatchObject({ board: null, hidden: 'fl' });
+        s = playTurn(s);
+        if (currentTurn(s)) expect(viewFor(s, 0).seats[1].board).toBeNull();
+      }
+      expect(flPlaced).toBe(true);
+      // Först när båda lagt klart (handen är slut) syns det
+      expect(viewFor(s, 0).seats[1].board).not.toBeNull();
+    }
   });
 
   it('går att spara som JSON och läsa tillbaka', () => {
