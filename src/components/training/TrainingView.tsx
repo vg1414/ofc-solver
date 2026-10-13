@@ -5,6 +5,7 @@
 // Hel hand har egna inställningar (längd, FL i slutet, coach) i ett ark
 // bakom kugghjulet. Topplistan för just det valet visas direkt under.
 // Valen sparas i localStorage så att de är kvar till nästa gång.
+// Under topplistan: "Sparade drag" (☆-markerade drag att analysera).
 // "Spela igen" byter `runId`, vilket monterar om omgången från noll.
 // ============================================================
 
@@ -18,6 +19,7 @@ import Footer from '../layout/Footer';
 import Leaderboard from './Leaderboard';
 import ScenarioRun from './ScenarioRun';
 import HandRun from './HandRun';
+import SavedMoves from './SavedMoves';
 import { POOL_SIZE, useScenarioPool } from '../../training/useScenarioPool';
 import HandSettingsSheet, { SettingsSummary } from './HandSettingsSheet';
 import { CPU_LEVELS, leaderboardCount, lengthLabel, sanitizeHandSettings, type HandSettings } from '../../training/session';
@@ -225,7 +227,8 @@ function Setup({
         </div>
       </div>
 
-      <div className="glass rounded-[24px] p-3.5 wide:sticky wide:top-[84px]">
+      <div className="flex flex-col gap-3 wide:sticky wide:top-[84px]">
+      <div className="glass rounded-[24px] p-3.5">
         <div className="mb-1.5 flex items-baseline justify-between px-1">
           <h2 className="title-serif text-[21px]">Topplista</h2>
           <span className="text-[11px] font-bold text-ink-3">
@@ -241,6 +244,9 @@ function Setup({
         ) : (
           <Leaderboard entries={entries} format={(s) => (scen ? `${s} p` : `${s > 0 ? '+' : ''}${s}`)} />
         )}
+      </div>
+      {/* Drag markerade med ☆ i alla lägen (även Spela) */}
+      <SavedMoves />
       </div>
       {!scen && <HandSettingsSheet open={sheet} onClose={() => setSheet(false)} value={cfg.hand} onChange={(hand) => setCfg({ ...cfg, hand })} />}
       <Footer className="wide:col-span-2" />

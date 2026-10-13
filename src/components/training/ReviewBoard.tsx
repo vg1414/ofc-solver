@@ -10,7 +10,7 @@
 
 import { useState } from 'react';
 import type { Board, Card } from '../../engine/types';
-import { applyMove, placementsOn, type Judgement, type Move } from '../../training/moves';
+import { applyMove, moveKey, placementsOn, type Judgement, type Move } from '../../training/moves';
 import BoardView from '../board/BoardView';
 import PlayingCard from '../cards/PlayingCard';
 import Segmented from '../ui/Segmented';
@@ -40,7 +40,8 @@ interface ReviewBoardProps {
 }
 
 export default function ReviewBoard({ board, move, judgement, maxCardWidth = 92 }: ReviewBoardProps) {
-  const same = judgement.diff <= 0.0001 && judgement.player === judgement.best;
+  // moveKey i stället för ===: sparade bedömningar (JSON) är kopior
+  const same = judgement.diff <= 0.0001 && moveKey(move) === moveKey(judgement.best);
   const [view, setView] = useState<'mine' | 'best'>(same ? 'mine' : 'best');
   const best = judgement.best;
 

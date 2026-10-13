@@ -3,6 +3,7 @@ import type { Card } from '../engine/types';
 import type { DetailedPlacementOption, DetailedSolverResult } from '../solver/solver';
 import { applyMove, countPlaced, emptyBoard, gradeOf, judge, moveKey, placementsOn, pointsFor, wasScreenedEarly } from './moves';
 import { settleHand, turnOrder, newSeat, applyToSeat } from './game';
+import { cardDiffs, explainMove } from './explain';
 import { insertEntry, qualifies, makeEntry, type LeaderboardEntry } from './leaderboard';
 
 const c = (s: string): Card => (s === 'JK' ? { kind: 'joker' } : { kind: 'card', rank: s[0] as never, suit: ({ s: 'spades', h: 'hearts', d: 'diamonds', c: 'clubs' } as const)[s[1] as 's'] });
@@ -214,5 +215,33 @@ describe('träning: session mot datorn', () => {
     expect(sanitizeHandSettings('skräp').length).toEqual({ kind: 'hands', n: 10 });
     expect(clockText(754_000)).toBe('12:34');
     expect(clockText(0)).toBe('0:00');
+  });
+});
+
+describe('träning: förklaring av drag', () => {
+  const mv = (rows: [string, 'top' | 'middle' | 'bottom'][], discards: string[] = []) => ({
+    placements: rows.map(([k, row], i) => ({ card: c(k), row, slotIndex: i })),
+    discards: discards.map(c),
+  });
+
+  it('cardDiffs hittar bara kort som ligger olika (jokrar lika)', () => {
+    const d = cardDiffs(mv([['Ks', 'middle'], ['JK', 'top']], ['2c']), mv([['Ks', 'bottom'], ['JK', 'top']], ['2c']));
+    expect(d).toHaveLength(1);
+    expect(d[0]).toMatchObject({ mine: 'middle', best: 'bottom' });
+  });
+
+  it('säkrare men lägre FL-chans ger rätt slutsats', () => {
+    const best = { ...opt(1.0, 800, [['Ks', 'bottom']]), foulProbability: 0.09, flProbability: 0.1 };
+    const mine = { ...opt(0.5, 800, [['Ks', 'middle']]), foulProbability: 0.28, flProbability: 0.15 };
+    const j = judge(res([best, mine]), mv([['Ks', 'middle']]));
+    const ex = explainMove(mv([['Ks', 'middle']]), j);
+    expect(ex.diffs).toHaveLength(1);
+    expect(ex.lines.join(' ')).toContain('28 %');
+    expect(ex.verdict).toContain('offrar lite FL-chans');
+  });
+
+  it('samma drag som solvern', () => {
+    const j = judge(res([opt(1.0, 800, [['Ks', 'bottom']])]), mv([['Ks', 'bottom']]));
+    expect(explainMove(mv([['Ks', 'bottom']]), j).verdict).toContain('samma drag');
   });
 });

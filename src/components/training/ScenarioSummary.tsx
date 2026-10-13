@@ -17,6 +17,7 @@ import Footer from '../layout/Footer';
 import ResultBoardPreview from '../solver/ResultBoardPreview';
 import Leaderboard, { NameSheet } from './Leaderboard';
 import ReviewBoard, { evFmt } from './ReviewBoard';
+import { MoveExplain } from './CoachReview';
 import { GradeBadge } from './ScenarioFeedback';
 import { OpponentMini, useCountUp } from './TrainingBits';
 import { applyMove } from '../../training/moves';
@@ -161,6 +162,7 @@ function ReviewContent({ d }: { d: ScenarioDone }) {
       </div>
       <OpponentMini board={d.scenario.opponentBoard} />
       <ReviewBoard board={d.scenario.board} move={d.move} judgement={d.j} maxCardWidth={64} />
+      <MoveExplain move={d.move} j={d.j} />
       {d.j.screened && <p className="text-[11.5px] font-semibold text-fl">ⓘ Solvern sållade bort ditt drag tidigt — EV:n är osäkrare.</p>}
     </div>
   );

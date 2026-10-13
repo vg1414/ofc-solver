@@ -15,6 +15,8 @@
 //   judging  du är klar men solvern räknar fortfarande (progress visas)
 //   feedback gradering + ditt drag mot bästa draget
 //   summary  sammanfattning + topplista
+// Draglistan (MoveHistory) visar alla avklarade scenarion i omgången;
+// ett tryck öppnar arket med bästa draget och förklaringen.
 // ============================================================
 
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -35,6 +37,9 @@ import ReviewBoard from './ReviewBoard';
 import ScenarioFeedback from './ScenarioFeedback';
 import ScenarioSummary, { type ScenarioDone } from './ScenarioSummary';
 import { OpponentMini, RunHeader, SolverChip, Spinner, useCountUp } from './TrainingBits';
+import MoveHistory from './MoveHistory';
+import { MoveExplain, MoveReviewSheet } from './CoachReview';
+import { newRunId, toggleSaved, useSavedMoves } from '../../training/savedMoves';
 
 /** Bedömningsnivå: Noggrann */
 const EVAL_OPTIONS: SolverOptions = { simulations: 2000 };
@@ -63,6 +68,35 @@ export default function ScenarioRun({ variant, jokers = false, pool, count, onEx
   const [locked, setLocked] = useState<Move | null>(null);
   const [done, setDone] = useState<ScenarioDone[]>([]);
   const [phase, setPhase] = useState<Phase>('loading');
+  /** Öppet scenario i draglistans ark (index i done) */
+  const [openIdx, setOpenIdx] = useState<number | null>(null);
+  const [runId] = useState(newRunId);
+  const savedList = useSavedMoves();
+  const savedKeys = new Set(savedList.filter((x) => x.id.startsWith(runId + ':')).map((x) => x.id.slice(runId.length + 1)));
+  const toggleSave = (i: number) => {
+    const d = done[i];
+    if (!d) return;
+    const sc = d.scenario;
+    toggleSaved({
+      id: `${runId}:${i}`,
+      source: jokers ? 'joker' : 'scenario',
+      variant: sc.variant,
+      label: sc.round === 1 ? 'Öppningshand' : `Runda ${sc.round}`,
+      board: sc.board,
+      move: d.move,
+      input: {
+        board: sc.board,
+        cards: sc.hand,
+        deadCards: sc.deadCards,
+        variant: sc.variant,
+        opponentBoard: countPlaced(sc.opponentBoard) > 0 ? sc.opponentBoard : undefined,
+        mode: 'normal',
+      },
+      fl: false,
+      j: d.j,
+      thorough: true,
+    });
+  };
 
   // ---------- Bedömning ----------
   const { solve: evSolve, cancel: evCancel } = ev;
@@ -147,9 +181,42 @@ export default function ScenarioRun({ variant, jokers = false, pool, count, onEx
     />
   );
 
+  const history = (
+    <MoveHistory
+      items={done.map((d, i) => ({
+        key: String(i),
+        group: jokers ? '★ Joker' : 'Scenarion',
+        label: `${i + 1}. ${d.scenario.round === 1 ? 'Öppningshand' : `Runda ${d.scenario.round}`}`,
+        move: d.move,
+        j: d.j,
+      }))}
+      onOpen={(k) => setOpenIdx(Number(k))}
+      empty="Avklarade scenarion dyker upp här."
+      saved={savedKeys}
+      onToggleSave={(k) => toggleSave(Number(k))}
+    />
+  );
+  const opened = openIdx !== null ? done[openIdx] : null;
+  const sheet = (
+    <MoveReviewSheet
+      open={!!opened}
+      onClose={() => setOpenIdx(null)}
+      itemKey={String(openIdx)}
+      subtitle={opened ? `Scenario ${openIdx! + 1} · ${scenarioLabel(opened.scenario)}` : ''}
+      board={opened?.scenario.board}
+      move={opened?.move}
+      j={opened?.j ?? null}
+      thorough="✓ Noggrann (2000 sim)"
+      extra={opened && <OpponentMini board={opened.scenario.opponentBoard} />}
+      saved={openIdx !== null && savedKeys.has(String(openIdx))}
+      onToggleSave={openIdx !== null ? () => toggleSave(openIdx) : undefined}
+    />
+  );
+
   if (phase === 'loading' || !current) {
     return (
-      <DockLayout dock={<Spinner title="Datorn spelar fram…" sub={pool.error ?? 'Ett riktigt parti spelas upp till din tur'} />}>
+      <>
+      <DockLayout side={history} dock={<Spinner title="Datorn spelar fram…" sub={pool.error ?? 'Ett riktigt parti spelas upp till din tur'} />}>
         {header}
         <div className="felt flex min-h-[260px] items-center justify-center rounded-[26px] p-6 text-center">
           <p className="max-w-[260px] text-[13px] font-semibold text-[color:var(--felt-label)] opacity-80">
@@ -157,10 +224,13 @@ export default function ScenarioRun({ variant, jokers = false, pool, count, onEx
           </p>
         </div>
       </DockLayout>
+      {sheet}
+      </>
     );
   }
 
   return (
+    <>
     <ScenarioStage
       key={current.id}
       scenario={current}
@@ -179,7 +249,10 @@ export default function ScenarioRun({ variant, jokers = false, pool, count, onEx
         setEvalError(null);
         startEval(current);
       }}
+      side={history}
     />
+    {sheet}
+    </>
   );
 }
 
@@ -202,9 +275,10 @@ interface StageProps {
   onNext: () => void;
   nextLabel: string;
   onRetryEval: () => void;
+  side?: React.ReactNode;
 }
 
-function ScenarioStage({ scenario, header, phase, ready, progress, rerun, evalError, judgement, lockedMove, onLock, onNext, nextLabel, onRetryEval }: StageProps) {
+function ScenarioStage({ scenario, header, phase, ready, progress, rerun, evalError, judgement, lockedMove, onLock, onNext, nextLabel, onRetryEval, side }: StageProps) {
   const mb = useMoveBuilder(scenario.board, scenario.hand, scenario.place);
   const playing = phase === 'play';
   const boardRef = useRef<HTMLDivElement>(null);
@@ -238,7 +312,7 @@ function ScenarioStage({ scenario, header, phase, ready, progress, rerun, evalEr
 
   return (
     <DragProvider onDrop={mb.drop}>
-      <DockLayout dock={dock}>
+      <DockLayout dock={dock} side={side}>
         {header}
         <OpponentMini board={scenario.opponentBoard} />
         <div className="px-1 -mb-1">
@@ -246,7 +320,10 @@ function ScenarioStage({ scenario, header, phase, ready, progress, rerun, evalEr
         </div>
         <div ref={boardRef}>
         {phase === 'feedback' && judgement && lockedMove ? (
-          <ReviewBoard board={scenario.board} move={lockedMove} judgement={judgement} />
+          <div className="flex flex-col gap-2">
+            <ReviewBoard board={scenario.board} move={lockedMove} judgement={judgement} />
+            <MoveExplain move={lockedMove} j={judgement} />
+          </div>
         ) : (
           <BoardView
             board={mb.board}

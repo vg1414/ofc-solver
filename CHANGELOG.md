@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-10-13 — Träna: draglista, förklaring och sparade drag
+
+- **Draglista "Dina drag"** i Hel hand, Scenarion och ★ Joker: alla drag i sessionen med betyg, korten du la (T/M/B) och EV-förlust, grupperade per hand med senaste överst. Tryck på ett drag för brädet med bästa draget och "Räkna om noggrant". På bred skärm i högerkolumnen, på telefon under brädena
+- **"Varför?"** (regelbaserad, ingen AI): vilka kort som ligger olika mot bästa draget, foul-risk och FL-chans för båda dragen och en slutsats (t.ex. "offrar lite FL-chans för att minska risken att foula"). Visas i coach-arket, efter varje scenario och i scenariosammanfattningen
+- Coachbrickan i Hel hand ligger kvar tills nästa drag i stället för att försvinna efter några sekunder
+- **☆ Spara drag för analys** i alla lägen (Hel hand även utan coach, Scenarion, Joker och Spela). Sparade drag finns under **Sparade drag** på Träna-startsidan; saknas bedömning räknar solvern fram den på Noggrann (2000 sim, ditt drag låst). Sparas på enheten (localStorage)
+- Spela: draglista utan betyg för den som har turen, så att drag kan stjärnmärkas
+
 ## 2026-10-13 — FL-värde omräknat med royalty-regeln
 
 - `FL_VALUE` omräknat med husregeln att royalty bara går till radens vinnare (1000 händer per kortantal, 3 varv): 13 kort 19,5 → 19,7 p, 14 kort 25,9 → 26,3 p, 15 kort 33,3 → 33,8 p, 16 kort 41,4 → 42,2 p. Nästan oförändrat, eftersom en FL-hand vinner de flesta rader och då ändå får sina royalties

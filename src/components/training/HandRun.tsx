@@ -18,6 +18,10 @@
 //    med solverns bästa drag som minikort. Ett tryck öppnar ett ark där
 //    man växlar mellan sitt drag och bästa draget på brädet. Ditt drag
 //    låses i solvern (pinned.ts) så att det räknas lika noga som solverns val.
+//    Brickan ligger kvar tills du gör nästa drag. Alla drag i sessionen
+//    finns dessutom i draglistan (MoveHistory), grupperade per hand.
+//  - ☆ i listan/arket sparar draget för analys senare (savedMoves.ts).
+//    Listan finns även utan coach, då utan betyg, så att man kan spara.
 //  - Den som börjar växlar varje hand. Fantasy Land-brädet syns inte
 //    för motståndaren förrän handen är slut (som vid ett riktigt bord).
 //  - Sessionen (session.ts): antal händer, minuter eller fritt spel.
@@ -50,6 +54,8 @@ import { CoachPill, CoachSheet, type CoachEntry } from './CoachReview';
 import HandOver from './HandOver';
 import HandSummary from './HandSummary';
 import { HandStrip, ScoreSheet, type HandRecord } from './Scoreboard';
+import MoveHistory, { type HistoryItem } from './MoveHistory';
+import { newRunId, toggleSaved, updateSavedJudgement, useSavedMoves } from '../../training/savedMoves';
 
 /** Coachen: Normal-nivå, men max 10 s per drag så att den hänger med */
 const COACH_OPTIONS: SolverOptions = { simulations: 800, maxMs: 10000 };
@@ -76,7 +82,11 @@ export default function HandRun({ variant, settings, active = true, onExit, onRe
   const coachJobs = useSolverJobs();
   const [h, setH] = useState<HandState>(() => startHand(1, Math.random() < 0.5 ? 0 : 1, [0, 0], variant));
   const [records, setRecords] = useState<HandRecord[]>([]);
+  /** Alla dina drag i sessionen (bedömning `j` bara med coach) */
   const [coachLog, setCoachLog] = useState<CoachEntry[]>([]);
+  const [runId] = useState(newRunId);
+  const savedList = useSavedMoves();
+  const savedKeys = useMemo(() => new Set(savedList.filter((x) => x.id.startsWith(runId + ':')).map((x) => x.id.slice(runId.length + 1))), [savedList, runId]);
   const [toast, setToast] = useState<CoachEntry | null>(null);
   const [review, setReview] = useState<CoachEntry | null>(null);
   /** Datorns foul-risk och FL-chans efter dess senaste drag */
@@ -158,7 +168,7 @@ export default function HandRun({ variant, settings, active = true, onExit, onRe
         options: {},
       });
       const entry: CoachEntry = { key, hand: h.no, round: turn.round, fl: turn.fl, board: h.seats[0].board, move, input, j: null };
-      if (coach) setCoachLog((l) => [...l, entry]);
+      setCoachLog((l) => [...l, entry]);
       if (!turn.fl && !last) setRisk({ key, hand: h.no, foul: null, fl: null });
       coachSolve({
         ...input,
@@ -177,12 +187,18 @@ export default function HandRun({ variant, settings, active = true, onExit, onRe
           const done = { ...entry, j };
           setCoachLog((l) => l.map((e) => (e.key === key ? done : e)));
           setToast(done);
+          updateSavedJudgement(`${runId}:${key}`, j, false);
         })
         .catch(() => {
-          setCoachLog((l) => l.filter((e) => e.key !== key));
+          if (coach) setCoachLog((l) => l.filter((e) => e.key !== key));
           setRisk((r) => (r?.key === key ? null : r));
         });
+    } else {
+      // Ingen räkning (sista draget / FL utan coach) — draget hamnar ändå i listan
+      const input = solverInput({ seat: h.seats[0], cards: h.dealt, variant, opponent: h.seats[1].fl > 0 ? undefined : h.seats[1].board, fl: turn.fl, options: {} });
+      setCoachLog((l) => [...l, { key, hand: h.no, round: turn.round, fl: turn.fl, board: h.seats[0].board, move, input, j: null }]);
     }
+    setToast(null);
     mbReset();
     setH((prev) => played(prev, 0, move));
   };
@@ -197,19 +213,13 @@ export default function HandRun({ variant, settings, active = true, onExit, onRe
       .then((res) => {
         const done: CoachEntry = { ...e, j: judge(res, e.move), thorough: true };
         setCoachLog((l) => l.map((x) => (x.key === e.key ? done : x)));
+        updateSavedJudgement(`${runId}:${e.key}`, done.j!, true);
         setReview((r) => (r?.key === e.key ? done : r));
         setToast((t) => (t?.key === e.key ? done : t));
       })
       .catch(() => {})
       .finally(() => setRechecking(null));
   };
-
-  // Coach-brickan försvinner efter en stund (längre om det fanns ett bättre drag att titta på)
-  useEffect(() => {
-    if (!toast || review) return;
-    const t = window.setTimeout(() => setToast(null), toast.j && toast.j.diff > 0.0001 ? 9000 : 4000);
-    return () => window.clearTimeout(t);
-  }, [toast, review]);
 
   // ---------- Handen klar ----------
   const recorded = useRef(0);
@@ -261,7 +271,7 @@ export default function HandRun({ variant, settings, active = true, onExit, onRe
     return (
       <HandSummary
         records={records}
-        coachLog={coachLog}
+        coachLog={coach ? coachLog : []}
         variant={variant}
         settings={settings}
         elapsed={elapsed}
@@ -277,6 +287,43 @@ export default function HandRun({ variant, settings, active = true, onExit, onRe
 
   const coachPill = toast?.j && <CoachPill key={toast.key} entry={toast} onOpen={setReview} />;
 
+  const toggleSave = (e: CoachEntry) =>
+    toggleSaved({
+      id: `${runId}:${e.key}`,
+      source: 'hand',
+      variant,
+      label: `Hand ${e.hand} · ${e.fl ? 'Fantasy Land' : e.round === 1 ? 'Öppningshand' : `Runda ${e.round}`}`,
+      board: e.board,
+      move: e.move,
+      input: e.input,
+      fl: e.fl,
+      // Utan coach visas ingen bedömning — den räknas fram under "Sparade drag"
+      j: coach ? e.j : null,
+      thorough: coach && !!e.thorough,
+    });
+
+  const history = (
+    <MoveHistory
+      items={coachLog.map(
+        (e): HistoryItem => ({
+          key: e.key,
+          group: `Hand ${e.hand}`,
+          label: e.fl ? 'Fantasy Land' : e.round === 1 ? 'Öppningshand' : `Runda ${e.round}`,
+          move: e.move,
+          j: e.j,
+          fl: e.fl,
+        }),
+      )}
+      onOpen={coach ? (key) => setReview(coachLog.find((e) => e.key === key) ?? null) : undefined}
+      hideGrades={!coach}
+      saved={savedKeys}
+      onToggleSave={(key) => {
+        const e = coachLog.find((x) => x.key === key);
+        if (e) toggleSave(e);
+      }}
+    />
+  );
+
   let dock: React.ReactNode;
   if (h.outcome) {
     dock = (
@@ -285,7 +332,7 @@ export default function HandRun({ variant, settings, active = true, onExit, onRe
         last={last}
         playOutFl={playOutFl}
         flSkipped={reached && settings.flEnd === 'stop' && (h.outcome.nextFl[0] > 0 || h.outcome.nextFl[1] > 0)}
-        coachLog={coachLog.filter((c) => c.hand === h.no)}
+        coachLog={coach ? coachLog.filter((c) => c.hand === h.no) : []}
         onReview={setReview}
         onScore={() => setScoreOpen(true)}
         onNext={nextHand}
@@ -339,7 +386,7 @@ export default function HandRun({ variant, settings, active = true, onExit, onRe
 
   return (
     <DragProvider onDrop={mb.drop}>
-      <DockLayout dock={dock}>
+      <DockLayout dock={dock} side={history}>
         <SessionHeader
           length={length}
           handNo={h.no}
@@ -392,7 +439,14 @@ export default function HandRun({ variant, settings, active = true, onExit, onRe
         </div>
       </DockLayout>
 
-      <CoachSheet entry={review} onClose={() => setReview(null)} onRecheck={recheck} rechecking={!!review && rechecking === review.key} />
+      <CoachSheet
+        entry={review}
+        onClose={() => setReview(null)}
+        onRecheck={recheck}
+        rechecking={!!review && rechecking === review.key}
+        saved={!!review && savedKeys.has(review.key)}
+        onToggleSave={review ? () => toggleSave(review) : undefined}
+      />
       <ScoreSheet open={scoreOpen} onClose={() => setScoreOpen(false)} records={records} current={h.no} />
 
       <BottomSheet open={exitOpen} onClose={() => setExitOpen(false)} title="Avsluta sessionen?">

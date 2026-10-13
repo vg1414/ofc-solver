@@ -16,6 +16,10 @@
 //  - Fantasy Land: korten döljs bakom en "Visa mina kort"-skärm tills
 //    FL-spelaren själv trycker, och brädet visas inte för motståndaren
 //    förrän handen är klar (viewFor döljer det).
+//  - Draglistan (MoveHistory, utan betyg — ingen solverhjälp här) visar
+//    dragen för den som har turen. ☆ sparar ett drag för analys senare
+//    under Träna → Sparade drag (savedMoves.ts). Listan finns bara medan
+//    sidan är öppen; ett återupptaget parti börjar med en tom lista.
 //  - Sessionen: samma regler som mot datorn (antal händer, minuter,
 //    fritt spel, FL spelas ut eller inte) — motorn avgör när det är slut.
 // ============================================================
@@ -30,7 +34,12 @@ import { usePlayClock } from '../../training/usePlayClock';
 import { useMoveBuilder } from '../../training/useMoveBuilder';
 import { useRevealAboveDock } from '../../training/useRevealAboveDock';
 import { haptic } from '../cards/cardStyle';
-import { countPlaced } from '../../training/moves';
+import { countPlaced, type Move } from '../../training/moves';
+import type { Board } from '../../engine/types';
+import type { SolverInput } from '../../hooks/useSolver';
+import { solverInput } from '../../training/game';
+import { toggleSaved, useSavedMoves } from '../../training/savedMoves';
+import MoveHistory from '../training/MoveHistory';
 import { DragProvider } from '../dnd/DragContext';
 import BoardView from '../board/BoardView';
 import BottomSheet from '../ui/BottomSheet';
@@ -51,6 +60,17 @@ interface Props {
 }
 
 const other = (s: SeatId): SeatId => (s === 0 ? 1 : 0);
+
+interface DuelEntry {
+  key: string;
+  seat: SeatId;
+  hand: number;
+  label: string;
+  fl: boolean;
+  board: Board;
+  move: Move;
+  input: SolverInput;
+}
 /** CSS-variabler för en spelares färg (grön = 1, blå = 2) */
 const seatVars = (s: SeatId) => ({ '--grad': `var(--grad-p${s + 1})`, '--glow': `var(--glow-p${s + 1})` }) as React.CSSProperties;
 
@@ -79,10 +99,31 @@ export default function DuelRun({ initial, initialElapsed, active = true, onExit
   const nextSeat = h.turns[h.idx + 1]?.seat;
   const handOver = nextSeat !== undefined && nextSeat !== viewer;
 
+  // Dragen i partiet (för draglistan och ☆ spara)
+  const [log, setLog] = useState<DuelEntry[]>([]);
+  const savedList = useSavedMoves();
+  const savedKeys = useMemo(() => new Set(savedList.filter((x) => x.id.startsWith(state.id + ':')).map((x) => x.id.slice(state.id.length + 1))), [savedList, state.id]);
+
   const confirm = () => {
     if (!turn || !mb.done) return;
-    const err = dispatch({ type: 'move', hand: h.no, turn: view.turnIdx, seat: viewer, move: mb.move });
+    const move = mb.move;
+    const err = dispatch({ type: 'move', hand: h.no, turn: view.turnIdx, seat: viewer, move });
     if (err) return setError(err);
+    const seat = state.hand.seats[viewer];
+    setLog((l) => [
+      ...l,
+      {
+        key: `${h.no}-${view.turnIdx}`,
+        seat: viewer,
+        hand: h.no,
+        label: turn.fl ? 'Fantasy Land' : turn.round === 1 ? 'Öppningshand' : `Runda ${turn.round}`,
+        fl: turn.fl,
+        board: seat.board,
+        move,
+        // Bara det spelaren såg: motståndarens bräde som det visades (dolt = okänt)
+        input: solverInput({ seat, cards: view.dealt, variant: state.config.variant, opponent: opp.board ?? undefined, fl: turn.fl, options: {} }),
+      },
+    ]);
     setError(null);
     mb.reset();
     haptic(handOver ? [10, 40, 10] : 8);
@@ -215,7 +256,36 @@ export default function DuelRun({ initial, initialElapsed, active = true, onExit
       {/* Skärmkanten lyser i färgen för den som har turen */}
       {turn && <div className="turn-edge" style={{ '--edge': `color-mix(in srgb, var(--p${viewer + 1}) 75%, transparent)` } as React.CSSProperties} aria-hidden="true" />}
 
-      <DockLayout dock={dock}>
+      <DockLayout
+        dock={dock}
+        side={
+          <MoveHistory
+            title={`${genitive(me.name)} drag`}
+            items={log
+              .filter((e) => e.seat === viewer)
+              .map((e) => ({ key: e.key, group: `Hand ${e.hand}`, label: e.label, move: e.move, j: null, fl: e.fl }))}
+            hideGrades
+            empty="Dina drag dyker upp här. Tryck ☆ för att spara ett drag och analysera det under Träna."
+            saved={savedKeys}
+            onToggleSave={(key) => {
+              const e = log.find((x) => x.key === key);
+              if (!e) return;
+              toggleSaved({
+                id: `${state.id}:${e.key}`,
+                source: 'duel',
+                variant: state.config.variant,
+                label: `${names[e.seat]} · Hand ${e.hand} · ${e.label}`,
+                board: e.board,
+                move: e.move,
+                input: e.input,
+                fl: e.fl,
+                j: null,
+                thorough: false,
+              });
+            }}
+          />
+        }
+      >
         <SessionHeader
           length={length}
           handNo={h.no}
