@@ -54,6 +54,7 @@ Förhandsvisning i Claude-appen: `.claude/launch.json` ligger i föräldermappen
 3. **Sållning:** vid många kandidater (öppningshänder) körs först en snabb grovsållning (60 spel, svag spelare), och de 12 bästa går vidare. Sedan slås drag ut när de är statistiskt sämre än ledaren. Bortsållade drag har därför färre simuleringar och osäkrare, ofta för lågt, EV.
 4. **Låsta drag (`options.pinned`):** ett låst drag sållas aldrig bort och räknas lika noga som bästa draget på samma blandningar. Träningen använder det för att bedöma spelarens drag rättvist.
 5. Fantasy Land löses exakt (alla uppställningar). Där returneras bara topp 15.
+6. **FL-värde** (`flValue.ts`): poäng som läggs till när en simulering når FL, och som FL-lösaren lägger på en uppställning som ger repeat. Inkluderar upprepade repeat (geometrisk serie). Räknas om med `sh scripts/run.sh scripts/computeFlValue.ts 1000` (1000 händer per kortantal, 3 varv, ca 2 timmar; 16 kort tar ~1,5 s per hand). Med få händer (t.ex. 60) svänger värdena 1–2 poäng.
 
 Nivåer: Snabb 300 sim (max 8 s), Normal 800 (20 s), Noggrann 2000 (45 s).
 

@@ -3,6 +3,7 @@
 ## 2026-10-13 — Säkrare Fantasy Land-värden
 
 - `FL_VALUE` (`src/core/flValue.ts`) omräknat med 1000 händer per kortantal i stället för 60: 13 kort 19 → 19,5 p, 14 kort 28 → 25,9 p, 15 kort 35 → 33,3 p, 16 kort 41 → 41,4 p. Värdet inkluderar upprepade repeat-FL (geometrisk serie). Repeat-chans: 30 % / 41 % / 52 % / 67 %. Påverkar både solvern, FL-lösaren och träningens bedömning
+- README och CLAUDE.md beskriver hur FL-värdet räknas (inkl. upprepade repeat) och hur det räknas om
 
 ## 2026-10-12 — Hel hand: välj datorns styrka, räkna om coachen noggrant
 
