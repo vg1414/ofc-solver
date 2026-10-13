@@ -266,7 +266,7 @@ export function SaveButton({ saved, onToggle, removeLabel = '★ Sparad · tryck
   );
 }
 
-const SLOT_LABEL: Record<Slot, string> = { top: 'Topp', middle: 'Mitten', bottom: 'Botten', discard: 'Kastas' };
+const SLOT_LABEL: Record<Slot, string> = { top: 'Topp', middle: 'Mitt', bottom: 'Botten', discard: 'Kastas' };
 
 /** "Varför?" — vilka kort som ligger olika + foul-risk/FL-chans + slutsats (explain.ts) */
 export function MoveExplain({ move, j, fl = false }: { move: Move; j: Judgement; fl?: boolean }) {
