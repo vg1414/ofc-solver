@@ -13,10 +13,9 @@
 //  - Vems tur: en stor banner i spelarens färg (grön/blå) som glider in
 //    från spelarens håll, skärmkanten lyser i samma färg, och Klar-knappen
 //    har färgen + texten "ge till Anna" när telefonen ska lämnas över.
-//  - Fantasy Land: innan FL-spelaren får sina kort täcks hela skärmen av
-//    en stor nedräkning (FlHandoff, 5 s) så att den som just tryckt Klar
-//    hinner lämna över utan att se korten. Brädet visas inte för
-//    motståndaren förrän båda lagt klart (viewFor döljer det).
+//  - Fantasy Land: korten döljs bakom en "Visa mina kort"-skärm tills
+//    FL-spelaren själv trycker, och brädet visas inte för motståndaren
+//    förrän handen är klar (viewFor döljer det).
 //  - Sessionen: samma regler som mot datorn (antal händer, minuter,
 //    fritt spel, FL spelas ut eller inte) — motorn avgör när det är slut.
 // ============================================================
@@ -41,7 +40,6 @@ import HandOver from '../training/HandOver';
 import SessionHeader, { type Dot } from '../training/SessionHeader';
 import { HandStrip, ScoreSheet } from '../training/Scoreboard';
 import DuelSummary from './DuelSummary';
-import FlHandoff from './FlHandoff';
 
 interface Props {
   initial: MatchState;
@@ -157,13 +155,27 @@ export default function DuelRun({ initial, initialElapsed, active = true, onExit
       />
     );
   } else if (turn && covered) {
-    // Skärmen täcks av nedräkningen (FlHandoff) — panelen bakom visar bara vem som väntas
     dock = (
-      <div className="flex items-center gap-3 py-1" style={seatVars(viewer)}>
-        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-[18px] text-white shadow-[var(--glow-fl)]" style={{ background: 'var(--grad-fl)' }}>
+      <div className="flex flex-col items-center gap-2.5 py-1 text-center" style={seatVars(viewer)}>
+        <span className="flex h-12 w-12 items-center justify-center rounded-full text-[20px] text-white shadow-[var(--glow-fl)] animate-floaty" style={{ background: 'var(--grad-fl)' }}>
           ★
         </span>
-        <div className="title-serif text-[19px]">Väntar på {me.name}…</div>
+        <div>
+          <div className="title-serif text-[21px]">{genitive(me.name)} Fantasy Land</div>
+          <div className="text-[12.5px] font-medium text-ink-2">
+            Ge telefonen till {me.name}. {view.dealt.length} kort — se till att {opp.name} inte tittar.
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={() => {
+            haptic([8, 30, 8]);
+            setRevealed(turnKey);
+          }}
+          className="btn-primary h-12 w-full rounded-full text-[15px] font-bold"
+        >
+          Jag är {me.name} — visa mina kort
+        </button>
       </div>
     );
   } else if (turn) {
@@ -279,8 +291,6 @@ export default function DuelRun({ initial, initialElapsed, active = true, onExit
           />
         </div>
       </DockLayout>
-
-      {turn && covered && <FlHandoff key={turnKey} seat={viewer} name={me.name} from={opp.name} cards={turn.count} onDone={() => setRevealed(turnKey)} />}
 
       <ScoreSheet open={scoreOpen} onClose={() => setScoreOpen(false)} records={state.records} current={h.no} names={names} />
 

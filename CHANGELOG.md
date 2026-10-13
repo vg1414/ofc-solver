@@ -1,8 +1,8 @@
 # Changelog
 
-## 2026-10-13 — Spela: stor nedräkning innan Fantasy Land
+## 2026-10-13 — Spela: tillbaka till "visa mina kort" vid Fantasy Land
 
-- När nästa spelare ska lägga sin Fantasy Land täcks hela skärmen av en stor nedräkning (5 s) med "Ge telefonen till Anna", så att den som just tryckt Klar inte ser FL-korten. Korten visas när nedräkningen är slut, eller direkt med "Jag är Anna — visa nu" (`FlHandoff.tsx`)
+- Nedräkningen före Fantasy Land är borttagen. FL-spelaren trycker själv "Jag är Anna — visa mina kort" i panelen, som tidigare
 
 ## 2026-10-13 — Test: Fantasy Land dolt tills båda lagt klart
 
