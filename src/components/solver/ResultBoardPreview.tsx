@@ -58,8 +58,8 @@ export default function ResultBoardPreview({ board, showRoyalties, cardWidth = 2
 
   return (
     <div className="inline-flex flex-col gap-[3px]">
-      <MiniRow label="Topp" cards={board.top.cards} royalty={showRoyalties ? topRoy : undefined} cardWidth={cardWidth} />
-      <MiniRow label="Mitt" cards={board.middle.cards} royalty={showRoyalties ? midRoy : undefined} cardWidth={cardWidth} />
+      <MiniRow label="Toppen" cards={board.top.cards} royalty={showRoyalties ? topRoy : undefined} cardWidth={cardWidth} />
+      <MiniRow label="Mitten" cards={board.middle.cards} royalty={showRoyalties ? midRoy : undefined} cardWidth={cardWidth} />
       <MiniRow label="Botten" cards={board.bottom.cards} royalty={showRoyalties ? botRoy : undefined} cardWidth={cardWidth} />
       {showRoyalties && totalRoy > 0 && (
         <div className="text-[10px] font-bold text-gold">Royalties totalt: +{totalRoy}p</div>

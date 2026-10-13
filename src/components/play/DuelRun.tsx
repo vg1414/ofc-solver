@@ -16,6 +16,8 @@
 //  - Fantasy Land: korten döljs bakom en "Visa mina kort"-skärm tills
 //    FL-spelaren själv trycker, och brädet visas inte för motståndaren
 //    förrän handen är klar (viewFor döljer det).
+//  - Senaste dragets kort har streckad ram (useRecentSlots): motståndarens
+//    (när brädet syns) och dina egna när handen är klar.
 //  - Draglistan (MoveHistory, utan betyg — ingen solverhjälp här) visar
 //    dragen för den som har turen. ☆ sparar ett drag för analys senare
 //    under Träna → Sparade drag (savedMoves.ts). Listan finns bara medan
@@ -41,6 +43,7 @@ import { solverInput } from '../../training/game';
 import { toggleSaved, useSavedMoves } from '../../training/savedMoves';
 import MoveHistory from '../training/MoveHistory';
 import ShareBoards from '../share/ShareBoards';
+import { useRecentSlots } from '../../training/useRecentSlots';
 import { DragProvider } from '../dnd/DragContext';
 import BoardView from '../board/BoardView';
 import BottomSheet from '../ui/BottomSheet';
@@ -88,6 +91,7 @@ export default function DuelRun({ initial, initialElapsed, active = true, onExit
   const opp = view.seats[other(viewer)];
   const names = state.config.names;
   const turnKey = `${h.no}-${h.idx}`;
+  const recent = useRecentSlots(h.no, [h.seats[0].board, h.seats[1].board]);
 
   // Fantasy Land: korten visas först när FL-spelaren själv trycker "Visa"
   const [revealed, setRevealed] = useState<string | null>(null);
@@ -326,7 +330,7 @@ export default function DuelRun({ initial, initialElapsed, active = true, onExit
         <SeatLabel seat={other(viewer)} name={opp.name} fl={opp.fl} starts={h.first === other(viewer)} />
         {opp.board ? (
           <div className="opacity-85">
-            <BoardView board={opp.board} maxCardWidth={40} fouled={other(viewer) === 0 ? !!h.outcome?.score.p1Foul : !!h.outcome?.score.p2Foul} earnedRoyalties={earnedFor(other(viewer))} />
+            <BoardView board={opp.board} recent={recent[other(viewer)]} maxCardWidth={40} fouled={other(viewer) === 0 ? !!h.outcome?.score.p1Foul : !!h.outcome?.score.p2Foul} earnedRoyalties={earnedFor(other(viewer))} />
           </div>
         ) : (
           <div className="felt flex h-[150px] flex-col items-center justify-center gap-1 rounded-[26px] p-4 text-center text-[13px] font-semibold text-[color:var(--felt-label)]">
@@ -355,13 +359,14 @@ export default function DuelRun({ initial, initialElapsed, active = true, onExit
         >
           <ShareBoards
             boards={() => [
-              { name: me.name, board: turn ? mb.board : me.board!, fouled: viewer === 0 ? !!h.outcome?.score.p1Foul : !!h.outcome?.score.p2Foul, royalties: earnedFor(viewer) },
+              { name: me.name, board: turn ? mb.board : me.board!, fouled: viewer === 0 ? !!h.outcome?.score.p1Foul : !!h.outcome?.score.p2Foul, royalties: earnedFor(viewer), recent: turn ? undefined : recent[viewer] },
               // Motståndarens bräde bara om det syns (dold öppning / FL delas inte)
-              ...(opp.board ? [{ name: opp.name, board: opp.board, fouled: other(viewer) === 0 ? !!h.outcome?.score.p1Foul : !!h.outcome?.score.p2Foul, royalties: earnedFor(other(viewer)) }] : []),
+              ...(opp.board ? [{ name: opp.name, board: opp.board, fouled: other(viewer) === 0 ? !!h.outcome?.score.p1Foul : !!h.outcome?.score.p2Foul, royalties: earnedFor(other(viewer)), recent: recent[other(viewer)] }] : []),
             ]}
           />
           <BoardView
             board={turn ? mb.board : me.board!}
+            recent={turn ? undefined : recent[viewer]}
             heldCard={turn ? mb.heldCard : null}
             interactive={!!turn && !covered}
             onPlace={mb.placeAt}

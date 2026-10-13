@@ -497,7 +497,7 @@ export default function SolverView({ simulations }: SolverViewProps) {
                     <dl className="mt-2 grid grid-cols-[auto_1fr_auto] gap-x-3 gap-y-1 text-[13px]">
                       {(['top', 'middle', 'bottom'] as const).map((r) => (
                         <div key={r} className="contents">
-                          <dt className="font-semibold text-ink-2">{r === 'top' ? 'Topp' : r === 'middle' ? 'Mitt' : 'Botten'}</dt>
+                          <dt className="font-semibold text-ink-2">{r === 'top' ? 'Toppen' : r === 'middle' ? 'Mitten' : 'Botten'}</dt>
                           <dd className="text-ink">{myHandDescriptions[r]}</dd>
                           <dd className="text-right font-bold text-gold tabular">{myRoyalties[r] > 0 ? `+${myRoyalties[r]}p` : ''}</dd>
                         </div>

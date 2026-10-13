@@ -17,7 +17,7 @@ import { evFmt } from './ReviewBoard';
 import { useCountUp } from './TrainingBits';
 import { genitive } from '../../match/names';
 
-const ROW_LABEL = { top: 'Topp', middle: 'Mitt', bottom: 'Botten' } as const;
+const ROW_LABEL = { top: 'Toppen', middle: 'Mitten', bottom: 'Botten' } as const;
 
 interface Props {
   outcome: HandOutcome;

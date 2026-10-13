@@ -16,7 +16,7 @@ import PlayingCard from '../cards/PlayingCard';
 import SuitIcon from '../cards/SuitIcon';
 import ResultBoardPreview from './ResultBoardPreview';
 
-const ROW_LABEL: Record<RowName, string> = { top: 'Topp', middle: 'Mitt', bottom: 'Botten' };
+const ROW_LABEL: Record<RowName, string> = { top: 'Toppen', middle: 'Mitten', bottom: 'Botten' };
 
 const evFmt = new Intl.NumberFormat('sv-SE', { signDisplay: 'always', minimumFractionDigits: 2, maximumFractionDigits: 2 });
 

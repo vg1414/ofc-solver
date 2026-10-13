@@ -1,9 +1,13 @@
 # Changelog
 
+## 2026-10-13 — Senaste korten streckade + Toppen / Mitten / Botten
+
+- **Senaste dragets kort har streckad ram** på brädet: datorns senaste kort i Hel hand, dina egna medan du väntar på datorn och när handen är klar, och motståndarens i Spela (när brädet syns). Samma markering på dela-bilden. Fantasy Land-drag markeras inte
+- Raderna heter nu **Toppen / Mitten / Botten** överallt (bräden, Solver, handresultat, "Varför?", dela-bilden), så att alla tre står i samma form. T / M / B i listorna är kvar
+
 ## 2026-10-13 — Ditt drag visas streckat
 
 - I alla ark med "Ditt drag / Bästa draget" (coachen, efter scenario, sammanfattningen, Sparade drag) visas korten från ditt drag streckade, som bästa draget, så att man ser vilka kort som lades just då
-- "Varför?" skriver raderna som Topp / Mitt / Botten, som på brädet (stod "Mitten")
 
 ## 2026-10-13 — Dela brädena som bild
 

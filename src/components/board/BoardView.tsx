@@ -1,5 +1,5 @@
 // ============================================================
-// BoardView.tsx — Ett OFC-bräde (Topp 3 / Mitt 5 / Botten 5)
+// BoardView.tsx — Ett OFC-bräde (Toppen 3 / Mitten 5 / Botten 5)
 // ============================================================
 //
 // Interaktion:
@@ -13,6 +13,8 @@
 //    = flytta, till ett annat flyttbart kort = byt plats, utanför brädet
 //    = ta bort. Själva flytten görs av DragProviderns onDrop.
 //  - Spökkort: solverns förslag visas genomskinligt med streckad ram.
+//  - `recent`: kort från senaste draget får en streckad ram (men syns
+//    som vanligt), så att man ser vilka kort som just lades.
 //
 // Kortstorlek: brädet är en "container" och kortbredden räknas ut från
 // brädets egen bredd (cqw), så 5 kort alltid får plats — oavsett skärm.
@@ -27,8 +29,8 @@ import { useDraggable, useDragContext } from '../dnd/useDraggable';
 import { haptic } from '../cards/cardStyle';
 
 const ROWS: { name: RowName; label: string }[] = [
-  { name: 'top', label: 'Topp' },
-  { name: 'middle', label: 'Mitt' },
+  { name: 'top', label: 'Toppen' },
+  { name: 'middle', label: 'Mitten' },
   { name: 'bottom', label: 'Botten' },
 ];
 
@@ -52,6 +54,7 @@ function PlacedCard({
   removable,
   hidden,
   swapTarget,
+  recent,
   onTap,
 }: {
   card: Card;
@@ -63,6 +66,8 @@ function PlacedCard({
   hidden: boolean;
   /** Ett annat kort svävar här → släpp för att byta plats */
   swapTarget: boolean;
+  /** Lagt i senaste draget (streckad ram) */
+  recent: boolean;
   onTap: () => void;
 }) {
   const drag = useDraggable(removable ? card : null, onTap, !removable, { row, slot });
@@ -84,7 +89,7 @@ function PlacedCard({
       } ${swapTarget ? 'scale-[1.06] shadow-[0_0_0_2.5px_#e8a828,0_0_16px_rgba(245,184,61,0.6)]' : ''}`}
       disabled={!removable}
     >
-      <PlayingCard card={card} snap />
+      <PlayingCard card={card} snap recent={recent} />
       {armed && (
         <span className="absolute inset-0 flex items-center justify-center rounded-[calc(var(--card-w)*0.14)] bg-[rgba(208,68,63,0.78)] text-white text-xl font-bold backdrop-blur-[1px] animate-badge-in">
           ✕
@@ -105,6 +110,8 @@ interface BoardViewProps {
   /** Får just detta kort tas bort? (utelämnas → alla kort, om onRemove finns) */
   canRemove?: (row: RowName, slot: number) => boolean;
   ghosts?: CardPlacement[];
+  /** Platser som fylldes i senaste draget (streckad ram) */
+  recent?: { row: RowName; slot: number }[];
   fouled?: boolean;
   /** Visa royalties per rad (beräknas live när raden är full) */
   showRoyalties?: boolean;
@@ -122,6 +129,7 @@ export default function BoardView({
   onRemove,
   canRemove,
   ghosts = [],
+  recent,
   fouled = false,
   showRoyalties = true,
   earnedRoyalties,
@@ -207,6 +215,7 @@ export default function BoardView({
                         removable={removable}
                         hidden={isSource}
                         swapTarget={removable && !!drag?.source && !isSource && isOverRow && drag?.over?.filled === i}
+                        recent={!!recent?.some((r) => r.row === name && r.slot === i)}
                         onTap={() => tapCard(name, i)}
                       />
                     );

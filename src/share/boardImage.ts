@@ -23,6 +23,8 @@ export interface ShareBoard {
   board: Board;
   fouled?: boolean;
   royalties?: Record<RowName, number>;
+  /** Kort från senaste draget (ritas med streckad ram) */
+  recent?: { row: RowName; slot: number }[];
 }
 
 const SCALE = 2;
@@ -45,8 +47,8 @@ const SUIT_COLORS: Record<Suit | 'joker', { bg: string; fg: string; line: string
 };
 
 const ROWS: { name: RowName; label: string; n: number }[] = [
-  { name: 'top', label: 'TOPP', n: 3 },
-  { name: 'middle', label: 'MITT', n: 5 },
+  { name: 'top', label: 'TOPPEN', n: 3 },
+  { name: 'middle', label: 'MITTEN', n: 5 },
   { name: 'bottom', label: 'BOTTEN', n: 5 },
 ];
 
@@ -155,7 +157,18 @@ function drawPanel(ctx: CanvasRenderingContext2D, b: ShareBoard, x: number, y: n
     for (let k = 0; k < r.n; k++) {
       const cx = x + PANEL_PAD + LABEL_W + k * (CARD_W + CARD_GAP);
       const card = b.board[r.name].cards[k];
-      if (card) drawCard(ctx, card, cx, ry);
+      if (card) {
+        drawCard(ctx, card, cx, ry);
+        if (b.recent?.some((x) => x.row === r.name && x.slot === k)) {
+          ctx.save();
+          ctx.setLineDash([4, 3]);
+          ctx.lineWidth = 2;
+          ctx.strokeStyle = '#15936a';
+          roundRect(ctx, cx + 1, ry + 1, CARD_W - 2, CARD_H - 2, CARD_W * 0.13);
+          ctx.stroke();
+          ctx.restore();
+        }
+      }
       else {
         roundRect(ctx, cx, ry, CARD_W, CARD_H, CARD_W * 0.14);
         ctx.fillStyle = 'rgba(255,255,255,0.45)';
