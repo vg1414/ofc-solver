@@ -360,3 +360,46 @@ describe('scoreHand — description', () => {
     }
   });
 });
+
+// ---------------------------------------------------------------
+// Husregel: royalty bara till radens vinnare
+// ---------------------------------------------------------------
+
+describe('scoreHand — royalty bara till den som vinner raden', () => {
+  it('Davids hand 2 mot Lennart: Lennarts färg i botten förlorar mot fyrtal och ger inget', () => {
+    const r = scoreHand(
+      [c('K','diamonds'), c('T','clubs'), c('8','hearts')],
+      [c('4','hearts'), c('4','spades'), c('3','hearts'), c('7','clubs'), c('5','diamonds')],
+      [J(), c('A','spades'), c('A','hearts'), c('A','clubs'), c('2','spades')],
+      [c('Q','hearts'), c('K','hearts'), c('8','clubs')],
+      [c('2','diamonds'), c('6','diamonds'), c('4','diamonds'), c('3','diamonds'), c('7','diamonds')],
+      [c('8','spades'), c('9','spades'), c('7','spades'), c('J','spades'), c('3','spades')],
+    );
+    expect(r.rows.top?.winner).toBe('p2');
+    expect(r.rows.middle?.winner).toBe('p2');
+    expect(r.rows.bottom?.winner).toBe('p1');
+    expect(r.p2RawRoyalties.bottom).toBe(4); // färgen hade varit värd 4p…
+    expect(r.p2Royalties.bottom).toBe(0); // …men raden förlorades
+    expect(r.p2Royalties.middle).toBe(8);
+    expect(r.p1Royalties.bottom).toBe(10);
+    // Rader 1–2 (−1) + Davids 10 − Lennarts 8 = +1
+    expect(r.p1Net).toBe(1);
+  });
+
+  it('lika rad ger ingen royalty till någon', () => {
+    const r = scoreHand(
+      [c('2','clubs'), c('3','hearts'), c('4','diamonds')],
+      [c('T','clubs'), c('T','diamonds'), c('2','hearts'), c('3','spades'), c('5','clubs')],
+      [c('9','clubs'), c('9','hearts'), c('9','spades'), c('8','spades'), c('8','clubs')],
+      [c('2','diamonds'), c('3','clubs'), c('5','hearts')],
+      [c('T','hearts'), c('T','spades'), c('2','spades'), c('3','diamonds'), c('5','diamonds')],
+      [c('7','clubs'), c('7','hearts'), c('7','spades'), c('8','hearts'), c('8','diamonds')],
+    );
+    expect(r.rows.middle?.winner).toBe('tie');
+    expect(r.p1Royalties.middle).toBe(0);
+    expect(r.p2Royalties.middle).toBe(0);
+    expect(r.rows.bottom?.winner).toBe('p1'); // 999-88 slår 777-88
+    expect(r.p1Royalties.bottom).toBe(6);
+    expect(r.p2Royalties.bottom).toBe(0);
+  });
+});

@@ -91,6 +91,19 @@ describe('poäng', () => {
     const f = settle(c('Ah Ad 2c'), c('Ks Qd 7c 4h 3s'), c('Ac Kd Kh 2h 2d'));
     expect(scoreVs(a, f)).toBe(6 + a.roy);
   });
+
+  it('royalty bara till radens vinnare (husregel), lika rad = ingen', () => {
+    // A: Q-färg i botten, B: A-färg i botten → bara B får botten-royaltyn (4p)
+    const a = settle(c('Kd Tc 8h'), c('4h 4s 3h 7c 5d'), c('Qd Td 6d 7d 8d'));
+    const b = settle(c('Qh Kh 8c'), c('2c 5c 5s 7h 9h'), c('9s Js Qs 3s As'));
+    expect(a.rb).toBe(4);
+    expect(b.rb).toBe(4);
+    // topp: A (K-T-8) < B (K-Q-8), mitt: A (44) < B (55), botten: A < B → B scoopar
+    expect(scoreVs(a, b)).toBe(-(3 + 3 + b.roy));
+    // Botten vunnen av A: A får sin, B:s går förlorad
+    const a2 = settle(c('Kd Tc 8h'), c('4h 4s 3h 7c 5d'), c('Jk Ac Ad Ah 2c'));
+    expect(scoreVs(a2, b)).toBe(-1 + a2.rb - b.rm - b.rt);
+  });
 });
 
 describe('Fantasy Land-lösaren', () => {

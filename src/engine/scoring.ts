@@ -8,6 +8,9 @@
 //      får +6p (scoop) PLUS sina egna royalties.
 //   3. Om ingen är foul: jämför rad för rad (1p per vunnen rad),
 //      scoop (+3p) om man vinner alla tre, plus royalties.
+//      Husregel: royalty för en rad går BARA till den som vinner raden.
+//      Lika rad = ingen royalty. (Vid foul vinner motståndaren alla
+//      rader och får därför alla sina royalties.)
 //
 // Rad-för-rad-jämförelse:
 //   - Top:    evaluate3 → compareHands
@@ -47,9 +50,12 @@ export interface ScorecardResult {
   p1Foul: boolean;
   p2Foul: boolean;
 
-  /** Royalties för respektive spelare (0 vid foul) */
+  /** Intjänade royalties (bara rader man vann; 0 vid foul) — det som räknas i poängen */
   p1Royalties: RoyaltyResult;
   p2Royalties: RoyaltyResult;
+  /** Vad brädet hade gett om man vann alla rader (0 vid foul) */
+  p1RawRoyalties: RoyaltyResult;
+  p2RawRoyalties: RoyaltyResult;
 
   /** Rad-för-rad-resultat (null om någon är foul) */
   rows: {
@@ -115,12 +121,12 @@ export function scoreHand(
   const p2Foul = isFoulFromResults(p2TopR, p2MidR, p2BotR);
 
   // 3. Royalties (0 om foul)
-  const p1Royalties = p1Foul
-    ? { top: 0, middle: 0, bottom: 0, total: 0 }
-    : calcAllRoyalties(p1Top, p1Middle, p1Bottom);
-  const p2Royalties = p2Foul
-    ? { top: 0, middle: 0, bottom: 0, total: 0 }
-    : calcAllRoyalties(p2Top, p2Middle, p2Bottom);
+  const NONE: RoyaltyResult = { top: 0, middle: 0, bottom: 0, total: 0 };
+  const p1RawRoyalties = p1Foul ? NONE : calcAllRoyalties(p1Top, p1Middle, p1Bottom);
+  const p2RawRoyalties = p2Foul ? NONE : calcAllRoyalties(p2Top, p2Middle, p2Bottom);
+  // Vid foul vinner motståndaren alla rader → alla sina royalties
+  let p1Royalties = p1RawRoyalties;
+  let p2Royalties = p2RawRoyalties;
 
   // 4. Poängberäkning
   if (p1Foul && p2Foul) {
@@ -128,7 +134,7 @@ export function scoreHand(
     return buildResult({
       p1Net: 0, p2Net: 0,
       p1Foul, p2Foul,
-      p1Royalties, p2Royalties,
+      p1Royalties, p2Royalties, p1RawRoyalties, p2RawRoyalties,
       rows: { top: null, middle: null, bottom: null },
       p1RowWins: 0, p2RowWins: 0,
       p1Scoop: false, p2Scoop: false,
@@ -142,7 +148,7 @@ export function scoreHand(
     return buildResult({
       p1Net: -p2Net, p2Net,
       p1Foul, p2Foul,
-      p1Royalties, p2Royalties,
+      p1Royalties, p2Royalties, p1RawRoyalties, p2RawRoyalties,
       rows: { top: null, middle: null, bottom: null },
       p1RowWins: 0, p2RowWins: 0,
       p1Scoop: false, p2Scoop: false,
@@ -156,7 +162,7 @@ export function scoreHand(
     return buildResult({
       p1Net, p2Net: -p1Net,
       p1Foul, p2Foul,
-      p1Royalties, p2Royalties,
+      p1Royalties, p2Royalties, p1RawRoyalties, p2RawRoyalties,
       rows: { top: null, middle: null, bottom: null },
       p1RowWins: 0, p2RowWins: 0,
       p1Scoop: false, p2Scoop: false,
@@ -181,7 +187,9 @@ export function scoreHand(
   // Scoop-bonus
   const p1ScoopBonus = p1Scoop ? SCOOP_BONUS : (p2Scoop ? -SCOOP_BONUS : 0);
 
-  // Royalty-differens
+  // Royalties: bara den som vann raden får sin (lika = ingen)
+  p1Royalties = earned(p1RawRoyalties, [topRow, middleRow, bottomRow], 'p1');
+  p2Royalties = earned(p2RawRoyalties, [topRow, middleRow, bottomRow], 'p2');
   const royaltyDiff = p1Royalties.total - p2Royalties.total;
 
   const p1Net = p1RowPoints + p1ScoopBonus + royaltyDiff;
@@ -197,7 +205,7 @@ export function scoreHand(
   return buildResult({
     p1Net, p2Net,
     p1Foul, p2Foul,
-    p1Royalties, p2Royalties,
+    p1Royalties, p2Royalties, p1RawRoyalties, p2RawRoyalties,
     rows: { top: topRow, middle: middleRow, bottom: bottomRow },
     p1RowWins, p2RowWins,
     p1Scoop, p2Scoop,
@@ -221,6 +229,14 @@ function scoreRow(p1Hand: HandResult, p2Hand: HandResult): RowScore {
   }
 }
 
+/** Behåll bara royalties för rader som spelaren vann */
+function earned(raw: RoyaltyResult, [t, m, b]: RowScore[], who: 'p1' | 'p2'): RoyaltyResult {
+  const top = t.winner === who ? raw.top : 0;
+  const middle = m.winner === who ? raw.middle : 0;
+  const bottom = b.winner === who ? raw.bottom : 0;
+  return { top, middle, bottom, total: top + middle + bottom };
+}
+
 /** Bygger ett ScorecardResult-objekt från beräknade delar */
 function buildResult(parts: {
   p1Net: number;
@@ -229,6 +245,8 @@ function buildResult(parts: {
   p2Foul: boolean;
   p1Royalties: RoyaltyResult;
   p2Royalties: RoyaltyResult;
+  p1RawRoyalties: RoyaltyResult;
+  p2RawRoyalties: RoyaltyResult;
   rows: { top: RowScore | null; middle: RowScore | null; bottom: RowScore | null };
   p1RowWins: number;
   p2RowWins: number;

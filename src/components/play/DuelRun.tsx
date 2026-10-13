@@ -121,6 +121,9 @@ export default function DuelRun({ initial, initialElapsed, active = true, onExit
   const [t1] = totals(state);
   const dots = useMemo(() => state.records.map((r): Dot => (r.net > 0 ? 'p1' : r.net < 0 ? 'p2' : null)), [state.records]);
 
+  /** Handen klar: bara intjänade royalties på brädena (husregel: radens vinnare) */
+  const earnedFor = (seat: SeatId) => (h.outcome ? (seat === 0 ? h.outcome.score.p1Royalties : h.outcome.score.p2Royalties) : undefined);
+
   // Ditt bräde ska synas ovanför panelen när det blir din tur
   const myBoardRef = useRef<HTMLDivElement>(null);
   useRevealAboveDock(myBoardRef, h.outcome ? `o${h.no}` : covered ? null : `t${turnKey}`);
@@ -252,7 +255,7 @@ export default function DuelRun({ initial, initialElapsed, active = true, onExit
         <SeatLabel seat={other(viewer)} name={opp.name} fl={opp.fl} starts={h.first === other(viewer)} />
         {opp.board ? (
           <div className="opacity-85">
-            <BoardView board={opp.board} maxCardWidth={40} fouled={other(viewer) === 0 ? !!h.outcome?.score.p1Foul : !!h.outcome?.score.p2Foul} />
+            <BoardView board={opp.board} maxCardWidth={40} fouled={other(viewer) === 0 ? !!h.outcome?.score.p1Foul : !!h.outcome?.score.p2Foul} earnedRoyalties={earnedFor(other(viewer))} />
           </div>
         ) : (
           <div className="felt flex h-[150px] flex-col items-center justify-center gap-1 rounded-[26px] p-4 text-center text-[13px] font-semibold text-[color:var(--felt-label)]">
@@ -287,6 +290,7 @@ export default function DuelRun({ initial, initialElapsed, active = true, onExit
             onRemove={turn ? mb.remove : undefined}
             canRemove={mb.isMine}
             fouled={viewer === 0 ? !!h.outcome?.score.p1Foul : !!h.outcome?.score.p2Foul}
+            earnedRoyalties={earnedFor(viewer)}
             maxCardWidth={84}
           />
         </div>

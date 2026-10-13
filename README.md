@@ -45,6 +45,7 @@ En webbaserad solver för Open Face Chinese Poker (OFC) med stöd för hemspels-
 - **Fantasy Land-inträde:** QQ+ på topp ger 13–16 kort beroende på hand
 - **Repeat FL:** Kräver 4-tal+ på bottom, kåk+ på middle, eller triss+ på topp
 - **Middle = dubbla royalties** jämfört med bottom för alla händer
+- **Royalty bara till radens vinnare:** den som förlorar en rad får ingen royalty för den raden (lika rad = ingen). Vid foul vinner motståndaren alla rader och får alla sina royalties. Gäller poängen, solvern och datorn
 
 ### Royalty-tabell
 

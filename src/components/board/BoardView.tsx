@@ -54,6 +54,8 @@ interface BoardViewProps {
   fouled?: boolean;
   /** Visa royalties per rad (beräknas live när raden är full) */
   showRoyalties?: boolean;
+  /** Handen är klar: visa bara den royalty som tjänades in per rad (rader man förlorade visar inget) */
+  earnedRoyalties?: Record<RowName, number>;
   /** Max kortbredd i px */
   maxCardWidth?: number;
 }
@@ -68,6 +70,7 @@ export default function BoardView({
   ghosts = [],
   fouled = false,
   showRoyalties = true,
+  earnedRoyalties,
   maxCardWidth = 64,
 }: BoardViewProps) {
   const drag = useDragContext();
@@ -110,7 +113,7 @@ export default function BoardView({
           const cards = board[name].cards;
           const hasFree = cards.some((c) => c === null);
           const isOverRow = dragging && drag?.over?.row === name;
-          const roy = showRoyalties ? liveRoyalty(board, name) : 0;
+          const roy = !showRoyalties ? 0 : earnedRoyalties ? earnedRoyalties[name] : liveRoyalty(board, name);
 
           return (
             <div

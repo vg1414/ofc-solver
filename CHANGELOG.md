@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-10-13 — Husregel: royalty bara till den som vinner raden
+
+- Den som förlorar en rad får ingen royalty för den (t.ex. en färg i botten som förlorar mot fyrtal ger 0 p). Lika rad ger ingen royalty. Vid foul vinner motståndaren alla rader och får alla sina royalties som förut
+- Gäller överallt: poängen i Spela och Hel hand (`engine/scoring.ts`) och solverns EV, datorns spel och FL-lösaren (`core/eval.ts`, `core/fl.ts`)
+- När handen är klar visar brädena bara den royalty som tjänades in per rad
+- FL-värdet räknas om med den nya regeln (kommer i en egen uppdatering)
+
 ## 2026-10-13 — Spela: tillbaka till "visa mina kort" vid Fantasy Land
 
 - Nedräkningen före Fantasy Land är borttagen. FL-spelaren trycker själv "Jag är Anna — visa mina kort" i panelen, som tidigare

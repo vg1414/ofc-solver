@@ -12,7 +12,7 @@
 // (inkl. scoop-bonus).
 // ============================================================
 
-import { rowValues, maxAtMost, royaltyOf, qualifiesRepeat, scoreVs } from './eval';
+import { rowValues, maxAtMost, royaltyOf, qualifiesRepeat, scoreVs, settledOf } from './eval';
 import type { Settled } from './eval';
 import { FL_VALUE } from './flValue';
 
@@ -34,7 +34,11 @@ function subsets(idx: number[], k: number): number[] {
   return out;
 }
 
-/** P(vinst) − P(förlust) per rad mot poolens icke-foulade bräden */
+/**
+ * Förväntade poäng per rad mot poolen: P(vinst) − P(förlust) + royalty × P(vinst).
+ * Royaltyn får man bara när man vinner raden (husregel) — eller när
+ * motståndaren foular (då vinner man alla rader).
+ */
 function rowEdge(pool: Settled[]) {
   const ok = pool.filter((s) => !s.foul);
   const pF = 1 - ok.length / Math.max(1, pool.length);
@@ -47,7 +51,8 @@ function rowEdge(pool: Settled[]) {
       const a = sorted[row];
       const below = lowerBound(a, v), notAbove = lowerBound(a, v + 1);
       const n = Math.max(1, a.length);
-      x = (1 - pF) * ((below - (a.length - notAbove)) / n) + royaltyOf(v, row);
+      const win = below / n;
+      x = (1 - pF) * (win - (a.length - notAbove) / n) + royaltyOf(v, row) * (pF + (1 - pF) * win);
       memo[row].set(v, x);
     }
     return x;
@@ -116,8 +121,8 @@ export function solveFantasyLand(cards: number[], pool: Settled[], keep = 40): F
     const vb = listOf(b)[0];
     const vm = maxAtMost(listOf(m), vb);
     const vt = maxAtMost(listOf(t), vm);
-    const roy = royaltyOf(vt, 0) + royaltyOf(vm, 1) + royaltyOf(vb, 2);
-    const me: Settled = { foul: false, top: vt, mid: vm, bot: vb, roy };
+    const me = settledOf(vt, vm, vb);
+    const roy = me.roy;
     let sum = 0;
     for (const o of pool) sum += scoreVs(me, o);
     const repeat = qualifiesRepeat(vt, vm, vb);

@@ -28,6 +28,7 @@ Förhandsvisning i Claude-appen: `.claude/launch.json` ligger i föräldermappen
 
 - 54 kort: 52 + 2 helt vilda jokrar (jokern väljs så att handen inte foular).
 - Poäng: 1 p per rad, scoop +3, foul = motståndaren får 6 + sina royalties.
+- **Royalty bara till radens vinnare** (lika rad = ingen). Vid foul får motståndaren alla sina. `engine/scoring.ts` (`p1Royalties` = intjänade, `p1RawRoyalties` = brädets värde) och `core/eval.ts` (`scoreVs` med `rt/rm/rb` per rad). Bräden visar bara intjänad royalty när handen är klar (`BoardView earnedRoyalties`).
 - Royalties: mitten ger dubbelt mot botten (triss i mitten 2 p, i botten 0 p). 5-tal finns (20/40 p). Royal flush slår 5-tal.
 - Fantasy Land: QQ i topp = 13 kort, KK = 14, AA = 15, triss = 16. Repeat-FL (alltid 13 kort) kräver fyrtal+ i botten, kåk+ i mitten eller triss i topp.
 - Varianter: **Vanlig** (5 kort, sedan 1 åt gången) och **Pineapple** (5 kort, sedan 3 där 1 kastas).

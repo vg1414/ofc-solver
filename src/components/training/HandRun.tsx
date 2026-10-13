@@ -366,7 +366,7 @@ export default function HandRun({ variant, settings, active = true, onExit, onRe
           </div>
         ) : (
           <div className={`transition-opacity duration-300 ${myTurn ? 'opacity-80' : ''}`}>
-            <BoardView board={h.seats[1].board} maxCardWidth={40} fouled={!!h.outcome?.score.p2Foul} />
+            <BoardView board={h.seats[1].board} maxCardWidth={40} fouled={!!h.outcome?.score.p2Foul} earnedRoyalties={h.outcome?.score.p2Royalties} />
           </div>
         )}
 
@@ -386,6 +386,7 @@ export default function HandRun({ variant, settings, active = true, onExit, onRe
           onRemove={myTurn ? mb.remove : undefined}
           canRemove={mb.isMine}
           fouled={!!h.outcome?.score.p1Foul}
+          earnedRoyalties={h.outcome?.score.p1Royalties}
           maxCardWidth={84}
         />
         </div>

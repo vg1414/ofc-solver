@@ -13,7 +13,7 @@
 // jämna fallen ("successive halving").
 // ============================================================
 
-import { settle, scoreVs, flEntryCards, FOULED } from './eval';
+import { settle, scoreVs, flEntryCards, FOULED, settledOf } from './eval';
 import type { Settled } from './eval';
 import { makeUnseen, addUnseen, CAP } from './policy';
 import { choose, LA, bestCompletion } from './lookahead';
@@ -107,7 +107,8 @@ export function opponentPool(variant: Variant, n = 1500): Settled[] {
   const pre: Settled[] = [];
   for (let i = 0; i + 5 < POOL_DATA.length; i += 6) {
     if (POOL_DATA[i] !== vi) continue;
-    pre.push(POOL_DATA[i + 1] ? FOULED : { foul: false, top: POOL_DATA[i + 2], mid: POOL_DATA[i + 3], bot: POOL_DATA[i + 4], roy: POOL_DATA[i + 5] });
+    // Royalties räknas om per rad från radernas värden (kolumn 5 = summan, behövs inte)
+    pre.push(POOL_DATA[i + 1] ? FOULED : settledOf(POOL_DATA[i + 2], POOL_DATA[i + 3], POOL_DATA[i + 4]));
   }
   if (pre.length >= 500) { pools[variant] = pre; return pre; }
   // Reserv: snabb heuristisk spelare (används bara om poolData saknas)

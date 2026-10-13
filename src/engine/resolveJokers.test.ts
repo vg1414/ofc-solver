@@ -37,10 +37,13 @@ describe('scoreHand med joker som annars ger foul', () => {
     );
     expect(s.p1Foul).toBe(false);
     expect(s.p1Royalties.top).toBe(0);
-    expect(s.p1Royalties.bottom).toBe(4);
+    expect(s.p1RawRoyalties.bottom).toBe(4);
     expect(s.rows.top?.winner).toBe('p1');
     expect(s.rows.bottom?.winner).toBe('p2'); // A-flush slår Q-flush
-    expect(s.p1Net).toBe(-1);
+    // Husregel: bara radens vinnare får royalty → P1:s Q-flush ger inget, P2:s A-flush 4p
+    expect(s.p1Royalties.bottom).toBe(0);
+    expect(s.p2Royalties.bottom).toBe(4);
+    expect(s.p1Net).toBe(-5);
   });
 
   it('hand 2: Q★6 / A-hög / par 2 är giltig och ger ingen FL', () => {

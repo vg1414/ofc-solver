@@ -202,10 +202,21 @@ export interface Settled {
   top: number;
   mid: number;
   bot: number;
+  /** Royalties för hela brädet (summan av rt + rm + rb) */
   roy: number;
+  /** Royalty per rad — husregel: bara den som vinner raden får den */
+  rt: number;
+  rm: number;
+  rb: number;
 }
 
-export const FOULED: Settled = { foul: true, top: -1, mid: -1, bot: -1, roy: 0 };
+export const FOULED: Settled = { foul: true, top: -1, mid: -1, bot: -1, roy: 0, rt: 0, rm: 0, rb: 0 };
+
+/** Ett giltigt bräde från radernas värden (royalties räknas ut per rad) */
+export function settledOf(top: number, mid: number, bot: number): Settled {
+  const rt = royaltyOf(top, 0), rm = royaltyOf(mid, 1), rb = royaltyOf(bot, 2);
+  return { foul: false, top, mid, bot, roy: rt + rm + rb, rt, rm, rb };
+}
 
 /** Bästa giltiga uppställning (jokrar väljs för att undvika foul) */
 export function settle(top: number[], mid: number[], bot: number[]): Settled {
@@ -214,15 +225,23 @@ export function settle(top: number[], mid: number[], bot: number[]): Settled {
   if (m < 0) return FOULED;
   const t = maxAtMost(rowValues(top), m);
   if (t < 0) return FOULED;
-  return { foul: false, top: t, mid: m, bot: b, roy: royaltyOf(t, 0) + royaltyOf(m, 1) + royaltyOf(b, 2) };
+  return settledOf(t, m, b);
 }
 
-/** Poäng för spelare A mot B (2 spelare: 1p/rad, +3 scoop, foul = 6 + royalties) */
+/** Royalty-poäng för A på en rad: vinnaren får sin royalty, lika rad = ingen */
+const rowRoy = (d: number, ra: number, rb: number) => (d > 0 ? ra : d < 0 ? -rb : 0);
+
+/**
+ * Poäng för spelare A mot B (2 spelare: 1p/rad, +3 scoop, foul = 6 + royalties).
+ * Husregel: royalty för en rad går bara till den som vinner raden.
+ * Vid foul vinner motståndaren alla rader och får alla sina royalties.
+ */
 export function scoreVs(a: Settled, b: Settled): number {
   if (a.foul && b.foul) return 0;
   if (a.foul) return -(6 + b.roy);
   if (b.foul) return 6 + a.roy;
-  const w = Math.sign(a.top - b.top) + Math.sign(a.mid - b.mid) + Math.sign(a.bot - b.bot);
+  const dt = Math.sign(a.top - b.top), dm = Math.sign(a.mid - b.mid), db = Math.sign(a.bot - b.bot);
+  const w = dt + dm + db;
   const scoop = w === 3 ? 3 : w === -3 ? -3 : 0;
-  return w + scoop + a.roy - b.roy;
+  return w + scoop + rowRoy(dt, a.rt, b.rt) + rowRoy(dm, a.rm, b.rm) + rowRoy(db, a.rb, b.rb);
 }
