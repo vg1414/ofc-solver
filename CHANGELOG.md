@@ -3,7 +3,7 @@
 ## 2026-10-13 — Dela i Solver + öppningshanden markerad
 
 - **Dela-knapp i Solver-fliken:** med ett förslag delas förslaget inlagt på brädet (streckade kort) + "Solverns förslag · EV · FL · Foul" (FL i lila, Foul i rött) och ev. kastade kort. Utan förslag delas läget + korten att lägga, som ett pussel
-- **Öppningshanden har en fast mörk ram** hela handen (Hel hand, Spela och dela-bilden), så att man alltid ser vad som var starthanden. Öppningen streckas inte längre som "senaste drag" (inte heller i "Ditt drag" eller Solverns förslag) Ramen följer med när man tittar tillbaka: arket för äldre drag (listan "Dina drag"), ställningen och sammanfattningen (minibräden per hand) och sparade drag från Hel hand
+- **Öppningshanden har en fast mörk ram** hela handen (Hel hand, Spela och dela-bilden), så att man alltid ser vad som var starthanden. Öppningen streckas inte längre som "senaste drag" (inte heller i "Ditt drag" eller Solverns förslag). Ramen följer med när man tittar tillbaka: arket för äldre drag (listan "Dina drag"), ställningen och sammanfattningen (minibräden per hand) och sparade drag från Hel hand
 - Dela-bildens textrad krymper så att den får plats även när bilden bara har ett bräde
 
 ## 2026-10-13 — Senaste korten streckade + Toppen / Mitten / Botten
