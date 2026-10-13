@@ -38,6 +38,8 @@ import ScenarioFeedback from './ScenarioFeedback';
 import ScenarioSummary, { type ScenarioDone } from './ScenarioSummary';
 import { OpponentMini, RunHeader, SolverChip, Spinner, useCountUp } from './TrainingBits';
 import MoveHistory from './MoveHistory';
+import ShareBoards from '../share/ShareBoards';
+import { applyMove } from '../../training/moves';
 import { MoveExplain, MoveReviewSheet } from './CoachReview';
 import { newRunId, toggleSaved, useSavedMoves } from '../../training/savedMoves';
 
@@ -318,7 +320,13 @@ function ScenarioStage({ scenario, header, phase, ready, progress, rerun, evalEr
         <div className="px-1 -mb-1">
           <span className="eyebrow">{scenarioLabel(scenario)}</span>
         </div>
-        <div ref={boardRef}>
+        <div ref={boardRef} className="relative">
+        <ShareBoards
+          boards={() => [
+            { name: 'Du', board: phase === 'feedback' && lockedMove ? applyMove(scenario.board, lockedMove.placements) : mb.board },
+            ...(countPlaced(scenario.opponentBoard) > 0 ? [{ name: 'Motståndare', board: scenario.opponentBoard }] : []),
+          ]}
+        />
         {phase === 'feedback' && judgement && lockedMove ? (
           <div className="flex flex-col gap-2">
             <ReviewBoard board={scenario.board} move={lockedMove} judgement={judgement} />

@@ -55,6 +55,7 @@ import HandOver from './HandOver';
 import HandSummary from './HandSummary';
 import { HandStrip, ScoreSheet, type HandRecord } from './Scoreboard';
 import MoveHistory, { type HistoryItem } from './MoveHistory';
+import ShareBoards from '../share/ShareBoards';
 import { newRunId, toggleSaved, updateSavedJudgement, useSavedMoves } from '../../training/savedMoves';
 
 /** Coachen: Normal-nivå, men max 10 s per drag så att den hänger med */
@@ -424,7 +425,13 @@ export default function HandRun({ variant, settings, active = true, onExit, onRe
           {risk && risk.hand === h.no && !h.outcome && <RiskMeter foul={risk.foul} fl={risk.fl} />}
           {h.first === 0 && <span className="ml-auto text-[10.5px] font-bold text-ink-3">börjar</span>}
         </div>
-        <div ref={myBoardRef}>
+        <div ref={myBoardRef} className="relative">
+        <ShareBoards
+          boards={() => [
+            { name: 'Du', board: myTurn ? mb.board : h.seats[0].board, fouled: !!h.outcome?.score.p1Foul, royalties: h.outcome?.score.p1Royalties },
+            ...(hidden ? [] : [{ name: 'Datorn', board: h.seats[1].board, fouled: !!h.outcome?.score.p2Foul, royalties: h.outcome?.score.p2Royalties }]),
+          ]}
+        />
         <BoardView
           board={myTurn ? mb.board : h.seats[0].board}
           heldCard={myTurn ? mb.heldCard : null}

@@ -40,6 +40,7 @@ import type { SolverInput } from '../../hooks/useSolver';
 import { solverInput } from '../../training/game';
 import { toggleSaved, useSavedMoves } from '../../training/savedMoves';
 import MoveHistory from '../training/MoveHistory';
+import ShareBoards from '../share/ShareBoards';
 import { DragProvider } from '../dnd/DragContext';
 import BoardView from '../board/BoardView';
 import BottomSheet from '../ui/BottomSheet';
@@ -349,9 +350,16 @@ export default function DuelRun({ initial, initialElapsed, active = true, onExit
         <div
           ref={myBoardRef}
           key={`b${viewer}`}
-          className={`rounded-[30px] transition-shadow duration-500 ${turn ? 'animate-fade-in' : ''}`}
+          className={`relative rounded-[30px] transition-shadow duration-500 ${turn ? 'animate-fade-in' : ''}`}
           style={turn ? { boxShadow: `0 0 0 3px color-mix(in srgb, var(--p${viewer + 1}) 70%, transparent), var(--glow-p${viewer + 1})` } : undefined}
         >
+          <ShareBoards
+            boards={() => [
+              { name: me.name, board: turn ? mb.board : me.board!, fouled: viewer === 0 ? !!h.outcome?.score.p1Foul : !!h.outcome?.score.p2Foul, royalties: earnedFor(viewer) },
+              // Motståndarens bräde bara om det syns (dold öppning / FL delas inte)
+              ...(opp.board ? [{ name: opp.name, board: opp.board, fouled: other(viewer) === 0 ? !!h.outcome?.score.p1Foul : !!h.outcome?.score.p2Foul, royalties: earnedFor(other(viewer)) }] : []),
+            ]}
+          />
           <BoardView
             board={turn ? mb.board : me.board!}
             heldCard={turn ? mb.heldCard : null}

@@ -17,6 +17,7 @@ import { SOURCE_LABEL, needsAnalysis, removeSaved, retryAnalysis, useAnalysisSta
 import { MoveReviewSheet } from './CoachReview';
 import MoveHistory from './MoveHistory';
 import { OpponentMini, Spinner } from './TrainingBits';
+import ShareBoards from '../share/ShareBoards';
 
 const dayFmt = new Intl.DateTimeFormat('sv-SE', { weekday: 'short', day: 'numeric', month: 'short' });
 
@@ -71,6 +72,27 @@ export default function SavedMoves() {
         extra={opened?.input.opponentBoard && countPlaced(opened.input.opponentBoard) > 0 ? <OpponentMini board={opened.input.opponentBoard} /> : undefined}
         saved
         onToggleSave={opened ? () => removeSaved(opened.id) : undefined}
+        action={
+          opened && (
+            // Läget FÖRE draget + korten att lägga — som ett pussel, utan svaret
+            <ShareBoards
+              className="shrink-0"
+              title="Dela läget"
+              boards={() => [
+                { name: 'Du', board: opened.board },
+                ...(opened.input.opponentBoard && countPlaced(opened.input.opponentBoard) > 0 ? [{ name: 'Motståndare', board: opened.input.opponentBoard }] : []),
+              ]}
+              hand={() => {
+                const place = opened.move.placements.length;
+                const n = opened.input.cards.length;
+                return {
+                  cards: opened.input.cards,
+                  label: opened.fl ? `Fantasy Land · ${n} kort` : place === n ? `Lägg ${n === 1 ? '1 kort' : `${n} kort`}` : `Lägg ${place}, kasta ${n - place}`,
+                };
+              }}
+            />
+          )
+        }
         loading={
           openedFailed ? (
             <div className="flex items-center gap-2 rounded-2xl bg-danger-soft px-3.5 py-2.5 text-[12.5px] font-semibold text-danger">

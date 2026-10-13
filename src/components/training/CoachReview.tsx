@@ -156,6 +156,7 @@ export function MoveReviewSheet({
   onToggleSave,
   title = 'Coach',
   loading,
+  action,
 }: {
   open: boolean;
   onClose: () => void;
@@ -178,6 +179,8 @@ export function MoveReviewSheet({
   title?: string;
   /** Bedömningen räknas (j saknas än): visa en snurra i arket */
   loading?: React.ReactNode;
+  /** Knapp uppe till höger, t.ex. dela läget som bild */
+  action?: React.ReactNode;
 }) {
   return (
     <BottomSheet open={open && (!!j || !!loading)} onClose={onClose} title={title}>
@@ -196,6 +199,7 @@ export function MoveReviewSheet({
                 {!isBest(j) && <> · {evFmt.format(-j.diff)} EV</>}
               </div>
             </div>
+            {action}
           </div>
           {extra}
           <ReviewBoard key={thorough ? 't' : 'n'} board={board} move={move} judgement={j} maxCardWidth={60} />

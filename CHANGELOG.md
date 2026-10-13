@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-10-13 — Dela brädena som bild
+
+- **Dela-knapp** (fyrkant med pil upp) i hörnet av ditt bräde i Hel hand, Spela och Scenarion. Ritar båda brädena som en bild med loggan, FOUL och intjänad royalty per rad
+- Arket visar bilden först och kopierar till urklipp först när man trycker **Kopiera bild** (så att man inte skriver över urklipp av misstag). Webbläsare som inte kan kopiera bilder får **Spara bild**
+- **Sparade drag → Dela läget:** läget före draget + korten att lägga ("Hur lägger du?"), utan svaret, så att någon annan kan lösa samma problem
+- Spela delar bara motståndarens bräde om det syns (dold öppning / Fantasy Land avslöjas inte)
+
 ## 2026-10-13 — Träna: draglista, förklaring och sparade drag
 
 - **Draglista "Dina drag"** i Hel hand, Scenarion och ★ Joker: alla drag i sessionen med betyg, korten du la (T/M/B) och EV-förlust, grupperade per hand med senaste överst. Tryck på ett drag för brädet med bästa draget och "Räkna om noggrant". På bred skärm i högerkolumnen, på telefon under brädena
