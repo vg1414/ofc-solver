@@ -69,6 +69,7 @@ export default function SavedMoves() {
         j={ready}
         fl={opened?.fl}
         thorough="✓ Noggrann (2000 sim, ditt drag låst)"
+        opening={opened?.opening}
         extra={opened?.input.opponentBoard && countPlaced(opened.input.opponentBoard) > 0 ? <OpponentMini board={opened.input.opponentBoard} /> : undefined}
         saved
         onToggleSave={opened ? () => removeSaved(opened.id) : undefined}
@@ -79,7 +80,7 @@ export default function SavedMoves() {
               className="shrink-0"
               title="Dela läget"
               boards={() => [
-                { name: 'Du', board: opened.board },
+                { name: 'Du', board: opened.board, opening: opened.opening },
                 ...(opened.input.opponentBoard && countPlaced(opened.input.opponentBoard) > 0 ? [{ name: 'Motståndare', board: opened.input.opponentBoard }] : []),
               ]}
               hand={() => {

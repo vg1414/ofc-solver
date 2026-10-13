@@ -5,7 +5,7 @@
 // motståndarens bräde. Royalties räknas med appens egna regler.
 // ============================================================
 
-import type { Board, Card } from '../../engine/types';
+import type { Board, Card, RowName } from '../../engine/types';
 import PlayingCard from '../cards/PlayingCard';
 import { calcTopRoyalty, calcRowRoyalty5, calcAllRoyalties } from '../../engine/royalties';
 
@@ -14,16 +14,18 @@ interface MiniRowProps {
   cards: (Card | null)[];
   royalty?: number;
   cardWidth: number;
+  /** Platser i raden som hörde till öppningshanden (mörk ram) */
+  opening?: number[];
 }
 
-function MiniRow({ label, cards, royalty, cardWidth }: MiniRowProps) {
+function MiniRow({ label, cards, royalty, cardWidth, opening }: MiniRowProps) {
   return (
     <div className="flex items-center gap-1.5">
       <span className="w-9 shrink-0 text-[9px] font-bold uppercase tracking-wide text-ink-3">{label}</span>
       <div className="flex gap-[2px]">
         {cards.map((card, i) =>
           card ? (
-            <PlayingCard key={i} card={card} width={cardWidth} compact />
+            <PlayingCard key={i} card={card} width={cardWidth} compact opening={!!opening?.includes(i)} />
           ) : (
             <div
               key={i}
@@ -42,9 +44,12 @@ interface ResultBoardPreviewProps {
   board: Board;
   showRoyalties?: boolean;
   cardWidth?: number;
+  /** Öppningshandens platser (mörk ram) */
+  opening?: { row: RowName; slot: number }[];
 }
 
-export default function ResultBoardPreview({ board, showRoyalties, cardWidth = 22 }: ResultBoardPreviewProps) {
+export default function ResultBoardPreview({ board, showRoyalties, cardWidth = 22, opening }: ResultBoardPreviewProps) {
+  const openIn = (row: RowName) => opening?.filter((o) => o.row === row).map((o) => o.slot);
   const topCards = board.top.cards.filter((c): c is Card => c !== null);
   const midCards = board.middle.cards.filter((c): c is Card => c !== null);
   const botCards = board.bottom.cards.filter((c): c is Card => c !== null);
@@ -58,9 +63,9 @@ export default function ResultBoardPreview({ board, showRoyalties, cardWidth = 2
 
   return (
     <div className="inline-flex flex-col gap-[3px]">
-      <MiniRow label="Toppen" cards={board.top.cards} royalty={showRoyalties ? topRoy : undefined} cardWidth={cardWidth} />
-      <MiniRow label="Mitten" cards={board.middle.cards} royalty={showRoyalties ? midRoy : undefined} cardWidth={cardWidth} />
-      <MiniRow label="Botten" cards={board.bottom.cards} royalty={showRoyalties ? botRoy : undefined} cardWidth={cardWidth} />
+      <MiniRow label="Toppen" opening={openIn('top')} cards={board.top.cards} royalty={showRoyalties ? topRoy : undefined} cardWidth={cardWidth} />
+      <MiniRow label="Mitten" opening={openIn('middle')} cards={board.middle.cards} royalty={showRoyalties ? midRoy : undefined} cardWidth={cardWidth} />
+      <MiniRow label="Botten" opening={openIn('bottom')} cards={board.bottom.cards} royalty={showRoyalties ? botRoy : undefined} cardWidth={cardWidth} />
       {showRoyalties && totalRoy > 0 && (
         <div className="text-[10px] font-bold text-gold">Royalties totalt: +{totalRoy}p</div>
       )}

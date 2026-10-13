@@ -92,7 +92,7 @@ export default function DuelRun({ initial, initialElapsed, active = true, onExit
   const opp = view.seats[other(viewer)];
   const names = state.config.names;
   const turnKey = `${h.no}-${h.idx}`;
-  const { recent, opening } = useRecentSlots(h.no, [h.seats[0].board, h.seats[1].board]);
+  const { recent, opening, openings } = useRecentSlots(h.no, [h.seats[0].board, h.seats[1].board]);
 
   // Fantasy Land: korten visas först när FL-spelaren själv trycker "Visa"
   const [revealed, setRevealed] = useState<string | null>(null);
@@ -176,7 +176,7 @@ export default function DuelRun({ initial, initialElapsed, active = true, onExit
   useRevealAboveDock(myBoardRef, h.outcome ? `o${h.no}` : covered ? null : `t${turnKey}`);
 
   if (state.finished) {
-    return <DuelSummary state={state} elapsed={finishedAt ?? elapsed} onRestart={onRestart} onExit={onExit} />;
+    return <DuelSummary state={state} elapsed={finishedAt ?? elapsed} onRestart={onRestart} onExit={onExit} openings={openings} />;
   }
 
   // ---------- Panelen längst ner ----------
@@ -381,7 +381,7 @@ export default function DuelRun({ initial, initialElapsed, active = true, onExit
         </div>
       </DockLayout>
 
-      <ScoreSheet open={scoreOpen} onClose={() => setScoreOpen(false)} records={state.records} current={h.no} names={names} />
+      <ScoreSheet open={scoreOpen} onClose={() => setScoreOpen(false)} records={state.records} current={h.no} names={names} openings={openings} />
 
       <BottomSheet open={exitOpen} onClose={() => setExitOpen(false)} title="Avsluta partiet?">
         <div className="flex flex-col gap-2.5">

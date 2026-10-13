@@ -10,7 +10,7 @@
 // ============================================================
 
 import { useState } from 'react';
-import type { Board, Card } from '../../engine/types';
+import type { Board, Card, RowName } from '../../engine/types';
 import { applyMove, countPlaced, moveKey, placementsOn, type Judgement, type Move } from '../../training/moves';
 import BoardView from '../board/BoardView';
 import PlayingCard from '../cards/PlayingCard';
@@ -38,9 +38,13 @@ interface ReviewBoardProps {
   move: Move;
   judgement: Judgement;
   maxCardWidth?: number;
+  /** Öppningshandens platser på brädet innan draget (mörk ram) */
+  opening?: { row: RowName; slot: number }[];
 }
 
-export default function ReviewBoard({ board, move, judgement, maxCardWidth = 92 }: ReviewBoardProps) {
+export default function ReviewBoard({ board, move, judgement, maxCardWidth = 92, opening }: ReviewBoardProps) {
+  // Är det här själva öppningen ramas dina kort in som öppningshand
+  const openingMine = countPlaced(board) === 0 ? placementsOn(board, move.placements).map((p) => ({ row: p.row, slot: p.slotIndex })) : opening;
   // moveKey i stället för ===: sparade bedömningar (JSON) är kopior
   const same = judgement.diff <= 0.0001 && moveKey(move) === moveKey(judgement.best);
   const [view, setView] = useState<'mine' | 'best'>(same ? 'mine' : 'best');
@@ -67,12 +71,12 @@ export default function ReviewBoard({ board, move, judgement, maxCardWidth = 92 
       {view === 'mine' ? (
         // Öppningshand: alla kort är nya, så de visas som vanliga kort
         countPlaced(board) === 0 ? (
-          <BoardView key="mine" board={applyMove(board, move.placements)} maxCardWidth={maxCardWidth} />
+          <BoardView key="mine" board={applyMove(board, move.placements)} opening={openingMine} maxCardWidth={maxCardWidth} />
         ) : (
-          <BoardView key="mine" board={board} ghosts={placementsOn(board, move.placements)} maxCardWidth={maxCardWidth} />
+          <BoardView key="mine" board={board} ghosts={placementsOn(board, move.placements)} opening={opening} maxCardWidth={maxCardWidth} />
         )
       ) : (
-        <BoardView key="best" board={board} ghosts={placementsOn(board, best.placements)} maxCardWidth={maxCardWidth} />
+        <BoardView key="best" board={board} ghosts={placementsOn(board, best.placements)} opening={opening} maxCardWidth={maxCardWidth} />
       )}
       {judgement.playerEv > judgement.bestEv && (
         <p className="rounded-[14px] bg-accent-soft px-3 py-2 text-[11.5px] font-semibold leading-snug text-accent-ink">

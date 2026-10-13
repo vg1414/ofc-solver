@@ -13,7 +13,7 @@
 // ============================================================
 
 import { useSyncExternalStore } from 'react';
-import type { Board, GameVariant } from '../engine/types';
+import type { Board, GameVariant, RowName } from '../engine/types';
 import type { SolverInput } from '../hooks/useSolver';
 import type { Judgement, Move } from './moves';
 
@@ -37,6 +37,8 @@ export interface SavedMove {
   j: Judgement | null;
   /** Bedömningen är gjord på Noggrann nivå */
   thorough: boolean;
+  /** Öppningshandens platser på brädet (Hel hand / Spela) */
+  opening?: { row: RowName; slot: number }[];
 }
 
 const KEY = 'ofc-saved-moves';

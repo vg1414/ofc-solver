@@ -5,6 +5,7 @@
 // hela vägen (complete). Tid och fritt spel visar speltid och snitt.
 // ============================================================
 
+import type { Openings } from '../../training/useRecentSlots';
 import type { GameVariant } from '../../engine/types';
 import { boardKey } from '../../training/leaderboard';
 import { useLeaderboardRun } from '../../training/useLeaderboardRun';
@@ -29,12 +30,14 @@ interface Props {
   complete: boolean;
   onRestart: () => void;
   onExit: () => void;
+  /** Öppningshandens platser per hand (mörk ram i handlistan) */
+  openings?: Openings;
 }
 
 
 const avgFmt = new Intl.NumberFormat('sv-SE', { minimumFractionDigits: 1, maximumFractionDigits: 1, signDisplay: 'exceptZero' });
 
-export default function HandSummary({ records, coachLog, variant, settings, elapsed, complete, onRestart, onExit }: Props) {
+export default function HandSummary({ records, coachLog, variant, settings, elapsed, complete, onRestart, onExit, openings }: Props) {
   const len = settings.length;
   const count = leaderboardCount(len);
   const extraHands = count !== null ? Math.max(0, records.length - count) : 0;
@@ -88,7 +91,7 @@ export default function HandSummary({ records, coachLog, variant, settings, elap
       </div>
 
       <div className="glass overflow-hidden rounded-[24px] animate-rise-in" style={{ animationDelay: '0.1s' }}>
-        <HandList records={records} />
+        <HandList records={records} openings={openings} />
       </div>
 
       {count !== null && (

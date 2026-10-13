@@ -5,6 +5,7 @@
 // speltid och listan med alla händer (tryck för att se slutbrädena).
 // ============================================================
 
+import type { Openings } from '../../training/useRecentSlots';
 import type { MatchState } from '../../match/match';
 import { totals } from '../../match/match';
 import { clockText, lengthLabel } from '../../training/session';
@@ -17,9 +18,11 @@ interface Props {
   elapsed: number;
   onRestart: () => void;
   onExit: () => void;
+  /** Öppningshandens platser per hand (mörk ram i handlistan) */
+  openings?: Openings;
 }
 
-export default function DuelSummary({ state, elapsed, onRestart, onExit }: Props) {
+export default function DuelSummary({ state, elapsed, onRestart, onExit, openings }: Props) {
   const [n1, n2] = state.config.names;
   const [t1, t2] = totals(state);
   const lead = Math.abs(t1);
@@ -71,7 +74,7 @@ export default function DuelSummary({ state, elapsed, onRestart, onExit }: Props
             <span className="w-11 text-right">Totalt</span>
             <span className="w-[7px]" />
           </div>
-          <HandList records={state.records} names={state.config.names} />
+          <HandList records={state.records} names={state.config.names} openings={openings} />
           <p className="pb-3 text-center text-[11px] text-ink-3">Grön = {n1} vann, blå = {n2} vann. Tryck på en hand för slutbrädena.</p>
         </div>
       )}

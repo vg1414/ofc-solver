@@ -16,6 +16,7 @@ import type { Board } from '../../engine/types';
 import type { HandOutcome } from '../../training/game';
 import BottomSheet from '../ui/BottomSheet';
 import ResultBoardPreview from '../solver/ResultBoardPreview';
+import type { Openings } from '../../training/useRecentSlots';
 import { haptic } from '../cards/cardStyle';
 
 export interface HandRecord {
@@ -46,7 +47,7 @@ function resultText(r: HandRecord, [n1, n2]: Names): string {
   return `${s.p1RowWins}–${s.p2RowWins} i rader`;
 }
 
-export function HandList({ records, names }: { records: HandRecord[]; names?: Names }) {
+export function HandList({ records, names, openings }: { records: HandRecord[]; names?: Names; openings?: Openings }) {
   const duel = !!names;
   const nm = names ?? CPU_NAMES;
   const [open, setOpen] = useState<number | null>(null);
@@ -116,7 +117,7 @@ export function HandList({ records, names }: { records: HandRecord[]; names?: Na
                       {who}
                       {(i === 0 ? s.p1Foul : s.p2Foul) && <span className="text-danger"> · foul</span>}
                     </div>
-                    <ResultBoardPreview board={r.boards![i]} cardWidth={13} />
+                    <ResultBoardPreview board={r.boards![i]} cardWidth={13} opening={openings?.[r.no]?.[i]} />
                   </div>
                 ))}
               </div>
@@ -153,7 +154,22 @@ export function HandStrip({ records, onOpen, names }: { records: HandRecord[]; o
   );
 }
 
-export function ScoreSheet({ open, onClose, records, current, names }: { open: boolean; onClose: () => void; records: HandRecord[]; current: number; names?: Names }) {
+export function ScoreSheet({
+  open,
+  onClose,
+  records,
+  current,
+  names,
+  openings,
+}: {
+  open: boolean;
+  onClose: () => void;
+  records: HandRecord[];
+  current: number;
+  names?: Names;
+  /** Öppningshandens platser per hand (mörk ram på minibräden) */
+  openings?: Openings;
+}) {
   const nm = names ?? CPU_NAMES;
   const total = records.reduce((n, r) => n + r.net, 0);
   const wins = records.filter((r) => r.net > 0).length;
@@ -184,7 +200,7 @@ export function ScoreSheet({ open, onClose, records, current, names }: { open: b
               <span className="w-11 text-right">Totalt</span>
               <span className="w-[7px]" />
             </div>
-            <HandList records={records} names={names} />
+            <HandList records={records} names={names} openings={openings} />
           </div>
         ) : (
           <p className="py-4 text-center text-[13px] font-semibold text-ink-3">Inga färdiga händer än — hand {current} pågår.</p>

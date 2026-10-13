@@ -35,6 +35,8 @@ export interface CoachEntry {
   j: Judgement | null;
   /** Omräknad på Noggrann nivå */
   thorough?: boolean;
+  /** Öppningshandens platser på brädet innan draget */
+  opening?: { row: RowName; slot: number }[];
 }
 
 const ROW_SHORT: Record<RowName, string> = { top: 'T', middle: 'M', bottom: 'B' };
@@ -126,6 +128,7 @@ export function CoachSheet({
       j={entry?.j ?? null}
       fl={entry?.fl}
       thorough={entry?.thorough ? '✓ Noggrann (2000 sim, ditt drag låst)' : undefined}
+      opening={entry?.opening}
       onRecheck={entry && onRecheck ? () => onRecheck(entry) : undefined}
       rechecking={rechecking}
       saved={saved}
@@ -157,6 +160,7 @@ export function MoveReviewSheet({
   title = 'Coach',
   loading,
   action,
+  opening,
 }: {
   open: boolean;
   onClose: () => void;
@@ -181,6 +185,8 @@ export function MoveReviewSheet({
   loading?: React.ReactNode;
   /** Knapp uppe till höger, t.ex. dela läget som bild */
   action?: React.ReactNode;
+  /** Öppningshandens platser (mörk ram) */
+  opening?: { row: RowName; slot: number }[];
 }) {
   return (
     <BottomSheet open={open && (!!j || !!loading)} onClose={onClose} title={title}>
@@ -202,7 +208,7 @@ export function MoveReviewSheet({
             {action}
           </div>
           {extra}
-          <ReviewBoard key={thorough ? 't' : 'n'} board={board} move={move} judgement={j} maxCardWidth={60} />
+          <ReviewBoard key={thorough ? 't' : 'n'} board={board} move={move} judgement={j} maxCardWidth={60} opening={opening} />
           <MoveExplain move={move} j={j} fl={fl} />
           {!fl &&
             (thorough ? (

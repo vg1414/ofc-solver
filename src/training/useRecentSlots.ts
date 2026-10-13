@@ -10,7 +10,8 @@
 //             spelare gör nästa drag. Öppningen markeras inte här.
 //  - opening: öppningshandens platser (fast mörk ram), hela handen ut.
 // Fantasy Land (alla kort på en gång) markeras inte alls.
-// Ny hand (handNo) → allt nollställs.
+// Ny hand (handNo) → recent/opening nollställs, men öppningen för varje
+// spelad hand finns kvar i `openings` (för ställningen och sammanfattningen).
 // Används på brädet (BoardView `recent`/`opening`) och på dela-bilden.
 // ============================================================
 
@@ -19,7 +20,9 @@ import type { Board, RowName } from '../engine/types';
 import { ROWS, countPlaced } from './moves';
 
 export type RecentSlot = { row: RowName; slot: number };
-type Pair = [RecentSlot[], RecentSlot[]];
+export type Pair = [RecentSlot[], RecentSlot[]];
+/** Öppningens platser per hand: openings[handNo] = [plats 0, plats 1] */
+export type Openings = Record<number, Pair>;
 
 /** Platser som är fyllda i `after` men tomma i `before` */
 export function newSlots(before: Board, after: Board): RecentSlot[] {
@@ -31,11 +34,11 @@ export function newSlots(before: Board, after: Board): RecentSlot[] {
 const FL_MIN = 13;
 const EMPTY: Pair = [[], []];
 
-export function useRecentSlots(handNo: number, boards: [Board, Board]): { recent: Pair; opening: Pair } {
-  const [st, setSt] = useState({ hand: handNo, boards, recent: EMPTY, opening: EMPTY });
+export function useRecentSlots(handNo: number, boards: [Board, Board]): { recent: Pair; opening: Pair; openings: Openings } {
+  const [st, setSt] = useState({ hand: handNo, boards, recent: EMPTY, opening: EMPTY, openings: {} as Openings });
   // Justera state när brädena byts (Reacts mönster för "state som följer props")
   if (st.hand !== handNo) {
-    setSt({ hand: handNo, boards, recent: EMPTY, opening: EMPTY });
+    setSt({ hand: handNo, boards, recent: EMPTY, opening: EMPTY, openings: st.openings });
   } else if (st.boards[0] !== boards[0] || st.boards[1] !== boards[1]) {
     const recent = [...st.recent] as Pair;
     const opening = [...st.opening] as Pair;
@@ -46,7 +49,7 @@ export function useRecentSlots(handNo: number, boards: [Board, Board]): { recent
       recent[s] = first ? [] : n;
       if (first) opening[s] = n.length >= FL_MIN ? [] : n;
     }
-    setSt({ hand: handNo, boards, recent, opening });
+    setSt({ hand: handNo, boards, recent, opening, openings: { ...st.openings, [handNo]: opening } });
   }
-  return st.hand === handNo ? { recent: st.recent, opening: st.opening } : { recent: EMPTY, opening: EMPTY };
+  return st.hand === handNo ? { recent: st.recent, opening: st.opening, openings: st.openings } : { recent: EMPTY, opening: EMPTY, openings: st.openings };
 }

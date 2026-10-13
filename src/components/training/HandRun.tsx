@@ -112,6 +112,7 @@ export default function HandRun({ variant, settings, active = true, onExit, onRe
   const {
     recent: [myRecent, cpuRecent],
     opening: [myOpening, cpuOpening],
+    openings,
   } = useRecentSlots(h.no, [h.seats[0].board, h.seats[1].board]);
   const myTurn = turn?.seat === 0;
   const mb = useMoveBuilder(h.seats[0].board, myTurn ? h.dealt : [], turn?.place ?? 0);
@@ -176,7 +177,7 @@ export default function HandRun({ variant, settings, active = true, onExit, onRe
         fl: turn.fl,
         options: {},
       });
-      const entry: CoachEntry = { key, hand: h.no, round: turn.round, fl: turn.fl, board: h.seats[0].board, move, input, j: null };
+      const entry: CoachEntry = { key, hand: h.no, round: turn.round, fl: turn.fl, board: h.seats[0].board, move, input, j: null, opening: myOpening };
       setCoachLog((l) => [...l, entry]);
       if (!turn.fl && !last) setRisk({ key, hand: h.no, foul: null, fl: null });
       coachSolve({
@@ -205,7 +206,7 @@ export default function HandRun({ variant, settings, active = true, onExit, onRe
     } else {
       // Ingen räkning (sista draget / FL utan coach) — draget hamnar ändå i listan
       const input = solverInput({ seat: h.seats[0], cards: h.dealt, variant, opponent: h.seats[1].fl > 0 ? undefined : h.seats[1].board, fl: turn.fl, options: {} });
-      setCoachLog((l) => [...l, { key, hand: h.no, round: turn.round, fl: turn.fl, board: h.seats[0].board, move, input, j: null }]);
+      setCoachLog((l) => [...l, { key, hand: h.no, round: turn.round, fl: turn.fl, board: h.seats[0].board, move, input, j: null, opening: myOpening }]);
     }
     setToast(null);
     mbReset();
@@ -280,6 +281,7 @@ export default function HandRun({ variant, settings, active = true, onExit, onRe
     return (
       <HandSummary
         records={records}
+        openings={openings}
         coachLog={coach ? coachLog : []}
         variant={variant}
         settings={settings}
@@ -309,6 +311,7 @@ export default function HandRun({ variant, settings, active = true, onExit, onRe
       // Utan coach visas ingen bedömning — den räknas fram under "Sparade drag"
       j: coach ? e.j : null,
       thorough: coach && !!e.thorough,
+      opening: e.opening,
     });
 
   const history = (
@@ -464,7 +467,7 @@ export default function HandRun({ variant, settings, active = true, onExit, onRe
         saved={!!review && savedKeys.has(review.key)}
         onToggleSave={review ? () => toggleSave(review) : undefined}
       />
-      <ScoreSheet open={scoreOpen} onClose={() => setScoreOpen(false)} records={records} current={h.no} />
+      <ScoreSheet open={scoreOpen} onClose={() => setScoreOpen(false)} records={records} current={h.no} openings={openings} />
 
       <BottomSheet open={exitOpen} onClose={() => setExitOpen(false)} title="Avsluta sessionen?">
         <div className="flex flex-col gap-2.5">
