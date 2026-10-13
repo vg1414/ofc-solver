@@ -9,6 +9,9 @@
 //  - Dra-och-släpp: raderna och platserna är släppytor (data-drop-*).
 //  - Tryck på ett lagt kort → det "beväpnas" (skakar + rött ✕).
 //    Tryck igen inom 2,5 s → kortet tas bort. Skyddar mot feltryck.
+//  - Ett lagt kort (som får tas bort) kan också dras: till en ledig plats
+//    = flytta, till ett annat flyttbart kort = byt plats, utanför brädet
+//    = ta bort. Själva flytten görs av DragProviderns onDrop.
 //  - Spökkort: solverns förslag visas genomskinligt med streckad ram.
 //
 // Kortstorlek: brädet är en "container" och kortbredden räknas ut från
@@ -20,7 +23,7 @@ import type { Board, Card, RowName } from '../../engine/types';
 import type { CardPlacement } from '../../solver/solver';
 import { calcAllRoyalties, calcRowRoyalty5, calcTopRoyalty } from '../../engine/royalties';
 import PlayingCard from '../cards/PlayingCard';
-import { useDragContext } from '../dnd/useDraggable';
+import { useDraggable, useDragContext } from '../dnd/useDraggable';
 import { haptic } from '../cards/cardStyle';
 
 const ROWS: { name: RowName; label: string }[] = [
@@ -38,6 +41,57 @@ function liveRoyalty(board: Board, row: RowName): number {
   const filled = filledOf(board[row].cards);
   if (row === 'top') return filled.length === 3 ? calcTopRoyalty(filled) : 0;
   return filled.length === 5 ? calcRowRoyalty5(filled, row) : 0;
+}
+
+/** Ett lagt kort: tryck två gånger för att ta bort, eller dra för att flytta */
+function PlacedCard({
+  card,
+  row,
+  slot,
+  armed,
+  removable,
+  hidden,
+  swapTarget,
+  onTap,
+}: {
+  card: Card;
+  row: RowName;
+  slot: number;
+  armed: boolean;
+  removable: boolean;
+  /** Kortet dras just nu (visas svagt på sin gamla plats) */
+  hidden: boolean;
+  /** Ett annat kort svävar här → släpp för att byta plats */
+  swapTarget: boolean;
+  onTap: () => void;
+}) {
+  const drag = useDraggable(removable ? card : null, onTap, !removable, { row, slot });
+  return (
+    <button
+      type="button"
+      aria-label={armed ? 'Tryck igen för att ta bort kortet' : 'Ta bort kort'}
+      data-drop-row={removable ? row : undefined}
+      data-drop-filled={removable ? slot : undefined}
+      {...drag}
+      onClick={(e) => {
+        // Klicket får inte bubbla till raden (den lägger annars ett lyft kort där)
+        e.stopPropagation();
+        drag.onClick(e);
+      }}
+      style={removable ? drag.style : undefined}
+      className={`relative rounded-[calc(var(--card-w)*0.14)] transition-[transform,opacity,box-shadow] duration-200 active:scale-95 ${armed ? 'animate-wiggle' : ''} ${
+        hidden ? 'opacity-30' : ''
+      } ${swapTarget ? 'scale-[1.06] shadow-[0_0_0_2.5px_#e8a828,0_0_16px_rgba(245,184,61,0.6)]' : ''}`}
+      disabled={!removable}
+    >
+      <PlayingCard card={card} snap />
+      {armed && (
+        <span className="absolute inset-0 flex items-center justify-center rounded-[calc(var(--card-w)*0.14)] bg-[rgba(208,68,63,0.78)] text-white text-xl font-bold backdrop-blur-[1px] animate-badge-in">
+          ✕
+        </span>
+      )}
+    </button>
+  );
 }
 
 interface BoardViewProps {
@@ -106,6 +160,7 @@ export default function BoardView({
   return (
     <div className="@container w-full" style={{ containerType: 'inline-size' }}>
       <div
+        data-drop-board={interactive ? '' : undefined}
         className={`felt flex flex-col gap-[calc(var(--card-w)*0.12)] rounded-[26px] p-3 sm:p-4 ${fouled ? 'felt-row fouled' : ''}`}
         style={{ '--card-w': `min(${maxCardWidth}px, calc((100cqw - 84px) / 5 - 5px), var(--card-h-cap, 999px))` } as React.CSSProperties}
       >
@@ -140,25 +195,20 @@ export default function BoardView({
                   const isArmed = armed?.row === name && armed.slot === i;
 
                   if (card) {
+                    const removable = interactive && !!onRemove && (canRemove ? canRemove(name, i) : true);
+                    const isSource = dragging && drag?.source?.row === name && drag.source.slot === i;
                     return (
-                      <button
+                      <PlacedCard
                         key={i}
-                        type="button"
-                        aria-label={isArmed ? 'Tryck igen för att ta bort kortet' : 'Ta bort kort'}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          tapCard(name, i);
-                        }}
-                        className={`relative rounded-[calc(var(--card-w)*0.14)] transition-transform duration-200 active:scale-95 ${isArmed ? 'animate-wiggle' : ''}`}
-                        disabled={!onRemove || (canRemove ? !canRemove(name, i) : false)}
-                      >
-                        <PlayingCard card={card} snap />
-                        {isArmed && (
-                          <span className="absolute inset-0 flex items-center justify-center rounded-[calc(var(--card-w)*0.14)] bg-[rgba(208,68,63,0.78)] text-white text-xl font-bold backdrop-blur-[1px] animate-badge-in">
-                            ✕
-                          </span>
-                        )}
-                      </button>
+                        card={card}
+                        row={name}
+                        slot={i}
+                        armed={isArmed}
+                        removable={removable}
+                        hidden={isSource}
+                        swapTarget={removable && !!drag?.source && !isSource && isOverRow && drag?.over?.filled === i}
+                        onTap={() => tapCard(name, i)}
+                      />
                     );
                   }
 

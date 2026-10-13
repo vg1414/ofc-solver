@@ -16,6 +16,12 @@
 //     smidigt även på långsamma telefoner.
 //  4. Släpper man över en rad/plats anropas onDrop. Rörde sig fingret
 //     knappt räknas det i stället som ett vanligt tryck (onTap).
+//  5. Ett kort som redan ligger på brädet kan också dras. Då följer
+//     platsen det kom ifrån med (source). Släpps det utanför brädet
+//     anropas onDrop med målet null — det betyder "ta bort kortet".
+//     Släpps det mellan raderna (data-drop-board) händer ingenting.
+//     Medan ett lagt kort hålls utanför brädet blir det rött med ✕,
+//     så att man ser att det tas bort om man släpper där.
 // ============================================================
 
 import { useCallback, useMemo, useRef, useState } from 'react';
@@ -23,7 +29,7 @@ import { createPortal } from 'react-dom';
 import type { Card, RowName } from '../../engine/types';
 import PlayingCard from '../cards/PlayingCard';
 import { haptic } from '../cards/cardStyle';
-import { DragCtx as Ctx, type DropTarget } from './dragCore';
+import { DragCtx as Ctx, type BoardSlot, type DropTarget } from './dragCore';
 
 
 const TOUCH_LIFT = 46; // px ovanför fingret
@@ -33,24 +39,35 @@ function hitTest(x: number, y: number): DropTarget | null {
   const el = document.elementFromPoint(x, y) as HTMLElement | null;
   if (!el) return null;
   if (el.closest('[data-drop-hand]')) return { row: null, slot: null, hand: true };
+  const filledEl = el.closest<HTMLElement>('[data-drop-filled]');
+  if (filledEl) {
+    return { row: filledEl.dataset.dropRow as RowName, slot: null, filled: Number(filledEl.dataset.dropFilled) };
+  }
   const slotEl = el.closest<HTMLElement>('[data-drop-slot]');
   if (slotEl) {
     return { row: slotEl.dataset.dropRow as RowName, slot: Number(slotEl.dataset.dropSlot) };
   }
   const rowEl = el.closest<HTMLElement>('[data-drop-row]');
   if (rowEl) return { row: rowEl.dataset.dropRow as RowName, slot: null };
+  if (el.closest('[data-drop-board]')) return { row: null, slot: null, board: true };
   return null;
 }
 
 interface DragProviderProps {
   children: React.ReactNode;
-  /** Returnerar true om kortet faktiskt placerades */
-  onDrop: (card: Card, target: DropTarget) => boolean;
+  /**
+   * Returnerar true om kortet faktiskt placerades.
+   * `source` finns när ett lagt kort flyttas; då kan `target` vara null
+   * (släppt utanför brädet = ta bort kortet).
+   */
+  onDrop: (card: Card, target: DropTarget | null, source?: BoardSlot) => boolean;
 }
 
 export function DragProvider({ children, onDrop }: DragProviderProps) {
   const [dragging, setDragging] = useState<Card | null>(null);
   const [over, setOver] = useState<DropTarget | null>(null);
+  const [source, setSource] = useState<BoardSlot | null>(null);
+  const sourceRef = useRef<BoardSlot | null>(null);
   const floatRef = useRef<HTMLDivElement>(null);
   const liftRef = useRef(0);
   const overRef = useRef<DropTarget | null>(null);
@@ -61,10 +78,12 @@ export function DragProvider({ children, onDrop }: DragProviderProps) {
     if (el) el.style.transform = `translate3d(${x - CARD_W / 2}px, ${y - liftRef.current - CARD_W * 0.7}px, 0) rotate(-3deg)`;
   }, []);
 
-  const begin = useCallback((card: Card, e: React.PointerEvent) => {
+  const begin = useCallback((card: Card, e: React.PointerEvent, from?: BoardSlot) => {
     liftRef.current = e.pointerType === 'mouse' ? 0 : TOUCH_LIFT;
     draggingRef.current = card;
+    sourceRef.current = from ?? null;
     setDragging(card);
+    setSource(from ?? null);
     haptic(6);
     // Positionera direkt efter att portalen ritats
     requestAnimationFrame(() => position(e.clientX, e.clientY));
@@ -74,7 +93,7 @@ export function DragProvider({ children, onDrop }: DragProviderProps) {
     position(e.clientX, e.clientY);
     const t = hitTest(e.clientX, e.clientY - liftRef.current);
     const prev = overRef.current;
-    if (t?.row !== prev?.row || t?.slot !== prev?.slot || t?.hand !== prev?.hand) {
+    if (t?.row !== prev?.row || t?.slot !== prev?.slot || t?.hand !== prev?.hand || t?.filled !== prev?.filled || t?.board !== prev?.board) {
       overRef.current = t;
       setOver(t);
       if (t) haptic(3);
@@ -84,22 +103,33 @@ export function DragProvider({ children, onDrop }: DragProviderProps) {
   const reset = useCallback(() => {
     overRef.current = null;
     draggingRef.current = null;
+    sourceRef.current = null;
     setOver(null);
     setDragging(null);
+    setSource(null);
   }, []);
 
   const end = useCallback((e: React.PointerEvent) => {
-    const t = hitTest(e.clientX, e.clientY - liftRef.current) ?? overRef.current;
     const card = draggingRef.current;
+    const from = sourceRef.current;
     let placed = false;
-    if (t && card) placed = onDrop(card, t);
+    if (from) {
+      // Lagt kort: målet där det släpps gäller (null = utanför brädet)
+      if (card) placed = onDrop(card, hitTest(e.clientX, e.clientY - liftRef.current), from);
+    } else {
+      const t = hitTest(e.clientX, e.clientY - liftRef.current) ?? overRef.current;
+      if (t && card) placed = onDrop(card, t);
+    }
     reset();
     return placed;
   }, [onDrop, reset]);
 
+  // Lagt kort som hålls utanför brädet (eller över handen) → tas bort vid släpp
+  const removing = !!source && (!over || (!over.row && !over.board));
+
   const value = useMemo(
-    () => ({ dragging, over, begin, move, end, cancel: reset }),
-    [dragging, over, begin, move, end, reset],
+    () => ({ dragging, source, over, begin, move, end, cancel: reset }),
+    [dragging, source, over, begin, move, end, reset],
   );
 
   return (
@@ -112,7 +142,17 @@ export function DragProvider({ children, onDrop }: DragProviderProps) {
             className="fixed left-0 top-0 z-[100] pointer-events-none will-change-transform"
             style={{ transform: 'translate3d(-200px,-200px,0)' }}
           >
-            <PlayingCard card={dragging} width={CARD_W} lifted className="!translate-y-0" />
+            <div className={`relative transition-transform duration-150 ${removing ? 'scale-90' : ''}`}>
+              <PlayingCard card={dragging} width={CARD_W} lifted className="!translate-y-0" />
+              <span
+                aria-hidden
+                className={`absolute inset-0 scale-[1.04] flex items-center justify-center rounded-[7px] bg-[rgba(208,68,63,0.8)] text-[22px] font-bold text-white shadow-[0_0_0_2px_#d0443f,0_6px_18px_rgba(208,68,63,0.45)] transition-opacity duration-150 ${
+                  removing ? 'opacity-100' : 'opacity-0'
+                }`}
+              >
+                ✕
+              </span>
+            </div>
           </div>,
           document.body,
         )}

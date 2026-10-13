@@ -8,7 +8,10 @@
 //
 //  - tapHand(i)        lyft/sänk kort i handen
 //  - placeAt(row,slot) lägg det lyfta kortet
-//  - drop(card, mål)   dra-och-släpp: första kortet i handen som matchar
+//  - drop(card, mål)   dra-och-släpp: första kortet i handen som matchar.
+//                      Med `source` är det ett lagt kort som dras: till en
+//                      ledig plats = flytta, på ett annat eget kort = byt
+//                      plats, utanför brädet eller till handen = ta tillbaka
 //  - remove(row,slot)  ta tillbaka ett kort du lagt i detta drag
 //  - reset()           ta tillbaka alla
 // Draget är klart när `place` kort ligger ute. Kort som blir kvar i
@@ -17,7 +20,7 @@
 
 import { useCallback, useMemo, useState } from 'react';
 import type { Board, Card, RowName } from '../engine/types';
-import type { DropTarget } from '../components/dnd/dragCore';
+import type { BoardSlot, DropTarget } from '../components/dnd/dragCore';
 import { haptic, sameCard } from '../components/cards/cardStyle';
 import { cloneBoard, type Move } from './moves';
 
@@ -81,20 +84,58 @@ export function useMoveBuilder(base: Board, hand: Card[], place: number) {
     [held, put],
   );
 
-  const drop = useCallback(
-    (card: Card, t: DropTarget) => {
-      if (!t.row) return false;
-      // Föredra det lyfta kortet om det är samma (två jokrar)
-      const h = (held !== null && sameCard(hand[held], card) && remaining.find((r) => r.id === held)) || remaining.find((r) => sameCard(r.card, card));
-      if (!h) return false;
-      const slot = t.slot ?? board[t.row].cards.findIndex((c) => c === null);
+  /** Flytta ett lagt kort (se drop) */
+  const moveCard = useCallback(
+    (from: BoardSlot, t: DropTarget | null) => {
+      const p = placed.find((x) => x.row === from.row && x.slot === from.slot);
+      if (!p) return false;
+      // Utanför brädet eller tillbaka till handen → ta bort
+      if (!t || (!t.row && !t.board)) {
+        setPlaced((ps) => ps.filter((x) => x !== p));
+        haptic(12);
+        return true;
+      }
+      if (!t.row) return false; // mellan raderna: inget händer
+      const row = t.row;
+      if (t.filled !== undefined) {
+        if (row === from.row && t.filled === from.slot) return false;
+        const q = placed.find((x) => x.row === row && x.slot === t.filled);
+        if (q) {
+          // Två egna kort byter plats
+          setPlaced((ps) => ps.map((x) => (x === p ? { ...x, row, slot: q.slot } : x === q ? { ...x, row: from.row, slot: from.slot } : x)));
+          haptic(12);
+          return true;
+        }
+      }
+      // Ledig plats: den man siktade på, annars radens första lediga
+      const slot = t.slot ?? board[row].cards.findIndex((c) => c === null);
       if (slot < 0) {
         haptic([4, 30, 4]);
         return false;
       }
-      return put(h.id, t.row, slot);
+      setPlaced((ps) => ps.map((x) => (x === p ? { ...x, row, slot } : x)));
+      haptic(12);
+      return true;
     },
-    [board, hand, held, put, remaining],
+    [board, placed],
+  );
+
+  const drop = useCallback(
+    (card: Card, t: DropTarget | null, source?: BoardSlot) => {
+      if (source) return moveCard(source, t);
+      if (!t?.row) return false;
+      const row = t.row;
+      // Föredra det lyfta kortet om det är samma (två jokrar)
+      const h = (held !== null && sameCard(hand[held], card) && remaining.find((r) => r.id === held)) || remaining.find((r) => sameCard(r.card, card));
+      if (!h) return false;
+      const slot = t.slot ?? board[row].cards.findIndex((c) => c === null);
+      if (slot < 0) {
+        haptic([4, 30, 4]);
+        return false;
+      }
+      return put(h.id, row, slot);
+    },
+    [board, hand, held, put, remaining, moveCard],
   );
 
   const isMine = useCallback((row: RowName, slot: number) => placed.some((p) => p.row === row && p.slot === slot), [placed]);
@@ -118,7 +159,7 @@ export function useMoveBuilder(base: Board, hand: Card[], place: number) {
 
   const heldIndex = held !== null ? remaining.findIndex((r) => r.id === held) : -1;
 
-  return { board, remaining, heldCard, heldIndex, placedCount: placed.length, done, move, tapHand, placeAt, drop, remove, isMine, reset };
+  return { hand, board, remaining, heldCard, heldIndex, placedCount: placed.length, done, move, tapHand, placeAt, drop, remove, isMine, reset };
 }
 
 export type MoveBuilder = ReturnType<typeof useMoveBuilder>;

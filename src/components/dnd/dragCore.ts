@@ -8,14 +8,26 @@ export interface DropTarget {
   slot: number | null;
   /** true = över "Din hand" (handen tar emot kort) */
   hand?: boolean;
+  /** Plats där det redan ligger ett kort (för att byta plats) */
+  filled?: number;
+  /** true = över brädet men mellan raderna (räknas inte som "utanför") */
+  board?: boolean;
+}
+
+/** En plats på brädet — varifrån ett lagt kort dras */
+export interface BoardSlot {
+  row: RowName;
+  slot: number;
 }
 
 export interface DragContextValue {
   /** Kortet som dras just nu (null = inget drag) */
   dragging: Card | null;
+  /** Lagt kort som dras: platsen det kom från (null = kortet kommer från handen) */
+  source: BoardSlot | null;
   /** Rad/plats som kortet svävar över */
   over: DropTarget | null;
-  begin: (card: Card, e: React.PointerEvent) => void;
+  begin: (card: Card, e: React.PointerEvent, source?: BoardSlot) => void;
   move: (e: React.PointerEvent) => void;
   end: (e: React.PointerEvent) => boolean;
   cancel: () => void;

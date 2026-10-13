@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-10-13 — Dra lagda kort + sortera Fantasy Land-handen
+
+- **Dra ett lagt kort:** till en ledig plats = flytta, på ett annat eget kort = byt plats, utanför brädet (eller till handen) = ta bort. Släpps det på brädet mellan raderna händer ingenting. Gäller Solver, Träna och Spela (där bara kort från det aktuella draget). Två tryck för att ta bort finns kvar
+- Kortet blir rött med ✕ medan det hålls utanför brädet, så att man ser att det tas bort vid släpp
+- **Sortera i Fantasy Land:** knapparna Färg / Värde under handen (Hel hand, Spela och Solver → Fantasy Land). Färg = ♠ ♥ ♣ ♦, högst först; Värde = A → 2; jokrar först. Tryck igen för att gå tillbaka till utdelad ordning. Varje ny hand börjar osorterad
+
 ## 2026-10-13 — Husregel: royalty bara till den som vinner raden
 
 - Den som förlorar en rad får ingen royalty för den (t.ex. en färg i botten som förlorar mot fyrtal ger 0 p). Lika rad ger ingen royalty. Vid foul vinner motståndaren alla rader och får alla sina royalties som förut

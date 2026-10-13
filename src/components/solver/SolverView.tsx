@@ -27,10 +27,12 @@ import { useGameStore } from '../../store/gameStore';
 import { useSolver } from '../../hooks/useSolver';
 import { useSwipeDown } from '../../hooks/useSwipeDown';
 import { DragProvider } from '../dnd/DragContext';
-import type { DropTarget } from '../dnd/dragCore';
+import type { BoardSlot, DropTarget } from '../dnd/dragCore';
 import BoardView from '../board/BoardView';
 import CardGrid, { JokerButton, type TileState } from '../cards/CardGrid';
 import HandTray from '../cards/HandTray';
+import SortButtons from '../cards/SortButtons';
+import { sortOrder, type SortMode } from '../cards/handSort';
 import PlayingCard from '../cards/PlayingCard';
 import { haptic, sameCard } from '../cards/cardStyle';
 import Segmented from '../ui/Segmented';
@@ -66,6 +68,8 @@ export default function SolverView({ simulations }: SolverViewProps) {
   const [previewIndex, setPreviewIndex] = useState(0);
   const [usedOpp, setUsedOpp] = useState(false);
   const [flash, setFlash] = useState<string | null>(null);
+  // FL-handens visningsordning (ändrar inte handen). Börjar osorterad.
+  const [flSort, setFlSort] = useState<SortMode>('dealt');
 
   const placed = countPlaced(myBoard);
   const oppPlaced = countPlaced(opponentBoard);
@@ -84,6 +88,9 @@ export default function SolverView({ simulations }: SolverViewProps) {
   }, [normal, trayActive, selectedCards, selectedCard]);
 
   const handKey = handCards.map(cardKey).sort().join(',');
+  // Tom FL-hand → nästa hand börjar osorterad
+  if (selectedCards.length === 0 && flSort !== 'dealt') setFlSort('dealt');
+  const flOrder = useMemo(() => sortOrder(selectedCards, normal ? 'dealt' : flSort), [selectedCards, normal, flSort]);
 
   // Resultatet gäller ett visst läge — ändras brädet, handen eller inställningarna rensas det
   useEffect(() => {
@@ -203,8 +210,56 @@ export default function SolverView({ simulations }: SolverViewProps) {
     [],
   );
 
+  /** Flytta ett lagt kort: ledig plats = flytta, annat kort = byt plats, utanför brädet = ta bort */
+  const moveOnBoard = useCallback((from: BoardSlot, t: DropTarget | null) => {
+    const st = useGameStore.getState();
+    const player = st.activePlayer;
+    const board = player === 'me' ? st.myBoard : st.opponentBoard;
+    const card = board[from.row].cards[from.slot];
+    if (!card) return false;
+    if (!t || (!t.row && !t.board)) {
+      st.removeCard(from.row, from.slot, player);
+      haptic(12);
+      return true;
+    }
+    if (!t.row) return false; // mellan raderna: inget händer
+    const row = t.row;
+    let slot = t.slot ?? -1;
+    let other: Card | null = null;
+    if (t.filled !== undefined) {
+      if (row === from.row && t.filled === from.slot) return false;
+      other = board[row].cards[t.filled];
+      slot = t.filled;
+    }
+    if (slot < 0) slot = board[row].cards.findIndex((c) => c === null);
+    if (slot < 0) {
+      haptic([4, 30, 4]);
+      return false;
+    }
+    // Lägg ut via storen (selectCard + placeCard) och behåll ett ev. lyft kort
+    const held = st.selectedCard;
+    const put = (c: Card, r: RowName, i: number) => {
+      useGameStore.getState().selectCard(c);
+      useGameStore.getState().placeCard(r, i);
+    };
+    st.removeCard(from.row, from.slot, player);
+    if (other) {
+      useGameStore.getState().removeCard(row, slot, player);
+      put(card, row, slot);
+      put(other, from.row, from.slot);
+    } else {
+      put(card, row, slot);
+    }
+    if (held) useGameStore.getState().selectCard(held);
+    else useGameStore.getState().clearSelectedCard();
+    haptic(12);
+    return true;
+  }, []);
+
   const onDrop = useCallback(
-    (card: Card, t: DropTarget) => {
+    (card: Card, t: DropTarget | null, source?: BoardSlot) => {
+      if (source) return moveOnBoard(source, t);
+      if (!t) return false;
       const st = useGameStore.getState();
 
       // Släppt på "Din hand": lägg till kortet i handen (öppningshand eller FL-hand)
@@ -234,7 +289,7 @@ export default function SolverView({ simulations }: SolverViewProps) {
       }
       return placeOn(card, t.row, slot);
     },
-    [placeOn],
+    [placeOn, moveOnBoard],
   );
 
   const onBoardPlace = (row: RowName, slot: number) => {
@@ -487,14 +542,14 @@ export default function SolverView({ simulations }: SolverViewProps) {
                   </span>
                 </div>
                 <HandTray
-                  cards={selectedCards}
+                  cards={flOrder.map((i) => selectedCards[i])}
                   capacity={needed}
-                  onTapCard={tapHandCard}
+                  onTapCard={(i) => tapHandCard(flOrder[i])}
                   dropZone
                   wrap
                   cardWidth="min(44px, calc((100vw - 100px) / 8))"
                 />
-                <div className="mt-2.5 flex items-center justify-between text-[11px] text-ink-3">
+                <div className="mt-2.5 flex items-center justify-between gap-2 text-[11px] text-ink-3">
                   <span>Tryck på ett kort för att ta bort det</span>
                   {selectedCards.length > 0 && (
                     <button type="button" onClick={clearSelectedCards} className="font-bold text-danger">
@@ -502,6 +557,11 @@ export default function SolverView({ simulations }: SolverViewProps) {
                     </button>
                   )}
                 </div>
+                {selectedCards.length > 1 && (
+                  <div className="mt-2">
+                    <SortButtons mode={flSort} onChange={setFlSort} />
+                  </div>
+                )}
               </div>
               {solverMode === 'fantasyLand' && (
                 <p className="px-1 text-[12px] text-ink-2">

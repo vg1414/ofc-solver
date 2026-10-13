@@ -1,7 +1,7 @@
 // Hooks för dra-och-släpp — se DragContext.tsx för hur det fungerar
 import { useContext, useRef } from 'react';
 import type { Card } from '../../engine/types';
-import { DragCtx as Ctx } from './dragCore';
+import { DragCtx as Ctx, type BoardSlot } from './dragCore';
 
 export function useDragContext() {
   return useContext(Ctx);
@@ -9,9 +9,10 @@ export function useDragContext() {
 
 /**
  * Gör ett element dragbart. `onTap` körs vid vanligt tryck/klick.
+ * `source` = platsen på brädet om kortet redan ligger där (flytta/ta bort).
  * Returnerar props att sprida på elementet.
  */
-export function useDraggable(card: Card | null, onTap: () => void, disabled = false) {
+export function useDraggable(card: Card | null, onTap: () => void, disabled = false, source?: BoardSlot) {
   const ctx = useContext(Ctx);
   const start = useRef<{ x: number; y: number; id: number } | null>(null);
   const active = useRef(false);
@@ -29,7 +30,7 @@ export function useDraggable(card: Card | null, onTap: () => void, disabled = fa
     if (!active.current) {
       if (!ctx || !card || Math.hypot(e.clientX - s.x, e.clientY - s.y) < 8) return;
       active.current = true;
-      ctx.begin(card, e);
+      ctx.begin(card, e, source);
     }
     ctx?.move(e);
   };
