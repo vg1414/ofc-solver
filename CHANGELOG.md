@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-10-13 — Ditt drag visas streckat
+
+- I alla ark med "Ditt drag / Bästa draget" (coachen, efter scenario, sammanfattningen, Sparade drag) visas korten från ditt drag streckade, som bästa draget, så att man ser vilka kort som lades just då
+
 ## 2026-10-13 — Dela brädena som bild
 
 - **Dela-knapp** (fyrkant med pil upp) i hörnet av ditt bräde i Hel hand, Spela och Scenarion. Ritar båda brädena som en bild med loggan, FOUL och intjänad royalty per rad

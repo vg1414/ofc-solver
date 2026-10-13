@@ -2,7 +2,8 @@
 // ReviewBoard.tsx — Ditt drag mot bästa draget, på brädet
 // ============================================================
 // En växel "Ditt drag / Bästa draget":
-//  - Ditt drag: dina kort ligger på brädet som vanliga kort.
+//  - Ditt drag: dina kort från draget som streckade kort (samma stil som
+//    bästa draget), så att man ser vilka kort som lades just då.
 //  - Bästa draget: solverns förslag som pulserande spökkort (samma som
 //    i Solvern) på brädet som det såg ut innan draget.
 // Kastade kort (Pineapple) visas under brädet.
@@ -10,7 +11,7 @@
 
 import { useState } from 'react';
 import type { Board, Card } from '../../engine/types';
-import { applyMove, moveKey, placementsOn, type Judgement, type Move } from '../../training/moves';
+import { moveKey, placementsOn, type Judgement, type Move } from '../../training/moves';
 import BoardView from '../board/BoardView';
 import PlayingCard from '../cards/PlayingCard';
 import Segmented from '../ui/Segmented';
@@ -64,7 +65,7 @@ export default function ReviewBoard({ board, move, judgement, maxCardWidth = 92 
         />
       )}
       {view === 'mine' ? (
-        <BoardView key="mine" board={applyMove(board, move.placements)} maxCardWidth={maxCardWidth} />
+        <BoardView key="mine" board={board} ghosts={placementsOn(board, move.placements)} maxCardWidth={maxCardWidth} />
       ) : (
         <BoardView key="best" board={board} ghosts={placementsOn(board, best.placements)} maxCardWidth={maxCardWidth} />
       )}
