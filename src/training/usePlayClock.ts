@@ -10,10 +10,11 @@
 
 import { useEffect, useRef, useState } from 'react';
 
-export function usePlayClock(running: boolean): number {
-  const banked = useRef(0);
+/** @param initial  tid som redan spelats (t.ex. ett sparat parti som fortsätter) */
+export function usePlayClock(running: boolean, initial = 0): number {
+  const banked = useRef(initial);
   const since = useRef<number | null>(null);
-  const [elapsed, setElapsed] = useState(0);
+  const [elapsed, setElapsed] = useState(initial);
 
   useEffect(() => {
     const now = () => banked.current + (since.current === null ? 0 : performance.now() - since.current);

@@ -155,3 +155,50 @@ export function settleHand(me: Seat, cpu: Seat): HandOutcome {
   const [ct, cm, cb] = r(cpu);
   return { score: scoreHand(mt, mm, mb, ct, cm, cb), nextFl: [nextFlFor(me), nextFlFor(cpu)] };
 }
+
+// ---------- En hand som tillstånd ----------
+//
+// HandState är en vanlig, oföränderlig struktur (bara data, går att spara
+// som JSON): kortlek + position, båda platserna, hela turordningen och
+// vilken tur vi är på. Används av "Hel hand mot datorn" och 2-spelarläget.
+
+export interface HandState {
+  no: number;
+  first: SeatId;
+  deck: Card[];
+  pos: number;
+  seats: [Seat, Seat];
+  turns: Turn[];
+  idx: number;
+  /** Korten som är utdelade till turen som pågår */
+  dealt: Card[];
+  outcome: HandOutcome | null;
+}
+
+/** Dela ut korten till nästa tur — eller räkna poäng när alla turer är klara */
+export function nextTurn(h: HandState): HandState {
+  if (h.idx >= h.turns.length) return { ...h, dealt: [], outcome: settleHand(h.seats[0], h.seats[1]) };
+  const t = h.turns[h.idx];
+  return { ...h, dealt: h.deck.slice(h.pos, h.pos + t.count), pos: h.pos + t.count };
+}
+
+export function startHand(no: number, first: SeatId, fl: [number, number], variant: GameVariant, deck: Card[] = newDeck()): HandState {
+  return nextTurn({
+    no,
+    first,
+    deck,
+    pos: 0,
+    seats: [newSeat(fl[0]), newSeat(fl[1])],
+    turns: turnOrder(variant, first, fl),
+    idx: 0,
+    dealt: [],
+    outcome: null,
+  });
+}
+
+/** Platsen har lagt sitt drag: uppdatera brädet och gå till nästa tur */
+export function played(h: HandState, seat: SeatId, move: Move): HandState {
+  const seats: [Seat, Seat] = [...h.seats];
+  seats[seat] = applyToSeat(seats[seat], move);
+  return nextTurn({ ...h, seats, idx: h.idx + 1 });
+}

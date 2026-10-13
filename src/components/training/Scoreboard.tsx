@@ -7,6 +7,8 @@
 //    poäng och totalen efter handen. Tryck på en rad för att se båda
 //    slutbrädena. Används även i slutresultatet (HandSummary).
 //  - HandStrip: små brickor med varje hands poäng, under poängraden.
+// 2 spelare: alla tar `names` ([spelare 1, spelare 2]). Då visas poängen
+// för den som vann handen i dennes färg i stället för +/− från ditt håll.
 // ============================================================
 
 import { useState } from 'react';
@@ -29,17 +31,24 @@ export interface HandRecord {
 export const sign = (n: number) => `${n > 0 ? '+' : ''}${n}`;
 const tone = (n: number) => (n > 0 ? 'text-accent-ink' : n < 0 ? 'text-danger' : 'text-ink-3');
 
-function resultText(r: HandRecord): string {
+type Names = [string, string];
+const CPU_NAMES: Names = ['Du', 'Datorn'];
+/** 2 spelare: den som är plus får sin färg (grön/blå), annars dämpat */
+const duelTone = (n: number, seat: 0 | 1) => (n > 0 ? (seat === 0 ? 'text-p1-ink' : 'text-p2-ink') : 'text-ink-3');
+
+function resultText(r: HandRecord, [n1, n2]: Names): string {
   const s = r.outcome.score;
   if (s.p1Foul && s.p2Foul) return 'Båda foulade';
-  if (s.p1Foul) return 'Du foulade';
-  if (s.p2Foul) return 'Datorn foulade';
-  if (s.p1Scoop) return 'Scoop!';
-  if (s.p2Scoop) return 'Datorn scoopade';
+  if (s.p1Foul) return `${n1} foulade`;
+  if (s.p2Foul) return `${n2} foulade`;
+  if (s.p1Scoop) return n1 === 'Du' ? 'Scoop!' : `${n1} scoopade`;
+  if (s.p2Scoop) return `${n2} scoopade`;
   return `${s.p1RowWins}–${s.p2RowWins} i rader`;
 }
 
-export function HandList({ records }: { records: HandRecord[] }) {
+export function HandList({ records, names }: { records: HandRecord[]; names?: Names }) {
+  const duel = !!names;
+  const nm = names ?? CPU_NAMES;
   const [open, setOpen] = useState<number | null>(null);
   let run = 0;
   const rows = records.map((r) => ({ r, total: (run += r.net) }));
@@ -62,13 +71,37 @@ export function HandList({ records }: { records: HandRecord[] }) {
             >
               <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-sunken text-[12px] font-extrabold text-ink-2 tabular">{r.no}</span>
               <div className="min-w-0 flex-1 text-[12.5px] text-ink-2">
-                <span className={s.p1Foul ? 'font-bold text-danger' : s.p1Scoop ? 'font-bold text-accent-ink' : ''}>{resultText(r)}</span>
-                {s.p1Royalties.total > 0 && <span className="text-gold"> · +{s.p1Royalties.total} roy</span>}
-                {r.fl[0] > 0 && <span className="font-bold text-fl"> · ★ FL</span>}
-                {r.fl[1] > 0 && <span className="text-fl"> · datorn FL</span>}
+                <span className={s.p1Foul ? 'font-bold text-danger' : s.p1Scoop ? 'font-bold text-accent-ink' : ''}>{resultText(r, nm)}</span>
+                {duel ? (
+                  <>
+                    {(s.p1Royalties.total > 0 || s.p2Royalties.total > 0) && (
+                      <span className="text-gold">
+                        {' '}
+                        · roy {s.p1Royalties.total}–{s.p2Royalties.total}
+                      </span>
+                    )}
+                    {r.fl[0] > 0 && <span className="font-bold text-fl"> · ★ {nm[0]} FL</span>}
+                    {r.fl[1] > 0 && <span className="font-bold text-fl"> · ★ {nm[1]} FL</span>}
+                  </>
+                ) : (
+                  <>
+                    {s.p1Royalties.total > 0 && <span className="text-gold"> · +{s.p1Royalties.total} roy</span>}
+                    {r.fl[0] > 0 && <span className="font-bold text-fl"> · ★ FL</span>}
+                    {r.fl[1] > 0 && <span className="text-fl"> · datorn FL</span>}
+                  </>
+                )}
               </div>
-              <span className={`w-10 text-right text-[16px] font-extrabold tabular ${tone(r.net)}`}>{sign(r.net)}</span>
-              <span className="w-11 text-right text-[11.5px] font-bold tabular text-ink-3">{sign(total)}</span>
+              {duel ? (
+                <>
+                  <span className={`w-10 text-right text-[16px] font-extrabold tabular ${r.net > 0 ? 'text-p1-ink' : r.net < 0 ? 'text-p2-ink' : 'text-ink-3'}`}>{r.net === 0 ? '±0' : `+${Math.abs(r.net)}`}</span>
+                  <span className={`w-11 text-right text-[11.5px] font-bold tabular ${total > 0 ? 'text-p1-ink' : total < 0 ? 'text-p2-ink' : 'text-ink-3'}`}>{total === 0 ? '±0' : `+${Math.abs(total)}`}</span>
+                </>
+              ) : (
+                <>
+                  <span className={`w-10 text-right text-[16px] font-extrabold tabular ${tone(r.net)}`}>{sign(r.net)}</span>
+                  <span className="w-11 text-right text-[11.5px] font-bold tabular text-ink-3">{sign(total)}</span>
+                </>
+              )}
               {r.boards && (
                 <span className={`text-[12px] text-ink-3 transition-transform duration-300 ${isOpen ? 'rotate-90' : ''}`} aria-hidden="true">
                   ›
@@ -77,7 +110,7 @@ export function HandList({ records }: { records: HandRecord[] }) {
             </button>
             {isOpen && r.boards && (
               <div className="grid grid-cols-2 gap-2 px-3.5 pb-3 animate-fade-in">
-                {(['Du', 'Datorn'] as const).map((who, i) => (
+                {nm.map((who, i) => (
                   <div key={who} className="overflow-hidden rounded-[14px] bg-sunken/60 p-2">
                     <div className="mb-1 text-[10.5px] font-extrabold uppercase tracking-[0.06em] text-ink-3">
                       {who}
@@ -96,7 +129,8 @@ export function HandList({ records }: { records: HandRecord[] }) {
 }
 
 /** Brickor med varje spelad hands poäng — syns under sessionen, tryck öppnar ställningen */
-export function HandStrip({ records, onOpen }: { records: HandRecord[]; onOpen: () => void }) {
+export function HandStrip({ records, onOpen, names }: { records: HandRecord[]; onOpen: () => void; names?: Names }) {
+  const duel = !!names;
   if (!records.length) return null;
   return (
     <button type="button" onClick={onOpen} aria-label="Visa ställningen" className="flex w-full flex-wrap items-center gap-1 px-1 text-left">
@@ -104,12 +138,14 @@ export function HandStrip({ records, onOpen }: { records: HandRecord[]; onOpen: 
         <span
           key={r.no}
           className={`rounded-full px-1.5 py-[1px] text-[11px] font-extrabold tabular animate-badge-in ${
-            r.net > 0 ? 'bg-accent-soft text-accent-ink' : r.net < 0 ? 'bg-danger-soft text-danger' : 'bg-sunken text-ink-3'
+            duel
+              ? r.net > 0 ? 'bg-p1-soft text-p1-ink' : r.net < 0 ? 'bg-p2-soft text-p2-ink' : 'bg-sunken text-ink-3'
+              : r.net > 0 ? 'bg-accent-soft text-accent-ink' : r.net < 0 ? 'bg-danger-soft text-danger' : 'bg-sunken text-ink-3'
           }`}
-          title={`Hand ${r.no}`}
+          title={duel ? `Hand ${r.no}: ${r.net > 0 ? names![0] : r.net < 0 ? names![1] : 'oavgjort'}` : `Hand ${r.no}`}
         >
-          {r.fl[0] > 0 && '★'}
-          {sign(r.net)}
+          {(duel ? r.fl[0] > 0 || r.fl[1] > 0 : r.fl[0] > 0) && '★'}
+          {duel ? (r.net === 0 ? '±0' : `+${Math.abs(r.net)}`) : sign(r.net)}
         </span>
       ))}
       <span className="ml-0.5 text-[11px] font-bold text-ink-3">Ställning ›</span>
@@ -117,7 +153,8 @@ export function HandStrip({ records, onOpen }: { records: HandRecord[]; onOpen: 
   );
 }
 
-export function ScoreSheet({ open, onClose, records, current }: { open: boolean; onClose: () => void; records: HandRecord[]; current: number }) {
+export function ScoreSheet({ open, onClose, records, current, names }: { open: boolean; onClose: () => void; records: HandRecord[]; current: number; names?: Names }) {
+  const nm = names ?? CPU_NAMES;
   const total = records.reduce((n, r) => n + r.net, 0);
   const wins = records.filter((r) => r.net > 0).length;
   const losses = records.filter((r) => r.net < 0).length;
@@ -126,16 +163,16 @@ export function ScoreSheet({ open, onClose, records, current }: { open: boolean;
       <div className="flex flex-col gap-3">
         <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 rounded-[22px] bg-sunken/60 px-3 py-3 text-center">
           <div>
-            <div className="text-[11px] font-extrabold uppercase tracking-[0.08em] text-ink-3">Du</div>
-            <div className={`font-serif text-[34px] font-extrabold leading-none tabular ${tone(total)}`}>{sign(total)}</div>
+            <div className="truncate text-[11px] font-extrabold uppercase tracking-[0.08em] text-ink-3">{nm[0]}</div>
+            <div className={`font-serif text-[34px] font-extrabold leading-none tabular ${names ? duelTone(total, 0) : tone(total)}`}>{sign(total)}</div>
           </div>
           <div className="text-[12px] font-bold text-ink-3 tabular">
             {wins}–{losses}
             <div className="text-[10px] font-semibold">vinster</div>
           </div>
           <div>
-            <div className="text-[11px] font-extrabold uppercase tracking-[0.08em] text-ink-3">Datorn</div>
-            <div className={`font-serif text-[34px] font-extrabold leading-none tabular ${tone(-total)}`}>{sign(-total)}</div>
+            <div className="truncate text-[11px] font-extrabold uppercase tracking-[0.08em] text-ink-3">{nm[1]}</div>
+            <div className={`font-serif text-[34px] font-extrabold leading-none tabular ${names ? duelTone(-total, 1) : tone(-total)}`}>{sign(-total)}</div>
           </div>
         </div>
         {records.length ? (
@@ -147,7 +184,7 @@ export function ScoreSheet({ open, onClose, records, current }: { open: boolean;
               <span className="w-11 text-right">Totalt</span>
               <span className="w-[7px]" />
             </div>
-            <HandList records={records} />
+            <HandList records={records} names={names} />
           </div>
         ) : (
           <p className="py-4 text-center text-[13px] font-semibold text-ink-3">Inga färdiga händer än — hand {current} pågår.</p>

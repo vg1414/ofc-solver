@@ -7,6 +7,7 @@
 //  - Fantasy Land i slutet: spelas ut eller får sluta i FL.
 //  - Datorns styrka (Snabb / Normal / Noggrann) och coach-läge.
 // SettingsSummary är raden på startsidan som visar valen och öppnar arket.
+// `duel` (2 spelare, Spela-fliken): bara längd och FL — ingen dator, ingen coach.
 // ============================================================
 
 import { useRef } from 'react';
@@ -33,9 +34,11 @@ interface Props {
   onClose: () => void;
   value: HandSettings;
   onChange: (s: HandSettings) => void;
+  /** 2 spelare: dölj datorns styrka och coachen */
+  duel?: boolean;
 }
 
-export default function HandSettingsSheet({ open, onClose, value, onChange }: Props) {
+export default function HandSettingsSheet({ open, onClose, value, onChange, duel }: Props) {
   // Kom ihåg senaste antal händer/minuter när man växlar läge fram och tillbaka
   const memory = useRef({ hands: value.length.kind === 'hands' ? value.length.n : 10, minutes: value.length.kind === 'minutes' ? value.length.n : 20 });
   const len = value.length;
@@ -99,29 +102,33 @@ export default function HandSettingsSheet({ open, onClose, value, onChange }: Pr
           </div>
         </Section>
 
-        <Section label="Datorns styrka">
-          <Segmented<CpuLevel>
-            size="sm"
-            ariaLabel="Datorns styrka"
-            value={value.cpuLevel}
-            onChange={(cpuLevel) => set({ cpuLevel })}
-            options={(['fast', 'normal', 'thorough'] as const).map((l) => ({
-              value: l,
-              label: CPU_LEVELS[l].label,
-              sub: `${CPU_LEVELS[l].simulations} sim · ≤ ${CPU_LEVELS[l].maxMs / 1000} s`,
-            }))}
-          />
-          <p className="mt-1.5 px-1 text-[11.5px] text-ink-3">Gäller bara datorn här. Solver-flikens nivå ändras inte.</p>
-        </Section>
+        {!duel && (
+          <>
+            <Section label="Datorns styrka">
+              <Segmented<CpuLevel>
+                size="sm"
+                ariaLabel="Datorns styrka"
+                value={value.cpuLevel}
+                onChange={(cpuLevel) => set({ cpuLevel })}
+                options={(['fast', 'normal', 'thorough'] as const).map((l) => ({
+                  value: l,
+                  label: CPU_LEVELS[l].label,
+                  sub: `${CPU_LEVELS[l].simulations} sim · ≤ ${CPU_LEVELS[l].maxMs / 1000} s`,
+                }))}
+              />
+              <p className="mt-1.5 px-1 text-[11.5px] text-ink-3">Gäller bara datorn här. Solver-flikens nivå ändras inte.</p>
+            </Section>
 
-        <Section label="Hjälp">
-          <Switch
-            on={value.coach}
-            onToggle={() => set({ coach: !value.coach })}
-            title="Coach-läge"
-            sub="Visar EV-förlusten och solverns bästa drag efter varje drag"
-          />
-        </Section>
+            <Section label="Hjälp">
+              <Switch
+                on={value.coach}
+                onToggle={() => set({ coach: !value.coach })}
+                title="Coach-läge"
+                sub="Visar EV-förlusten och solverns bästa drag efter varje drag"
+              />
+            </Section>
+          </>
+        )}
 
         <button type="button" onClick={onClose} className="btn-primary h-12 rounded-full text-[15px] font-bold">
           Klar
@@ -247,8 +254,9 @@ export function Switch({ on, onToggle, title, sub }: { on: boolean; onToggle: ()
 }
 
 /** Raden på startsidan: visar valen som små pills, ett tryck öppnar arket */
-export function SettingsSummary({ value, onOpen }: { value: HandSettings; onOpen: () => void }) {
-  const pills = [lengthLabel(value.length), value.flEnd === 'playout' ? '★ FL spelas ut' : 'Får sluta i FL', `Dator: ${CPU_LEVELS[value.cpuLevel].label}`, value.coach ? 'Coach på' : 'Coach av'];
+export function SettingsSummary({ value, onOpen, duel }: { value: HandSettings; onOpen: () => void; duel?: boolean }) {
+  const pills = [lengthLabel(value.length), value.flEnd === 'playout' ? '★ FL spelas ut' : 'Får sluta i FL'];
+  if (!duel) pills.push(`Dator: ${CPU_LEVELS[value.cpuLevel].label}`, value.coach ? 'Coach på' : 'Coach av');
   return (
     <button
       type="button"

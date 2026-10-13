@@ -7,12 +7,15 @@
 // 1 p per rad, +3 för scoop, royalties (mitten dubbelt), foul = 6 p + royalties.
 // I slutet av en session: "FL spelas ut" (en hand till) eller en notis om
 // att FL inte spelas ut. Fritt spel får en "Avsluta här"-knapp.
+// 2 spelare (`names`): texterna får spelarnas namn, och poängen visas för
+// den som vann handen i dennes färg (grön = spelare 1, blå = spelare 2).
 // ============================================================
 
 import type { HandOutcome } from '../../training/game';
 import { CoachDots, type CoachEntry } from './CoachReview';
 import { evFmt } from './ReviewBoard';
 import { useCountUp } from './TrainingBits';
+import { genitive } from '../../match/names';
 
 const ROW_LABEL = { top: 'Topp', middle: 'Mitt', bottom: 'Botten' } as const;
 
@@ -34,13 +37,21 @@ interface Props {
   /** FL måste spelas ut innan man får sluta */
   stopBlocked?: boolean;
   top?: React.ReactNode;
+  /** 2 spelare: [spelare 1, spelare 2]. Utan = "Du" mot "Datorn" */
+  names?: [string, string];
 }
 
-export default function HandOver({ outcome, last, playOutFl, flSkipped, coachLog, onReview, onScore, onNext, onStop, stopBlocked, top }: Props) {
+export default function HandOver({ outcome, last, playOutFl, flSkipped, coachLog, onReview, onScore, onNext, onStop, stopBlocked, top, names }: Props) {
   const s = outcome.score;
   const net = s.p1Net;
-  const shown = useCountUp(net, 800, 0);
-  const title = net > 0 ? 'Du vann handen' : net < 0 ? 'Datorn vann handen' : 'Oavgjort';
+  const duel = !!names;
+  const [n1, n2] = names ?? ['Du', 'Datorn'];
+  // Mot datorn: poängen från ditt håll (+/−). 2 spelare: vinnarens poäng i vinnarens färg.
+  const shown = useCountUp(duel ? Math.abs(net) : net, 800, 0);
+  const title = net > 0 ? `${n1} vann handen` : net < 0 ? `${n2} vann handen` : 'Oavgjort';
+  const netTone = duel ? (net > 0 ? 'text-p1-ink' : net < 0 ? 'text-p2-ink' : 'text-ink-2') : net > 0 ? 'text-accent-ink' : net < 0 ? 'text-danger' : 'text-ink-2';
+  const p2Win = duel ? 'font-bold text-p2-ink' : 'font-bold text-danger';
+  const p1Win = duel ? 'font-bold text-p1-ink' : 'font-bold text-accent-ink';
   const judged = coachLog.filter((c) => c.j);
   const coachLoss = judged.reduce((n, c) => n + (c.j?.diff ?? 0), 0);
 
@@ -51,11 +62,21 @@ export default function HandOver({ outcome, last, playOutFl, flSkipped, coachLog
         <div className="min-w-0 flex-1">
           <div className="title-serif text-[23px]">{title}</div>
           <div className="text-[12px] font-semibold text-ink-3">
-            {s.p1Foul && s.p2Foul ? 'Båda foulade' : s.p1Foul ? 'Du foulade' : s.p2Foul ? 'Datorn foulade' : s.p1Scoop ? 'Scoop! +3 extra' : s.p2Scoop ? 'Datorn scoopade' : `${s.p1RowWins}–${s.p2RowWins} i rader`}
+            {s.p1Foul && s.p2Foul
+              ? 'Båda foulade'
+              : s.p1Foul
+                ? `${n1} foulade`
+                : s.p2Foul
+                  ? `${n2} foulade`
+                  : s.p1Scoop
+                    ? duel ? `${n1} scoopade! +3 extra` : 'Scoop! +3 extra'
+                    : s.p2Scoop
+                      ? `${n2} scoopade`
+                      : `${s.p1RowWins}–${s.p2RowWins} i rader`}
           </div>
         </div>
-        <div className={`text-[36px] font-extrabold leading-none tabular ${net > 0 ? 'text-accent-ink' : net < 0 ? 'text-danger' : 'text-ink-2'}`}>
-          {net > 0 ? '+' : ''}
+        <div className={`text-[36px] font-extrabold leading-none tabular ${netTone}`}>
+          {(duel ? net !== 0 : net > 0) ? '+' : ''}
           {Math.round(shown)}
         </div>
       </div>
@@ -67,9 +88,9 @@ export default function HandOver({ outcome, last, playOutFl, flSkipped, coachLog
             return (
               <div key={r} className="contents">
                 <span className="font-bold text-ink-3">{ROW_LABEL[r]}</span>
-                <span className={`truncate ${row.winner === 'p1' ? 'font-bold text-accent-ink' : 'text-ink-2'}`}>{row.p1Hand.description}</span>
+                <span className={`truncate ${row.winner === 'p1' ? p1Win : 'text-ink-2'}`}>{row.p1Hand.description}</span>
                 <span className="text-center font-extrabold text-ink-3">{row.winner === 'p1' ? '◀' : row.winner === 'p2' ? '▶' : '='}</span>
-                <span className={`truncate text-right ${row.winner === 'p2' ? 'font-bold text-danger' : 'text-ink-2'}`}>{row.p2Hand.description}</span>
+                <span className={`truncate text-right ${row.winner === 'p2' ? p2Win : 'text-ink-2'}`}>{row.p2Hand.description}</span>
               </div>
             );
           })}
@@ -77,8 +98,12 @@ export default function HandOver({ outcome, last, playOutFl, flSkipped, coachLog
       )}
 
       <div className="flex flex-wrap gap-1.5 text-[11.5px] font-bold">
-        <span className="rounded-full bg-gold-soft px-2.5 py-0.5 text-gold">Dina royalties +{s.p1Royalties.total}</span>
-        <span className="rounded-full bg-sunken px-2.5 py-0.5 text-ink-2">Datorns +{s.p2Royalties.total}</span>
+        <span className={`rounded-full px-2.5 py-0.5 ${duel ? 'bg-p1-soft text-p1-ink' : 'bg-gold-soft text-gold'}`}>
+          {duel ? `${genitive(n1)} royalties` : 'Dina royalties'} +{s.p1Royalties.total}
+        </span>
+        <span className={`rounded-full px-2.5 py-0.5 ${duel ? 'bg-p2-soft text-p2-ink' : 'bg-sunken text-ink-2'}`}>
+          {genitive(n2)} +{s.p2Royalties.total}
+        </span>
         {judged.length > 0 && (
           <span className="rounded-full bg-accent-soft px-2.5 py-0.5 text-accent-ink">Coach: {coachLoss > 0.0001 ? `${evFmt.format(-coachLoss)} EV` : 'felfritt!'}</span>
         )}
@@ -95,11 +120,17 @@ export default function HandOver({ outcome, last, playOutFl, flSkipped, coachLog
 
       {outcome.nextFl[0] > 0 && !last && (
         <div className="rounded-2xl px-3.5 py-2 text-[13.5px] font-bold text-white shadow-[var(--glow-fl)] animate-badge-in" style={{ background: 'var(--grad-fl)' }}>
-          ★ Fantasy Land! Du får {outcome.nextFl[0]} kort nästa hand.
+          ★ Fantasy Land! {n1} får {outcome.nextFl[0]} kort nästa hand.
         </div>
       )}
       {outcome.nextFl[1] > 0 && !last && (
-        <div className="rounded-2xl bg-fl-soft px-3.5 py-2 text-[12.5px] font-bold text-fl">★ Datorn går till Fantasy Land ({outcome.nextFl[1]} kort).</div>
+        duel ? (
+          <div className="rounded-2xl px-3.5 py-2 text-[13.5px] font-bold text-white shadow-[var(--glow-fl)] animate-badge-in" style={{ background: 'var(--grad-fl)' }}>
+            ★ Fantasy Land! {n2} får {outcome.nextFl[1]} kort nästa hand.
+          </div>
+        ) : (
+          <div className="rounded-2xl bg-fl-soft px-3.5 py-2 text-[12.5px] font-bold text-fl">★ Datorn går till Fantasy Land ({outcome.nextFl[1]} kort).</div>
+        )
       )}
 
       {playOutFl && (

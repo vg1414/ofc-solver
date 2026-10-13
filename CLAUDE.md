@@ -4,10 +4,11 @@ Läses automatiskt av varje ny Claude-session. Håll den kort och uppdatera den 
 
 ## Vad appen är
 
-Webbapp för **Open Face Chinese Poker** med Davids hemspelsregler. Två flikar:
+Webbapp för **Open Face Chinese Poker** med Davids hemspelsregler. Tre flikar:
 
 - **Solver** – mata in läget, få bästa draget med EV (förväntade poäng).
 - **Träna** – öva mot solvern: Scenarion, ★ Joker och Hel hand mot datorn.
+- **Spela** – 2 spelare på samma telefon (förberett för online).
 
 Live: https://vg1414.github.io/ofc-solver/ (varje push till `main` testas, byggs och publiceras automatiskt via `.github/workflows/deploy.yml`).
 
@@ -43,6 +44,7 @@ Förhandsvisning i Claude-appen: `.claude/launch.json` ligger i föräldermappen
 | `src/store/gameStore.ts` | Zustand-state för Solver-fliken (bräden, valda kort, variant) |
 | `src/components/` | UI. `board/` bräde, `cards/` spelkort + rutnät + hand, `dnd/` dra-och-släpp, `solver/` Solver-fliken, `training/` Träna-fliken, `ui/` BottomSheet + Segmented |
 | `src/training/` | Träningslogik (ingen UI): drag/poäng, turordning, scenariogenerator, topplistor |
+| `src/match/` | Spelmotor för 2 spelare (ingen UI): `match.ts` (MatchState, actions, `validateMove`, `viewFor`), `useLocalMatch.ts` (samma telefon + sparning), `names.ts` |
 | `src/splash/` | Splash-skärmen (`splash.ts` + `splash.css`), startas från `main.tsx` |
 | `public/` | Appikoner (`favicon.svg/.ico`, `apple-touch-icon.png`, `icon-*.png`) och `manifest.webmanifest` |
 | `scripts/` | Mät- och kalibreringsskript för solvern (`sh scripts/run.sh scripts/demo.ts`) |
@@ -85,6 +87,13 @@ En `useSolver()` = en egen worker, och den räknar en sak i taget. Träningen an
 - **Sessioner (Hel hand):** `session.ts` (längd: händer/minuter/fritt, FL-regel `stop` (standard) / `playout`, `sessionOver()`), `usePlayClock.ts` (klocka som pausar när appen inte syns). Inställningsark `HandSettingsSheet.tsx`, toppraden `SessionHeader.tsx`, ställning + handlista `Scoreboard.tsx`, coachens bricka/ark `CoachReview.tsx`. Varje drag bedöms även utan coach för foul/FL-mätaren, alltid med spelarens drag låst (`pinnedOptions`). Datorns mätare tar siffrorna från `res.best` i datorns eget solveranrop. Topplista bara för fullständiga sessioner med antal händer.
 - **Topplistor:** localStorage, topp 10 per läge × variant × antal (`leaderboard.ts`). Senaste namnet kommer ihåg.
 - `useMoveBuilder.ts` hanterar placeringen: tryck/dra, ångra, bara kort från aktuellt drag kan tas bort, och ett ensamt kort är redan lyft.
+
+## Spela-fliken (`src/components/play/`, logik i `src/match/`)
+
+- `PlayView.tsx` startsida (namn, variant, längd/FL via `HandSettingsSheet duel`, "Fortsätt" för sparat parti), `DuelRun.tsx` partiet, `DuelSummary.tsx` slutresultat.
+- **Online-förberedelse:** allt går via `applyAction(state, action)`. Actions bär handens nummer + turens index så gamla/dubbla avvisas, och `validateMove` kontrollerar kort, antal och tur. UI ritar från `viewFor(state, seat)`, som döljer kortleken, motståndarens kast, motståndarens öppning under runda 1 (husregel) och FL-bräde till handens slut. `MatchState` är ren JSON. En framtida `useOnlineMatch` ska ha samma `{ state, dispatch }` som `useLocalMatch`.
+- Spelarfärger: `--p1*` (grön) och `--p2*` (blå) i `index.css`. `HandOver`, `Scoreboard` och `SessionHeader` tar `names` / `p1`/`p2`-prickar för 2-spelarläget.
+- Ingen solverhjälp i 2-spelarläget.
 
 ## Design och UI-regler
 

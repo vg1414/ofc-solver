@@ -12,7 +12,8 @@
 import type { SessionLength } from '../../training/session';
 import { clockText } from '../../training/session';
 
-export type Dot = 'good' | 'miss' | null;
+/** good = grön, miss = röd. 2 spelare: p1 = spelare 1 vann (grön), p2 = spelare 2 vann (blå) */
+export type Dot = 'good' | 'miss' | 'p1' | 'p2' | null;
 
 interface Props {
   length: SessionLength;
@@ -80,7 +81,7 @@ function HandsProgress({ n, handNo, dots, extra }: { n: number; handNo: number; 
         {Array.from({ length: shown }, (_, i) => {
           const g = dots[i] ?? null;
           const over = i >= n; // FL-hand efter sista handen
-          const bg = g === 'good' ? 'var(--grad)' : g === 'miss' ? 'var(--danger)' : i < index ? 'var(--ink-3)' : i === index ? (over ? 'var(--fl)' : 'var(--accent)') : 'var(--line-strong)';
+          const bg = g === 'good' || g === 'p1' ? 'var(--grad-p1)' : g === 'p2' ? 'var(--grad-p2)' : g === 'miss' ? 'var(--danger)' : i < index ? 'var(--ink-3)' : i === index ? (over ? 'var(--fl)' : 'var(--accent)') : 'var(--line-strong)';
           return (
             <span
               key={i}

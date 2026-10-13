@@ -29,20 +29,9 @@
 // ============================================================
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import type { Card, GameVariant } from '../../engine/types';
+import type { GameVariant } from '../../engine/types';
 import type { SolverOptions } from '../../solver/solver';
-import {
-  applyToSeat,
-  newDeck,
-  newSeat,
-  settleHand,
-  solverInput,
-  turnOrder,
-  type HandOutcome,
-  type Seat,
-  type SeatId,
-  type Turn,
-} from '../../training/game';
+import { played, solverInput, startHand, type HandState } from '../../training/game';
 import { countPlaced, judge, type Move } from '../../training/moves';
 import { pinnedOptions } from '../../training/pinned';
 import { CANCELLED, useSolverJobs } from '../../training/useSolverJobs';
@@ -69,44 +58,6 @@ const CPU_PAUSE_MS = 450;
 const THOROUGH_OPTIONS: SolverOptions = { simulations: 2000 };
 /** Risk-mätaren utan coach: Snabb-nivå räcker för en ungefärlig procentsats */
 const RISK_OPTIONS: SolverOptions = { simulations: 300, maxMs: 3000 };
-
-export interface HandState {
-  no: number;
-  first: SeatId;
-  deck: Card[];
-  pos: number;
-  seats: [Seat, Seat];
-  turns: Turn[];
-  idx: number;
-  dealt: Card[];
-  outcome: HandOutcome | null;
-}
-
-function nextTurn(h: HandState): HandState {
-  if (h.idx >= h.turns.length) return { ...h, dealt: [], outcome: settleHand(h.seats[0], h.seats[1]) };
-  const t = h.turns[h.idx];
-  return { ...h, dealt: h.deck.slice(h.pos, h.pos + t.count), pos: h.pos + t.count };
-}
-
-function startHand(no: number, first: SeatId, fl: [number, number], variant: GameVariant): HandState {
-  return nextTurn({
-    no,
-    first,
-    deck: newDeck(),
-    pos: 0,
-    seats: [newSeat(fl[0]), newSeat(fl[1])],
-    turns: turnOrder(variant, first, fl),
-    idx: 0,
-    dealt: [],
-    outcome: null,
-  });
-}
-
-function played(h: HandState, seat: SeatId, move: Move): HandState {
-  const seats: [Seat, Seat] = [...h.seats];
-  seats[seat] = applyToSeat(seats[seat], move);
-  return nextTurn({ ...h, seats, idx: h.idx + 1 });
-}
 
 export type { CoachEntry };
 

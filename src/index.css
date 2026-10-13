@@ -41,6 +41,17 @@
   --danger-soft: #fdece9;
   --fl: #7a4fd0;
   --fl-soft: #f3ecfd;
+  /* 2 spelare: spelare 1 = smaragd (som appen), spelare 2 = blå */
+  --p1: #15936a;
+  --p1-ink: #0e6a4b;
+  --p1-soft: #e3f4ea;
+  --grad-p1: linear-gradient(135deg, #3cc48f 0%, #17996b 55%, #0f7653 100%);
+  --glow-p1: 0 8px 24px -6px rgba(23, 153, 107, 0.5);
+  --p2: #2f6fdc;
+  --p2-ink: #1d4fa3;
+  --p2-soft: #e4edfc;
+  --grad-p2: linear-gradient(135deg, #6fa9ff 0%, #2f74e0 55%, #1f52ae 100%);
+  --glow-p2: 0 8px 24px -6px rgba(47, 116, 224, 0.5);
 
   --grad: linear-gradient(135deg, #3cc48f 0%, #17996b 55%, #0f7653 100%);
   --grad-hot: linear-gradient(135deg, #ffb37a 0%, #f5b83d 50%, #3cc48f 100%);
@@ -103,6 +114,12 @@
     --danger-soft: #3a161a;
     --fl: #c3a2ff;
     --fl-soft: #2a1e45;
+    --p1: #2bc08a;
+    --p1-ink: #7fe0b7;
+    --p1-soft: #113428;
+    --p2: #6ea6ff;
+    --p2-ink: #a3c6ff;
+    --p2-soft: #142443;
     --grad-ink: linear-gradient(120deg, #efe9e2 0%, #7fe0b7 60%, #2bc08a 100%);
     --felt: radial-gradient(130% 100% at 50% 0%, #1b3a2e 0%, #142c23 55%, #10231c 100%);
     --felt-line: rgba(127, 224, 183, 0.18);
@@ -146,6 +163,12 @@
   --color-danger-soft: var(--danger-soft);
   --color-fl: var(--fl);
   --color-fl-soft: var(--fl-soft);
+  --color-p1: var(--p1);
+  --color-p1-ink: var(--p1-ink);
+  --color-p1-soft: var(--p1-soft);
+  --color-p2: var(--p2);
+  --color-p2-ink: var(--p2-ink);
+  --color-p2-soft: var(--p2-soft);
   --font-sans: "Outfit", system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-serif: "Playfair Display", Georgia, serif;
   --font-card: "Barlow Condensed", "Arial Narrow", system-ui, sans-serif;
@@ -255,6 +278,7 @@ button:disabled {
   border-radius: 0 0 26px 26px;
   box-shadow: 0 10px 30px -12px rgba(15, 118, 83, 0.5);
   overflow: hidden;
+  overflow: clip; /* glöden är bredare än raden: "clip" hindrar att raden kan skrollas åt sidan */
   isolation: isolate;
   color: #fff;
 }
@@ -455,6 +479,29 @@ button:disabled {
 }
 .animate-rise-in {
   animation: rise-in 0.42s var(--ease) both;
+}
+
+/* 2 spelare: turbannern byter spelare — glider in från sidan och studsar */
+@keyframes turn-swap {
+  0% { opacity: 0; transform: translateX(var(--swap-from, 40px)) scale(0.92); }
+  60% { opacity: 1; transform: translateX(0) scale(1.03); }
+  100% { transform: none; }
+}
+.animate-turn-swap {
+  animation: turn-swap 0.55s var(--spring) both;
+}
+/* Skärmkanten lyser i spelarens färg */
+.turn-edge {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  pointer-events: none;
+  border-radius: 0;
+  box-shadow: inset 0 0 0 4px var(--edge), inset 0 0 36px -8px var(--edge);
+  transition: box-shadow 0.5s var(--ease);
+}
+@media (prefers-reduced-motion: reduce) {
+  .animate-turn-swap { animation: none; }
 }
 
 @keyframes badge-in {

@@ -73,7 +73,7 @@ export function flPending(flEnd: FlEnd, nextFl: [number, number]): boolean {
  * Är sessionen slut efter den hand som just spelats?
  * Längden nådd och inget FL kvar att spela ut.
  */
-export function sessionOver(s: HandSettings, handsPlayed: number, elapsedMs: number, nextFl: [number, number]): boolean {
+export function sessionOver(s: Pick<HandSettings, 'length' | 'flEnd'>, handsPlayed: number, elapsedMs: number, nextFl: [number, number]): boolean {
   return targetReached(s.length, handsPlayed, elapsedMs) && !flPending(s.flEnd, nextFl);
 }
 

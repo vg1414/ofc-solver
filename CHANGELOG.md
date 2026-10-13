@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-10-13 — Ny flik: Spela (2 spelare)
+
+- **2 spelare på samma telefon** i en ny tredje flik "Spela": namn, variant, längd och FL-regel. Turbanner och skärmkant i spelarens färg (grön/blå), eget bräde alltid nederst, "Klar – ge till …"
+- Motståndarens öppningshand är dold tills båda lagt sin, kastade kort visas aldrig och Fantasy Land-brädet döljs tills handen är klar (med "visa mina kort"-skärm för FL-spelaren)
+- Partiet sparas efter varje drag och kan fortsättas från startsidan. Slutresultat med vinnare och handlista
+- Ny spelmotor `src/match/` (actions + kontroll av drag + vy per spelare), förberedd för online-spel. Handens logik (`startHand`/`played`) flyttad från HandRun till `training/game.ts` och delas av båda lägena
+- Toppraden kunde skjutas åt sidan på smala skärmar (glöden var bredare än raden) — rättat
+
 ## 2026-10-13 — Hel hand slutar som standard även vid FL
 
 - Standardvalet för "Fantasy Land i slutet" är nu **Får sluta i FL**, och det alternativet står först i inställningsarket. "Spelas ut" går fortfarande att välja

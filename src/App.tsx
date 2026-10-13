@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import Footer from './components/layout/Footer';
 import SolverView from './components/solver/SolverView';
 import TrainingView from './components/training/TrainingView';
+import PlayView from './components/play/PlayView';
 import SettingsSheet from './components/solver/SettingsSheet';
 import { simPreset } from './components/solver/simPresets';
 import SuitIcon from './components/cards/SuitIcon';
@@ -16,7 +17,12 @@ function loadSims() {
   }
 }
 
-type Tab = 'solver' | 'train';
+type Tab = 'solver' | 'train' | 'play';
+const TABS: { id: Tab; label: string }[] = [
+  { id: 'solver', label: 'Solver' },
+  { id: 'train', label: 'Träna' },
+  { id: 'play', label: 'Spela' },
+];
 
 export default function App() {
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -24,8 +30,10 @@ export default function App() {
   // Träningen monteras först när fliken besöks (så att den inte räknar i onödan),
   // och ligger sedan kvar dold — då tappar man inte en pågående omgång.
   const [trainMounted, setTrainMounted] = useState(false);
+  const [playMounted, setPlayMounted] = useState(false);
   const openTab = (t: Tab) => {
     if (t === 'train') setTrainMounted(true);
+    if (t === 'play') setPlayMounted(true);
     setTab(t);
     window.scrollTo({ top: 0 });
   };
@@ -62,23 +70,23 @@ export default function App() {
             </div>
           </div>
 
-          {/* Flikar: Solver / Träna — vit puck som glider fjädrande */}
+          {/* Flikar: Solver / Träna / Spela — vit puck som glider fjädrande */}
           <div role="tablist" aria-label="Vy" className="relative ml-auto flex rounded-full border border-white/30 bg-white/15 p-[3px] backdrop-blur-md">
             <span
               aria-hidden="true"
-              className="absolute top-[3px] bottom-[3px] left-[3px] w-[calc(50%-3px)] rounded-full bg-white shadow-[0_4px_14px_rgba(0,0,0,0.18)] transition-transform duration-[450ms] ease-[cubic-bezier(0.34,1.56,0.64,1)]"
-              style={{ transform: `translateX(${tab === 'train' ? 100 : 0}%)` }}
+              className="absolute top-[3px] bottom-[3px] left-[3px] w-[calc((100%-6px)/3)] rounded-full bg-white shadow-[0_4px_14px_rgba(0,0,0,0.18)] transition-transform duration-[450ms] ease-[cubic-bezier(0.34,1.56,0.64,1)]"
+              style={{ transform: `translateX(${TABS.findIndex((x) => x.id === tab) * 100}%)` }}
             />
-            {(['solver', 'train'] as Tab[]).map((t) => (
+            {TABS.map(({ id, label }) => (
               <button
-                key={t}
+                key={id}
                 type="button"
                 role="tab"
-                aria-selected={tab === t}
-                onClick={() => openTab(t)}
-                className={`relative z-10 w-[66px] rounded-full py-1.5 text-[13px] font-bold transition-colors duration-300 active:scale-95 ${tab === t ? 'text-[#0f7653]' : 'text-white'}`}
+                aria-selected={tab === id}
+                onClick={() => openTab(id)}
+                className={`relative z-10 w-[62px] min-[400px]:w-[66px] rounded-full py-1.5 text-[13px] font-bold transition-colors duration-300 active:scale-95 ${tab === id ? 'text-[#0f7653]' : 'text-white'}`}
               >
-                {t === 'solver' ? 'Solver' : 'Träna'}
+                {label}
               </button>
             ))}
           </div>
@@ -112,6 +120,11 @@ export default function App() {
         {trainMounted && (
           <div className={tab === 'train' ? 'contents' : 'hidden'}>
             <TrainingView active={tab === 'train'} />
+          </div>
+        )}
+        {playMounted && (
+          <div className={tab === 'play' ? 'contents' : 'hidden'}>
+            <PlayView active={tab === 'play'} />
           </div>
         )}
       </main>

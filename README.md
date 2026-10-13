@@ -30,6 +30,14 @@ En webbaserad solver för Open Face Chinese Poker (OFC) med stöd för hemspels-
 - **Hel hand mot datorn:** spela sessioner med husreglerna, inklusive Fantasy Land. Längd: antal händer, minuter eller fritt spel. Sessionen slutar som standard även om någon står på FL, men man kan välja att FL ska spelas ut. Ställningen och varje hands poäng syns under spelet, och foul-risk och FL-chans visas efter varje drag, både för dig och datorn. Datorns styrka går att välja (Snabb/Normal/Noggrann). Valfritt coach-läge visar EV-förlusten och bästa draget, och ett drag kan räknas om noggrant
 - **Topplistor** sparas lokalt i webbläsaren (topp 10 per läge, variant och antal)
 
+## Spela (2 spelare)
+
+- **Två spelare på samma telefon:** skriv in namnen, välj variant och längd (händer, minuter eller fritt, och om FL ska spelas ut). Skicka telefonen mellan er
+- **Tydligt vems tur det är:** stor banner i spelarens färg (grön = spelare 1, blå = spelare 2), skärmkanten lyser i samma färg, och Klar-knappen säger "ge till Anna" när telefonen ska lämnas över. Den som har turen ser alltid sitt bräde nederst
+- **Dolt det som ska vara dolt:** öppningshänderna läggs dolt och visas när båda lagt sin, kastade kort (Pineapple) visas aldrig för motståndaren, och Fantasy Land-brädet är dolt tills handen är klar. FL-spelaren trycker själv "visa mina kort"
+- Ställning, handlista med slutbräden och ett slutresultat med vinnaren. Partiet sparas efter varje drag, så det går att fortsätta om appen stängs
+- **Förberett för online:** spelmotorn (`src/match/`) tar emot drag som "actions", kontrollerar dem och visar varje spelare bara sin egen vy — samma kod kan senare köras på en server
+
 ## Specialregler (hemspel)
 
 - **Jokrar:** Helt vilda, kan vara vilket kort som helst (även dubletter). Jokern väljs så att handen inte foulear
