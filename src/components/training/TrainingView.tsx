@@ -33,13 +33,18 @@ interface Config {
   hand: HandSettings;
 }
 
+/** Version av FL-valet. Före v2 var "Spelas ut" standard och sparades
+ *  automatiskt, så äldre sparade val nollställs till nya standarden. */
+const FL_VERSION = 2;
+
 function loadConfig(): Config {
   const def: Config = { mode: 'scenario', count: 10, hand: sanitizeHandSettings(null) };
   try {
-    const v = JSON.parse(localStorage.getItem(CFG_KEY) ?? '{}') as Partial<Config> & { coach?: boolean };
+    const v = JSON.parse(localStorage.getItem(CFG_KEY) ?? '{}') as Partial<Config> & { coach?: boolean; flV?: number };
     const count = COUNTS.includes(v.count as 5) ? (v.count as number) : def.count;
     // Äldre sparade val hade coach + antal direkt i config — ta med dem
     const hand = sanitizeHandSettings(v.hand ?? { length: { kind: 'hands', n: count }, coach: v.coach });
+    if (v.flV !== FL_VERSION) hand.flEnd = def.hand.flEnd;
     return { mode: v.mode === 'hand' || v.mode === 'joker' ? v.mode : 'scenario', count, hand };
   } catch {
     return def;
@@ -54,7 +59,7 @@ export default function TrainingView({ active = true }: { active?: boolean }) {
 
   useEffect(() => {
     try {
-      localStorage.setItem(CFG_KEY, JSON.stringify(cfg));
+      localStorage.setItem(CFG_KEY, JSON.stringify({ ...cfg, flV: FL_VERSION }));
     } catch {
       /* privat läge */
     }

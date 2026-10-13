@@ -1,5 +1,10 @@
 # Changelog
 
+## 2026-10-13 — Hel hand slutar som standard även vid FL
+
+- Standardvalet för "Fantasy Land i slutet" är nu **Får sluta i FL**, och det alternativet står först i inställningsarket. "Spelas ut" går fortfarande att välja
+- Tidigare sparade val nollställs en gång till den nya standarden, eftersom det gamla standardvalet sparades automatiskt
+
 ## 2026-10-13 — Jokern räknas rätt vid handens slut
 
 - **Fel foul med joker:** poängräkningen valde jokern för varje rad för sig (t.ex. ★74 i topp blev 77), så brädet kunde räknas som foul fast jokern kunde ha hållit det giltigt (★ = A → A74). Nu väljs jokrarna för hela brädet med samma regel som solvern (`src/engine/resolveJokers.ts`) innan raderna jämförs

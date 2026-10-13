@@ -89,13 +89,13 @@ export default function HandSettingsSheet({ open, onClose, value, onChange }: Pr
 
         <Section label="Fantasy Land i slutet">
           <div className="grid grid-cols-2 gap-2">
+            <FlOption active={value.flEnd === 'stop'} onClick={() => set({ flEnd: 'stop' as FlEnd })} title="Får sluta i FL" sub="Sessionen slutar direkt, FL går förlorat" />
             <FlOption
               active={value.flEnd === 'playout'}
               onClick={() => set({ flEnd: 'playout' as FlEnd })}
               title="Spelas ut"
               sub="Som vid bordet: FL och repeat-FL spelas klart först"
             />
-            <FlOption active={value.flEnd === 'stop'} onClick={() => set({ flEnd: 'stop' as FlEnd })} title="Får sluta i FL" sub="Sessionen slutar direkt, FL går förlorat" />
           </div>
         </Section>
 

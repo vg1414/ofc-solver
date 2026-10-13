@@ -35,7 +35,7 @@ export const MINUTE_PRESETS = [10, 20, 30] as const;
 export const HANDS_RANGE = { min: 1, max: 99, step: 1 };
 export const MINUTES_RANGE = { min: 5, max: 180, step: 5 };
 
-export const DEFAULT_HAND_SETTINGS: HandSettings = { length: { kind: 'hands', n: 10 }, flEnd: 'playout', coach: true, cpuLevel: 'normal' };
+export const DEFAULT_HAND_SETTINGS: HandSettings = { length: { kind: 'hands', n: 10 }, flEnd: 'stop', coach: true, cpuLevel: 'normal' };
 
 const clamp = (n: number, r: { min: number; max: number }) => Math.min(r.max, Math.max(r.min, Math.round(n)));
 
@@ -51,7 +51,7 @@ export function sanitizeHandSettings(v: unknown): HandSettings {
   else if (l?.kind === 'minutes' && typeof l.n === 'number') length = { kind: 'minutes', n: clamp(l.n, MINUTES_RANGE) };
   return {
     length,
-    flEnd: o.flEnd === 'stop' ? 'stop' : 'playout',
+    flEnd: o.flEnd === 'playout' ? 'playout' : 'stop',
     coach: typeof o.coach === 'boolean' ? o.coach : d.coach,
     cpuLevel: o.cpuLevel === 'fast' || o.cpuLevel === 'thorough' ? o.cpuLevel : 'normal',
   };
