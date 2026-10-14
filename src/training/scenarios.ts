@@ -134,7 +134,8 @@ export async function generateScenario(
       variant,
       round: t.round,
       board: seats[0].board,
-      opponentBoard: seats[1].board,
+      // Öppningshanden läggs samtidigt (dold) → motståndarens kort syns inte än
+      opponentBoard: t.round === 1 ? newSeat().board : seats[1].board,
       hand,
       deadCards: seats[0].discards,
       place: t.place,

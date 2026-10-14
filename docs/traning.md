@@ -4,7 +4,7 @@ Läs detta innan du ändrar i `src/components/training/` eller `src/training/`. 
 
 ## Scenarion
 
-- 5/10/20 scenarion. `scenarios.ts` låter datorn spela fram båda bräden med solvern (Normal: 800 sim, max 3 s per drag) och stannar på ett slumpat drag (≈ 25 % öppningar).
+- 5/10/20 scenarion. `scenarios.ts` låter datorn spela fram båda bräden med solvern (Normal: 800 sim, max 3 s per drag) och stannar på ett slumpat drag (≈ 25 % öppningar). Vid öppningshand får scenariot ett tomt motståndarbräde: öppningen läggs dolt, så den varken visas eller räknas med av solvern.
 - Scenariokön `useScenarioPool.ts` (ägs av `TrainingView`) håller 3 scenarion redo per variant + läge i en egen worker. Den börjar redan på startsidan, sparar överblivna till nästa omgång och pausas när Solver-fliken visas.
 - Kön har två workers som körs samtidigt: framspelaren håller kön full, och bedömaren räknar äldsta obedömda scenariot på Noggrann (`SCENARIO_EVAL`, sparas i `Scenario.evaluation`). En jokerbedömning tar ≈ 4× så lång tid som en vanlig, så de ska inte vänta på varandra. Saknas bedömningen (scenariot togs för tidigt) avbryts den och ScenarioRun räknar själv.
 - Draget matchas mot `result.options` på kort + rad (`moves.ts`). Om draget sållades bort räknas det om med `pinned` (`pinned.ts`).

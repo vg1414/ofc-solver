@@ -1,5 +1,10 @@
 # Changelog
 
+## 2026-10-14 — Dold motståndare vid öppningshand (Scenarion/★ Joker)
+
+- När scenariot är din öppningshand visas inte längre motståndarens 5 kort. Öppningen läggs dolt, precis som i Hel hand mot datorn
+- Solvern räknar inte heller med motståndarens öppning i de scenarierna (förut fick bedömningen veta korten du egentligen inte ser)
+
 ## 2026-10-14 — Snabbare scenariokö (särskilt ★ Joker)
 
 - Scenariokön använder nu **två räknare samtidigt**: en spelar fram nya scenarion och en bedömer dem. Förut gjorde en enda räknare båda sakerna i tur och ordning
