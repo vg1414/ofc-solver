@@ -16,7 +16,7 @@
 import { settle, scoreVs, flEntryCards, FOULED, settledOf } from './eval';
 import type { Settled } from './eval';
 import { makeUnseen, addUnseen, CAP } from './policy';
-import { choose, LA, bestCompletion } from './lookahead';
+import { choose, LA, bestCompletion, reseedLookahead } from './lookahead';
 import type { Unseen } from './policy';
 import { FL_VALUE } from './flValue';
 import { POOL_DATA } from './poolData';
@@ -160,6 +160,9 @@ export interface EvalInput {
   onProgress?: (p: number) => void;
 }
 
+/** Antal pool-händer varje färdigt bräde jämförs mot (okänd motståndare) */
+export const SIM = { oppSamples: 64 };
+
 const SCREEN_KEEP = 12;
 const SCREEN_SIMS = 60;
 
@@ -195,19 +198,26 @@ export function evaluateCandidates(input: EvalInput, cands: Candidate[]): Candid
 
   const runOne = (st: (typeof stats)[number], i: number) => {
     const deck = scenario(i);
+    reseedLookahead(i);
     const r: number[][] = [rows[0].slice(), rows[1].slice(), rows[2].slice()];
     for (let k = 0; k < hand.length; k++) if (st.c.assign[k] >= 0) r[st.c.assign[k]].push(hand[k]);
     const u = makeUnseen(unseen);
     const pos = playOut(r, deck, 0, u, variant);
     const me = settle(r[0], r[1], r[2]);
-    let opp: Settled;
+    let v = 0;
     if (knownOpp) {
       const o = [knownOpp[0].slice(), knownOpp[1].slice(), knownOpp[2].slice()];
       const ou = makeUnseen(deck.slice(pos));
       playOut(o, deck, pos, ou, variant);
-      opp = o.every((x, k) => x.length === CAP[k]) ? settle(o[0], o[1], o[2]) : FOULED;
-    } else opp = pool[oppIdx[i]];
-    let v = scoreVs(me, opp);
+      const opp = o.every((x, k) => x.length === CAP[k]) ? settle(o[0], o[1], o[2]) : FOULED;
+      v = scoreVs(me, opp);
+    } else {
+      // Okänd motståndare: snitt mot många pool-händer (billigt jämfört med
+      // att spela klart brädet) i stället för en → nästan inget motståndarbrus
+      const k = Math.min(SIM.oppSamples, pool.length);
+      for (let j = 0; j < k; j++) v += scoreVs(me, pool[(oppIdx[i] + j) % pool.length]);
+      v /= k;
+    }
     const fl = me.foul ? 0 : flEntryCards(me.top);
     if (fl) { v += FL_VALUE[fl]; st.fl++; }
     if (me.foul) st.foul++;

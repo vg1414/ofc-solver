@@ -24,6 +24,15 @@ const rand = () => {
   return seed / 0x7fffffff;
 };
 
+/**
+ * Startar om provframtidernas slump. sim.ts anropar den i början av varje
+ * simulering med simuleringens nummer → alla kandidater får samma
+ * provframtider i samma blandning (och samma läge ger alltid samma svar).
+ */
+export function reseedLookahead(i: number): void {
+  seed = (Math.imul(i + 1, 0x9e3779b1) ^ 0x5bd1e995) & 0x7fffffff;
+}
+
 function sample(pool: number[], n: number): number[] {
   const a = pool.slice();
   const m = Math.min(n, a.length);

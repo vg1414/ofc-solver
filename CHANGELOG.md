@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-10-14 — Mindre slumpbrus i solvern
+
+- **Samma läge ger alltid samma svar.** Den simulerade spelarens provframtider startas om för varje simulering, så alla drag som jämförs får exakt samma slump (tidigare fortsatte slumpen mellan körningar)
+- **Okänd motståndare:** varje färdigt bräde jämförs mot 64 pool-händer i stället för 1. Det tar ingen märkbar extra tid
+- Mätt med nya `scripts/variance.ts`: standardfelet för EV-skillnaden mellan dragen blev 2–8 % lägre i vanliga lägen och upp till 28 % lägre när två drag är nästan likadana
+
 ## 2026-10-14 — Dold öppning mot datorn, datorn hänger sig inte, bästa draget = högst EV
 
 - **Hel hand:** datorns öppning är dold under runda 1 (husregeln, som i Spela) och visas först när du lagt din. Datorn och coachen räknar inte heller med en öppning man inte får se
