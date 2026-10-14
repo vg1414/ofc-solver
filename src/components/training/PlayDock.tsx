@@ -6,11 +6,16 @@
 // "Klar"-knappen aktiv. Kort som blir kvar kastas.
 // Stor hand (Fantasy Land): knappar för att sortera efter färg/värde.
 // Valet hör ihop med just den handen, så nästa hand börjar osorterad.
+// Ett enda kort att lägga: kortet visas först stort mitt på skärmen och
+// flyger ner i handen (DealIn), och glöder sedan svagt tills det är lagt.
+// DealIn får handen som key, så animationen körs en gång per utdelning
+// (inte igen efter Ångra).
 // ============================================================
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import type { MoveBuilder } from '../../training/useMoveBuilder';
 import HandTray from '../cards/HandTray';
+import DealIn from '../cards/DealIn';
 import SortButtons from '../cards/SortButtons';
 import { sortOrder, type SortMode } from '../cards/handSort';
 
@@ -37,6 +42,12 @@ export default function PlayDock({ mb, place, total, onDone, doneLabel = 'Klar',
   const cards = mb.remaining.map((r) => r.card);
   const order = sortOrder(cards, mode);
 
+  const single = total === 1 && place === 1 && mb.hand.length === 1;
+  const trayRef = useRef<HTMLDivElement>(null);
+  /** Handen vars kort har landat — tills dess döljs kortet i handen */
+  const [landed, setLanded] = useState<string | null>(null);
+  const flying = single && landed !== handId;
+
   const hint = (() => {
     if (mb.done) return discard > 0 ? `Klart! ${discard === 1 ? 'Kortet' : `De ${discard} korten`} som är kvar kastas.` : 'Klart! Dra ett lagt kort för att flytta det, eller ut från brädet för att ta bort det.';
     if (mb.heldCard) return 'Tryck på en rad – eller dra kortet dit';
@@ -47,8 +58,10 @@ export default function PlayDock({ mb, place, total, onDone, doneLabel = 'Klar',
   return (
     <div className="flex flex-col gap-2.5">
       {top}
+      {single && <DealIn key={handId} card={mb.hand[0]} target={() => trayRef.current?.querySelector('button') ?? null} onLanded={() => setLanded(handId)} />}
       <div className={`flex gap-2.5 ${many ? 'flex-col' : 'min-h-[60px] items-center'}`}>
         {mb.remaining.length > 0 && (
+          <div ref={trayRef} className={single ? 'deal-glow' : undefined} style={flying ? { opacity: 0 } : undefined}>
           <HandTray
             cards={order.map((i) => cards[i])}
             capacity={mb.remaining.length}
@@ -58,6 +71,7 @@ export default function PlayDock({ mb, place, total, onDone, doneLabel = 'Klar',
             wrap={many}
             cardWidth={many ? 'min(40px, calc((100vw - 90px) / 8))' : '42px'}
           />
+          </div>
         )}
         <div className="flex flex-1 items-center gap-2">
           <span className="flex-1 text-[12.5px] font-semibold leading-snug text-ink-2" aria-live="polite">

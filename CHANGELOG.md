@@ -1,5 +1,10 @@
 # Changelog
 
+## 2026-10-14 — Nytt kort syns tydligt + panelen täcker inte bottenraden
+
+- **Nytt kort flyger in:** när du får ett enda kort att lägga (Hel hand, Spela, Scenarion/Joker) visas det först stort mitt på skärmen och flyger sedan ner i handen. Där glöder det svagt i guld tills det är lagt. Öppning och Pineapple som förut. "Minska rörelse" hoppar över animationen
+- **Panelen täckte ibland bottenraden:** panelen kan växa efter att turen börjat (coachens bricka, längre tips). Nu scrollas brädet upp igen varje gång panelen växer
+
 ## 2026-10-14 — Mindre slumpbrus i solvern
 
 - **Samma läge ger alltid samma svar.** Den simulerade spelarens provframtider startas om för varje simulering, så alla drag som jämförs får exakt samma slump (tidigare fortsatte slumpen mellan körningar)
