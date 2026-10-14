@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-10-14 — Jokern lila igen, men tydligare
+
+- Regnbågen är borta. Jokern har en tydligare lila toning (ljust lila uppe till vänster → mer mättat nere till höger), mörkare lila text och en lila kant. Samma på dela-bilden och i mörkt läge
+
 ## 2026-10-14 — Foul/FL i coachens bricka
 
 - **Hel hand:** coachens bricka efter varje drag visar nu Foul % och FL % för ditt drag ("Du · Foul 44 % · FL 4 %") och för bästa draget i den gula delen. Fantasy Land-drag har inga sådana siffror

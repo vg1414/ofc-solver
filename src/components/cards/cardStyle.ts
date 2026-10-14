@@ -21,8 +21,8 @@ export function suitVars(card: Card) {
   };
 }
 
-/** Jokerns pastellregnbåge (röd → violett). index.css har samma färger i --joker-bg; dela-bilden ritar med dessa */
-export const JOKER_RAINBOW = ['#ffbcc6', '#ffd6a3', '#fff09a', '#bdeebb', '#b8dcff', '#d0c3ff', '#f0c0ff'];
+/** Jokerns lila toning (ljus → mörkare). index.css har samma färger i --joker-bg; dela-bilden ritar med dessa */
+export const JOKER_BG = ['#f3eaff', '#dcc6fb'];
 
 /** "T" visas som "10" på korten — så ser riktiga kort ut */
 export function rankLabel(card: Card): string {

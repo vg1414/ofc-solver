@@ -10,14 +10,14 @@
 //    läge som pussel — utan svaret).
 //  - Korten ritas som i appen: fyrfärgslek, valör uppe till vänster
 //    (Barlow Condensed), färgsymbol nere till höger (samma SVG-banor
-//    som SuitIcon), joker = gul stjärna på pastellregnbåge (stilla).
+//    som SuitIcon), joker = gul stjärna på lila toning.
 // Alltid ljust tema, så bilden ser likadan ut för den som tar emot den.
 // Ritas i 2× upplösning så att den blir skarp på telefoner.
 // ============================================================
 
 import type { Board, Card, RowName, Suit } from '../engine/types';
 import { SUIT_PATHS } from '../components/cards/suitPaths';
-import { JOKER_RAINBOW } from '../components/cards/cardStyle';
+import { JOKER_BG } from '../components/cards/cardStyle';
 
 export interface ShareBoard {
   name: string;
@@ -46,7 +46,7 @@ const SUIT_COLORS: Record<Suit | 'joker', { bg: string; fg: string; line: string
   hearts: { bg: '#fde6ea', fg: '#c81d39', line: '#f1b2bd' },
   diamonds: { bg: '#e0ebfd', fg: '#1a55c6', line: '#adc7f3' },
   clubs: { bg: '#def3e6', fg: '#13733b', line: '#a5d6b7' },
-  joker: { bg: '#f0e7fc', fg: '#5b3a9e', line: '#ccb6ee' },
+  joker: { bg: '#f3eaff', fg: '#4b2a91', line: '#b08ce8' },
 };
 
 const ROWS: { name: RowName; label: string; n: number }[] = [
@@ -77,10 +77,11 @@ function drawCard(ctx: CanvasRenderingContext2D, card: Card, x: number, y: numbe
   const col = SUIT_COLORS[card.kind === 'joker' ? 'joker' : card.suit];
   roundRect(ctx, x, y, CARD_W, CARD_H, CARD_W * 0.14);
   if (card.kind === 'joker') {
-    // Samma regnbåge som i appen (ett varv, vänster → höger som i CSS)
-    const rb = ctx.createLinearGradient(x, y, x + CARD_W, y);
-    JOKER_RAINBOW.forEach((c, i) => rb.addColorStop(i / (JOKER_RAINBOW.length - 1), c));
-    ctx.fillStyle = rb;
+    // Samma lila toning som i appen (uppe till vänster → nere till höger)
+    const jg = ctx.createLinearGradient(x, y, x + CARD_W * 0.5, y + CARD_H);
+    jg.addColorStop(0, JOKER_BG[0]);
+    jg.addColorStop(1, JOKER_BG[1]);
+    ctx.fillStyle = jg;
   } else ctx.fillStyle = col.bg;
   ctx.fill();
   ctx.lineWidth = 1;

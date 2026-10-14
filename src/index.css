@@ -81,9 +81,9 @@
   --heart-bg: #fde6ea;   --heart-fg: #c81d39;   --heart-line: #f1b2bd;
   --diamond-bg: #e0ebfd; --diamond-fg: #1a55c6; --diamond-line: #adc7f3;
   --club-bg: #def3e6;    --club-fg: #13733b;    --club-line: #a5d6b7;
-  /* Jokern: pastellregnbåge, två varv (se .joker-shimmer). Samma färger som JOKER_RAINBOW i cardStyle.ts */
-  --joker-bg: linear-gradient(90deg, #ffbcc6, #ffd6a3, #fff09a, #bdeebb, #b8dcff, #d0c3ff, #f0c0ff, #ffbcc6, #ffd6a3, #fff09a, #bdeebb, #b8dcff, #d0c3ff, #f0c0ff, #ffbcc6);
-  --joker-fg: #5b3a9e;   --joker-line: #ccb6ee; --joker-star: #e2a812;
+  /* Jokern: lila med mjuk ljus → mörkare toning. Samma färger som JOKER_BG i cardStyle.ts */
+  --joker-bg: linear-gradient(160deg, #f3eaff 0%, #dcc6fb 100%);
+  --joker-fg: #4b2a91;   --joker-line: #b08ce8; --joker-star: #e2a812;
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;
@@ -138,8 +138,8 @@
     --heart-bg: #f6d6dc;   --heart-line: #d991a0;
     --diamond-bg: #d2e0f8; --diamond-line: #8eaee6;
     --club-bg: #d1eadb;    --club-line: #86c09b;
-    --joker-bg: linear-gradient(90deg, #e6b3bc, #e8c79a, #e6da98, #b3dbb1, #acc9ea, #c2b6ec, #dcb3ea, #e6b3bc, #e8c79a, #e6da98, #b3dbb1, #acc9ea, #c2b6ec, #dcb3ea, #e6b3bc);
-    --joker-line: #a98bdc;
+    --joker-bg: linear-gradient(160deg, #e2d2fa 0%, #c6a9f0 100%);
+    --joker-line: #9a72dc;
     color-scheme: dark;
   }
 }
@@ -453,21 +453,6 @@ button:disabled {
   animation: card-snap 0.32s var(--spring) both;
 }
 
-/* Jokerns regnbåge skimrar långsamt: bakgrunden är dubbelt så bred som
-   kortet och innehåller två likadana varv, så när den glidit ett helt
-   varv ser den ut som vid start — och loopen syns inte. */
-.joker-shimmer {
-  background-size: 200% 100% !important;
-  animation: joker-shimmer 7s linear infinite;
-}
-@keyframes joker-shimmer {
-  from { background-position: 0% 0; }
-  to { background-position: 100% 0; }
-}
-@media (prefers-reduced-motion: reduce) {
-  .joker-shimmer { animation: none; }
-}
-
 /* Ensamt kort i handen (PlayDock): varm guldglöd som andas tills det är lagt.
    Sitter på själva kortet (inte knappen runt det), så att glöden följer med
    när kortet är lyft. outline + drop-shadow eftersom kortet klipper allt
@@ -477,16 +462,12 @@ button:disabled {
   outline-offset: 1px;
   animation: deal-glow 1.8s ease-in-out infinite;
 }
-/* En joker behåller sitt regnbågsskimmer samtidigt */
-.deal-glow .joker-shimmer {
-  animation: deal-glow 1.8s ease-in-out infinite, joker-shimmer 7s linear infinite;
-}
 @keyframes deal-glow {
   0%, 100% { outline-color: rgba(232, 168, 40, 0.45); filter: drop-shadow(0 0 3px rgba(245, 184, 61, 0.25)); }
   50% { outline-color: rgba(232, 168, 40, 1); filter: drop-shadow(0 0 9px rgba(245, 184, 61, 0.7)); }
 }
 @media (prefers-reduced-motion: reduce) {
-  .deal-glow [role="img"], .deal-glow .joker-shimmer { animation: none; outline-color: rgba(232, 168, 40, 0.9); }
+  .deal-glow [role="img"] { animation: none; outline-color: rgba(232, 168, 40, 0.9); }
 }
 
 /* Spökkort (solverns förslag) tonar in och pulserar svagt */
