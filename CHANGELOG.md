@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-10-14 — Solver: varje läge minns sin hand
+
+- Byter man mellan Vanlig hand och Fantasy Land försvinner inte längre de valda korten. Varje läge har sin egen hand, och den ligger kvar när man byter tillbaka (`_handByMode` i `gameStore`)
+
 ## 2026-10-14 — Båda brädena syns hela tiden på telefonen
 
 - **Hel hand och Spela:** båda brädena och panelen får plats på skärmen utan att man scrollar. Korten krymps lagom (motståndarens lite mindre än dina) utifrån skärmens höjd (`useFitBoards`)

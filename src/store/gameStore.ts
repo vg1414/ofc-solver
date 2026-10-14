@@ -68,6 +68,8 @@ interface GameStore {
   solverMode: SolverMode;
   selectedCards: Card[];
   flCardCount: FLCardCount;
+  /** Varje läge minns sin hand: när man byter läge sparas handen här och läggs tillbaka när man byter tillbaka */
+  _handByMode: Partial<Record<SolverMode, Card[]>>;
 
   // --- Fantasy Land ---
   isFantasyLand: boolean;
@@ -122,6 +124,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
   solverMode: 'normal',
   selectedCards: [],
   flCardCount: 13,
+  _handByMode: {},
   isFantasyLand: false,
   fantasyLandCards: 0,
   myFouled: false,
@@ -318,8 +321,18 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
   // --- Solver-läge actions ---
 
+  // Bytet sparar nuvarande lägets hand och tar fram det nya lägets
   setSolverMode: (mode) =>
-    set({ solverMode: mode, selectedCards: [], selectedCard: null }),
+    set((s) =>
+      s.solverMode === mode
+        ? {}
+        : {
+            solverMode: mode,
+            _handByMode: { ...s._handByMode, [s.solverMode]: s.selectedCards },
+            selectedCards: s._handByMode[mode] ?? [],
+            selectedCard: null,
+          },
+    ),
 
   toggleCardSelection: (card) => {
     const { selectedCards, solverMode, flCardCount } = get();
@@ -366,6 +379,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       solverMode: 'normal',
       selectedCards: [],
       flCardCount: 13,
+      _handByMode: {},
       isFantasyLand: false,
       fantasyLandCards: 0,
       myFouled: false,
