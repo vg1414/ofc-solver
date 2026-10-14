@@ -46,11 +46,13 @@ export interface UseSolverState {
   lastSimulations: number;
   /** Beräkningsprogress 0–100 (null = ej startad/klar) */
   progress: number | null;
+  /** Id för körningen som senast blev klar (resultat eller fel), 0 = ingen */
+  doneId: number;
 }
 
 export interface UseSolverReturn extends UseSolverState {
-  /** Kör solvern med givet input. Avbryter ev. pågående beräkning. */
-  runSolver: (input: SolverInput) => void;
+  /** Kör solvern med givet input. Avbryter ev. pågående beräkning. Ger körningens id (se doneId). */
+  runSolver: (input: SolverInput) => number;
   /** Avbryter pågående beräkning och återställer loading-state */
   cancelSolver: () => void;
   /** Rensar resultatet (men behåller worker) */
@@ -72,6 +74,7 @@ export function useSolver(): UseSolverReturn {
     error: null,
     lastSimulations: 0,
     progress: null,
+    doneId: 0,
   });
 
   // Skapa worker en gång
@@ -97,13 +100,13 @@ export function useSolver(): UseSolverReturn {
     (input: SolverInput) => {
       const { board, cards, deadCards = [], variant = 'regular', opponentBoard, options, mode = 'normal' } = input;
 
-      if (cards.length === 0) {
-        setState((s) => ({ ...s, error: 'Inga kort att beräkna.', isLoading: false }));
-        return;
-      }
-
       // Öka request-id; svar med lägre id ignoreras
       const currentId = ++requestIdRef.current;
+
+      if (cards.length === 0) {
+        setState((s) => ({ ...s, error: 'Inga kort att beräkna.', isLoading: false, doneId: currentId }));
+        return currentId;
+      }
 
       setState((s) => ({ ...s, isLoading: true, error: null, progress: 0 }));
 
@@ -132,6 +135,7 @@ export function useSolver(): UseSolverReturn {
             error: null,
             lastSimulations: data.result.simulations,
             progress: 100,
+            doneId: currentId,
           });
         } else {
           setState((s) => ({
@@ -139,6 +143,7 @@ export function useSolver(): UseSolverReturn {
             isLoading: false,
             error: data.message,
             progress: null,
+            doneId: currentId,
           }));
         }
       };
@@ -152,6 +157,7 @@ export function useSolver(): UseSolverReturn {
           isLoading: false,
           error: `Worker-fel: ${event.message}`,
           progress: null,
+          doneId: currentId,
         }));
       };
 
@@ -167,6 +173,7 @@ export function useSolver(): UseSolverReturn {
         msg = { type: 'solveFromBoard', board, cards, deadCards, variant, opponentBoard, options };
       }
       worker.postMessage(msg);
+      return currentId;
     },
     [getWorker],
   );

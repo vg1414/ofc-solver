@@ -27,6 +27,9 @@
 //    Listan finns även utan coach, då utan betyg, så att man kan spara.
 //  - Den som börjar växlar varje hand. Fantasy Land-brädet syns inte
 //    för motståndaren förrän handen är slut (som vid ett riktigt bord).
+//  - Husregel: öppningarna är dolda under runda 1. Datorns öppning syns
+//    först när du lagt din, och datorn (och coachen) räknar inte med en
+//    öppning som spelaren inte får se.
 //  - Sessionen (session.ts): antal händer, minuter eller fritt spel.
 //    Efter varje hand avgör sessionOver() om det var den sista. Står
 //    någon på FL och regeln är "spelas ut" fortsätter det med extra
@@ -131,7 +134,7 @@ export default function HandRun({ variant, settings, active = true, onExit, onRe
         seat: h.seats[1],
         cards: h.dealt,
         variant,
-        opponent: h.seats[0].fl > 0 ? undefined : h.seats[0].board,
+        opponent: h.seats[0].fl > 0 || turn.round === 1 ? undefined : h.seats[0].board,
         fl: turn.fl,
         options: { simulations: CPU_LEVELS[settings.cpuLevel].simulations, maxMs: CPU_LEVELS[settings.cpuLevel].maxMs },
       }),
@@ -173,7 +176,7 @@ export default function HandRun({ variant, settings, active = true, onExit, onRe
         seat: h.seats[0],
         cards: h.dealt,
         variant,
-        opponent: h.seats[1].fl > 0 ? undefined : h.seats[1].board,
+        opponent: h.seats[1].fl > 0 || turn.round === 1 ? undefined : h.seats[1].board,
         fl: turn.fl,
         options: {},
       });
@@ -205,7 +208,7 @@ export default function HandRun({ variant, settings, active = true, onExit, onRe
         });
     } else {
       // Ingen räkning (sista draget / FL utan coach) — draget hamnar ändå i listan
-      const input = solverInput({ seat: h.seats[0], cards: h.dealt, variant, opponent: h.seats[1].fl > 0 ? undefined : h.seats[1].board, fl: turn.fl, options: {} });
+      const input = solverInput({ seat: h.seats[0], cards: h.dealt, variant, opponent: h.seats[1].fl > 0 || turn.round === 1 ? undefined : h.seats[1].board, fl: turn.fl, options: {} });
       setCoachLog((l) => [...l, { key, hand: h.no, round: turn.round, fl: turn.fl, board: h.seats[0].board, move, input, j: null, opening: myOpening }]);
     }
     setToast(null);
@@ -293,7 +296,8 @@ export default function HandRun({ variant, settings, active = true, onExit, onRe
     );
   }
 
-  const hidden = !h.outcome && h.seats[1].fl > 0; // datorns FL-bräde syns först i slutet
+  // Datorns bräde döljs: FL-brädet till handens slut, öppningen under runda 1
+  const hidden = !h.outcome && (h.seats[1].fl > 0 || turn?.round === 1);
   const cpuThinking = turn?.seat === 1;
 
   const coachPill = toast?.j && <CoachPill key={toast.key} entry={toast} onOpen={setReview} />;
@@ -421,7 +425,13 @@ export default function HandRun({ variant, settings, active = true, onExit, onRe
         </div>
         {hidden ? (
           <div className="felt flex h-[150px] items-center justify-center rounded-[26px] p-4 text-center text-[13px] font-semibold text-[color:var(--felt-label)]">
-            ★ Datorn spelar Fantasy Land — brädet visas när handen är klar
+            {h.seats[1].fl > 0
+              ? '★ Datorn spelar Fantasy Land — brädet visas när handen är klar'
+              : countPlaced(h.seats[1].board) > 0
+                ? 'Datorns öppning är dold — den visas när du lagt din'
+                : myTurn
+                  ? 'Datorn lägger sin öppning efter dig — dold tills båda lagt'
+                  : 'Datorn lägger sin öppning — dold tills båda lagt'}
           </div>
         ) : (
           <div className={`transition-opacity duration-300 ${myTurn ? 'opacity-80' : ''}`}>

@@ -267,7 +267,9 @@ export function evaluateCandidates(input: EvalInput, cands: Candidate[]): Candid
   let batch = 25;
   while (true) {
     const target = Math.min(maxSims, Math.min(...alive.map((s) => s.n)) + batch);
-    for (const st of alive) while (st.n < target && !timeUp()) runOne(st, st.n);
+    // Turvis (ett spel per kandidat åt gången): tar tiden slut har alla
+    // kvarvarande lika många spel (±1), så att EV:erna går att jämföra
+    while (!timeUp() && alive.some((st) => st.n < target)) for (const st of alive) if (st.n < target) runOne(st, st.n);
     const n = Math.min(...alive.map((s) => s.n));
     const own = Math.min(1, Math.max(n / maxSims, (Date.now() - mainStart) / mainMs));
     report(Math.min(99, mainFrom + (100 - mainFrom) * own));
@@ -288,7 +290,9 @@ export function evaluateCandidates(input: EvalInput, cands: Candidate[]): Candid
 
   const out = stats
     .map((s) => ({ st: s, stage: s.stage, assign: s.c.assign, ev: s.sum / Math.max(1, s.n), sims: s.n, flRate: s.fl / Math.max(1, s.n), foulRate: s.foul / Math.max(1, s.n), finalist: s.stage === 3, pinned: !!s.c.pinned }))
-    .sort((a, b) => b.stage - a.stage || b.sims - a.sims || b.ev - a.ev); // överlevt längst först
+    // Överlevt längst först. Finalisterna (lika många spel) efter EV, så att
+    // bästa draget alltid är finalisten med högst EV; övriga efter antal spel.
+    .sort((a, b) => b.stage - a.stage || (a.stage === 3 ? b.ev - a.ev : b.sims - a.sims || b.ev - a.ev));
 
   // Precision för finalisterna: standardfelet för skillnaden mot bästa
   // draget, räknat parvis på samma blandningar (vals[i] = blandning i).

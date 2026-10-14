@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-10-14 — Dold öppning mot datorn, datorn hänger sig inte, bästa draget = högst EV
+
+- **Hel hand:** datorns öppning är dold under runda 1 (husregeln, som i Spela) och visas först när du lagt din. Datorn och coachen räknar inte heller med en öppning man inte får se
+- **Datorn kunde hänga sig** ("Datorn tänker" för evigt) när solvern blev klar väldigt snabbt. Varje körning har nu ett eget id, så svaret kan aldrig missas
+- **Solverns bästa drag är alltid finalisten med högst EV.** Tidigare kunde ett drag med högre EV (t.ex. ditt) hamna efter när tiden tog slut, eftersom draget med flest spel valdes. Nu räknas finalisterna turvis så att de har lika många spel
+
 ## 2026-10-13 — Dela i Solver + öppningshanden markerad
 
 - **Dela-knapp i Solver-fliken:** med ett förslag delas förslaget inlagt på brädet (streckade kort) + "Solverns förslag · EV · FL · Foul" (FL i lila, Foul i rött) och ev. kastade kort. Utan förslag delas läget + korten att lägga, som ett pussel
