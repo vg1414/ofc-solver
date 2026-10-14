@@ -17,6 +17,11 @@
 //     "Beräkna" ger bästa öppning och "Lägg så här" lägger ut alla.
 //   - Därefter ett kort i taget: tryck kort → tryck/dra till rad.
 //   - Solverns förslag syns som spökkort direkt på brädet.
+//
+// Jämför (CompareView): när ett helt drag ligger på brädet (öppningen,
+// ett kort, eller Pineapple: två kort + det tredje kvar i handen) dyker
+// "⇄ Jämför mot…" upp. Draget hittas bakifrån i _history (lastMove).
+// I Fantasy Land: "⇄ Lägg själv och jämför" när handen är full.
 // ============================================================
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
@@ -31,7 +36,8 @@ import type { BoardSlot, DropTarget } from '../dnd/dragCore';
 import BoardView from '../board/BoardView';
 import ShareBoards from '../share/ShareBoards';
 import type { ShareBoard, ShareHand } from '../../share/boardImage';
-import { applyMove as applyPlacements, placementsOn } from '../../training/moves';
+import { applyMove as applyPlacements, cloneBoard, placementsOn, type Move } from '../../training/moves';
+import CompareView, { type CompareSetup } from './CompareView';
 import CardGrid, { JokerButton, type TileState } from '../cards/CardGrid';
 import HandTray from '../cards/HandTray';
 import SortButtons from '../cards/SortButtons';
@@ -51,6 +57,38 @@ function countPlaced(board: Board) {
 
 function cardKey(c: Card) {
   return c.kind === 'joker' ? 'JK' : c.rank + c.suit;
+}
+
+type HistoryRec = { row: RowName; slotIndex: number; card: Card; player: 'me' | 'opponent' };
+
+/**
+ * Det senaste hela draget på mitt bräde, eller null:
+ *  - öppningen: exakt 5 kort ute, inget kvar i handen
+ *  - därefter 1 kort (Pineapple: 2 kort + kortet som är kvar i handen = kastas)
+ * Korten tas bakifrån ur historiken och måste fortfarande ligga där.
+ */
+function lastMove(board: Board, history: HistoryRec[], tray: Card[], held: Card | null, pineapple: boolean): { base: Board; hand: Card[]; place: number; a: Move } | null {
+  if (held) return null;
+  const placed = countPlaced(board);
+  const mine = history.filter((h) => h.player === 'me');
+  let k: number;
+  let discards: Card[] = [];
+  if (placed === 5 && mine.length === 5 && tray.length === 0) k = 5;
+  else if (placed > 5 && pineapple && tray.length === 1) {
+    k = 2;
+    discards = [tray[0]];
+  } else if (placed > 5 && !pineapple && tray.length === 0) k = 1;
+  else return null;
+  const recs = mine.slice(-k);
+  if (recs.length < k || !recs.every((r) => sameCard(board[r.row].cards[r.slotIndex], r.card))) return null;
+  const base = cloneBoard(board);
+  for (const r of recs) base[r.row].cards[r.slotIndex] = null;
+  return {
+    base,
+    hand: [...recs.map((r) => r.card), ...discards],
+    place: k,
+    a: { placements: recs.map((r) => ({ card: r.card, row: r.row, slotIndex: r.slotIndex })), discards },
+  };
 }
 
 interface SolverViewProps {
@@ -73,6 +111,7 @@ export default function SolverView({ simulations }: SolverViewProps) {
   const [flash, setFlash] = useState<string | null>(null);
   // FL-handens visningsordning (ändrar inte handen). Börjar osorterad.
   const [flSort, setFlSort] = useState<SortMode>('dealt');
+  const [compare, setCompare] = useState<CompareSetup | null>(null);
 
   const placed = countPlaced(myBoard);
   const oppPlaced = countPlaced(opponentBoard);
@@ -343,6 +382,42 @@ export default function SolverView({ simulations }: SolverViewProps) {
     haptic([10, 30, 14]);
   };
 
+  // ---------- Jämför ----------
+  const seed = normal && onMine ? lastMove(myBoard, _history, selectedCards, selectedCard, variant === 'pineapple') : null;
+  const flFull = !normal && selectedCards.length === flCardCount;
+
+  const startCompare = () => {
+    haptic(8);
+    clearResult();
+    if (seed) {
+      setCompare({ mode: 'normal', ...seed, deadCards, variant, opponentBoard: oppPlaced > 0 ? opponentBoard : undefined, simulations });
+    } else if (flFull) {
+      setCompare({ mode: 'fantasyLand', base: createEmptyBoard(), hand: selectedCards, place: 13, a: null, deadCards: [], variant, simulations });
+    }
+  };
+
+  /** Lägg den valda läggningen på brädet (Vanlig hand: byt ut A; FL: lägg ut som "Lägg så här") */
+  const keepCompared = (m: Move) => {
+    const c = compare;
+    setCompare(null);
+    if (!c) return;
+    if (c.mode === 'fantasyLand') {
+      apply({ placements: m.placements, discards: m.discards } as DetailedPlacementOption);
+      return;
+    }
+    const st = useGameStore.getState();
+    st.setActivePlayer('me');
+    for (const p of c.a!.placements) useGameStore.getState().removeCard(p.row, p.slotIndex, 'me');
+    for (const p of m.placements) {
+      useGameStore.getState().selectCard(p.card);
+      useGameStore.getState().placeCard(p.row, p.slotIndex);
+    }
+    // Pineapple: kortet som kastas ligger kvar i handen, som efter ett vanligt drag
+    useGameStore.getState().clearSelectedCards();
+    for (const d of m.discards) useGameStore.getState().addSelectedCard(d);
+    useGameStore.getState().clearSelectedCard();
+  };
+
   const newHand = () => {
     cancelSolver();
     resetGame();
@@ -429,6 +504,10 @@ export default function SolverView({ simulations }: SolverViewProps) {
     if (phase === 'scoring') return 'Handen är klar';
     return 'Välj ditt nästa kort';
   })();
+
+  if (compare) {
+    return <CompareView setup={compare} onClose={() => setCompare(null)} onKeep={keepCompared} canKeep={compare.mode === 'normal' || placed === 0} />;
+  }
 
   return (
     <DragProvider onDrop={onDrop}>
@@ -609,6 +688,11 @@ export default function SolverView({ simulations }: SolverViewProps) {
                   </div>
                 )}
               </div>
+              {flFull && (
+                <button type="button" onClick={startCompare} disabled={isLoading} className="btn-ghost h-11 rounded-full text-[13.5px] font-bold">
+                  ⇄ Lägg själv och jämför
+                </button>
+              )}
               {solverMode === 'fantasyLand' && (
                 <p className="px-1 text-[12px] text-ink-2">
                   QQ i topp = 13 kort, KK = 14, AA = 15, triss = 16. Solvern går igenom alla uppställningar exakt.
@@ -689,6 +773,12 @@ export default function SolverView({ simulations }: SolverViewProps) {
                         {flash ?? hint}
                       </span>
                     </div>
+
+                    {seed && (
+                      <button type="button" onClick={startCompare} className="btn-ghost h-10 rounded-full text-[13px] font-bold animate-fade-in">
+                        ⇄ Jämför mot… <span className="font-semibold text-ink-3">ändra draget, se vilket som är bäst</span>
+                      </button>
+                    )}
 
                     <CardGrid stateOf={stateOf} onTap={tapCard} draggable />
 

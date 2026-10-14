@@ -12,7 +12,7 @@
 // (inkl. scoop-bonus).
 // ============================================================
 
-import { rowValues, maxAtMost, royaltyOf, qualifiesRepeat, scoreVs, settledOf } from './eval';
+import { rowValues, maxAtMost, royaltyOf, qualifiesRepeat, scoreVs, settledOf, settle } from './eval';
 import type { Settled } from './eval';
 import { FL_VALUE } from './flValue';
 
@@ -131,4 +131,20 @@ export function solveFantasyLand(cards: number[], pool: Settled[], keep = 40): F
   });
   results.sort((x, y) => y.ev - x.ev);
   return results;
+}
+
+/**
+ * Värdet av EN given uppställning (t.ex. spelarens egen i "Jämför").
+ * Samma värdering som de exakta finalisterna ovan: snittpoäng mot hela
+ * poolen + repeat-värdet. Jokrarna väljs så att brädet inte foular (settle).
+ * @param assign rad per kort: 0=topp, 1=middle, 2=bottom, -1=kastas
+ */
+export function evaluateFLAssign(cards: number[], assign: number[], pool: Settled[]): FLResult {
+  const rows: number[][] = [[], [], []];
+  cards.forEach((c, i) => { if (assign[i] >= 0) rows[assign[i]].push(c); });
+  const me = settle(rows[0], rows[1], rows[2]);
+  let sum = 0;
+  for (const o of pool) sum += scoreVs(me, o);
+  const repeat = !me.foul && qualifiesRepeat(me.top, me.mid, me.bot);
+  return { assign, ev: sum / Math.max(1, pool.length) + (repeat ? FL_VALUE[13] : 0), repeat, royalties: me.roy };
 }

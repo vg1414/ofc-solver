@@ -131,6 +131,8 @@ export interface Candidate {
   assign: number[];
   /** Låst: sållas aldrig bort, räknas lika noga som bästa draget */
   pinned?: boolean;
+  /** Plats i listan med låsta drag (0 = första). Används för felmarginalen mot det första låsta draget */
+  pinIndex?: number;
 }
 
 export interface CandidateResult {
@@ -147,6 +149,8 @@ export interface CandidateResult {
   pinned: boolean;
   /** Standardfel för EV-skillnaden mot bästa draget (parvis, samma blandningar). Bara för finalister. */
   evDiffSE?: number;
+  /** Standardfel för EV-skillnaden mot det FÖRSTA låsta draget (parvis). Bara för finalister, och bara om något drag var låst. */
+  evDiffSEPin0?: number;
 }
 
 export interface EvalInput {
@@ -307,14 +311,18 @@ export function evaluateCandidates(input: EvalInput, cands: Candidate[]): Candid
   // Precision för finalisterna: standardfelet för skillnaden mot bästa
   // draget, räknat parvis på samma blandningar (vals[i] = blandning i).
   const best = out[0].st;
+  const pin0 = stats.find((s) => s.c.pinIndex === 0 && s.stage === 3);
+  const diffSE = (a: (typeof stats)[number], b: (typeof stats)[number]) => {
+    const n = Math.min(a.n, b.n);
+    if (a === b || n < 2) return 0;
+    let sum = 0, sq = 0;
+    for (let i = 0; i < n; i++) { const d = a.vals[i] - b.vals[i]; sum += d; sq += d * d; }
+    const m = sum / n;
+    return Math.sqrt(Math.max(0, (sq - n * m * m) / (n - 1)) / n);
+  };
   return out.map(({ st, ...r }) => {
     if (!r.finalist) return r;
-    const n = Math.min(st.n, best.n);
-    if (st === best || n < 2) return { ...r, evDiffSE: 0 };
-    let sum = 0, sq = 0;
-    for (let i = 0; i < n; i++) { const d = st.vals[i] - best.vals[i]; sum += d; sq += d * d; }
-    const m = sum / n;
-    return { ...r, evDiffSE: Math.sqrt(Math.max(0, (sq - n * m * m) / (n - 1)) / n) };
+    return { ...r, evDiffSE: diffSE(st, best), ...(pin0 ? { evDiffSEPin0: diffSE(st, pin0) } : {}) };
   });
 }
 

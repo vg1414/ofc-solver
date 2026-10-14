@@ -15,7 +15,7 @@ import { toInt } from '../core/eval';
 import { allAssignments } from '../core/policy';
 import { evaluateCandidates, opponentPool } from '../core/sim';
 import type { Candidate, CandidateResult } from '../core/sim';
-import { solveFantasyLand } from '../core/fl';
+import { solveFantasyLand, evaluateFLAssign } from '../core/fl';
 
 // ============================================================
 // Publika typer
@@ -31,7 +31,8 @@ export interface SolverOptions {
   /**
    * Låsta drag: varje inre lista är ett komplett drag (alla kort i handen,
    * 'discard' = kastas i Pineapple). De sållas aldrig bort och räknas lika
-   * noga som bästa draget, på samma blandningar. Ignoreras i Fantasy Land.
+   * noga som bästa draget, på samma blandningar. I Fantasy Land räknas
+   * de exakt och läggs till i listan om de inte redan är med.
    */
   pinned?: PinnedMove[];
 }
@@ -72,6 +73,8 @@ export interface DetailedPlacementOption {
   pinned?: boolean;
   /** Standardfel för EV-skillnaden mot bästa draget, parvis på samma blandningar (bara finalister) */
   evDiffSE?: number;
+  /** Standardfel för EV-skillnaden mot det första låsta draget (options.pinned[0]). 0 i Fantasy Land (exakt) */
+  evDiffSEPin0?: number;
 }
 
 export interface DetailedSolverResult {
@@ -200,11 +203,12 @@ export function solveFromBoard(
   // Låsta drag → markera motsvarande kandidat
   if (options.pinned?.length) {
     const byKey = new Map(cands.map((c) => [assignKey(hand, c.assign), c]));
-    for (const move of options.pinned) {
+    options.pinned.forEach((move, idx) => {
       const cand = byKey.get(assignKey(hand, pinnedAssign(move, cards)));
       if (!cand) throw new Error('Låst drag är inte ett giltigt drag i den här situationen.');
       cand.pinned = true;
-    }
+      if (cand.pinIndex === undefined) cand.pinIndex = idx;
+    });
   }
 
   const t0 = Date.now();
@@ -221,6 +225,7 @@ export function solveFromBoard(
     o.finalist = r.finalist;
     if (r.pinned) o.pinned = true;
     if (r.evDiffSE !== undefined) o.evDiffSE = r.evDiffSE;
+    if (r.evDiffSEPin0 !== undefined) o.evDiffSEPin0 = r.evDiffSEPin0;
     return o;
   });
   return finish(out, 'monteCarlo', timedOut);
@@ -250,11 +255,26 @@ export function solveFantasyLandMode(
   options.onProgress?.(30);
   const res = solveFantasyLand(hand, pool);
   options.onProgress?.(100);
-  const out = res.slice(0, 15).map((r) => {
+  const top = res.slice(0, 15);
+  // Låsta uppställningar (Jämför): räknas exakt och läggs till om de inte redan är med
+  const pinnedKeys = new Set<string>();
+  for (const move of options.pinned ?? []) {
+    const assign = pinnedAssign(move, cards);
+    const key = assignKey(hand, assign);
+    pinnedKeys.add(key);
+    if (!top.some((r) => assignKey(hand, r.assign) === key)) top.push(evaluateFLAssign(hand, assign, pool));
+  }
+  const out = top.map((r) => {
     const o = buildOption(createEmptyBoard(), cards, r.assign, r.ev, pool.length);
     o.repeatFL = r.repeat;
+    if (pinnedKeys.has(assignKey(hand, r.assign))) {
+      o.pinned = true;
+      o.evDiffSEPin0 = 0;
+    }
     return o;
   });
+  // Bästa först (en låst uppställning kan bara vara sämre eller lika, men sortera för säkerhets skull)
+  out.sort((a, b) => b.ev - a.ev);
   return finish(out, 'exact');
 }
 

@@ -79,6 +79,8 @@ En `useSolver()` = en egen worker, och den räknar en sak i taget. `runSolver` g
 - Kort läggs genom tryck kort → tryck rad, eller dra-och-släpp. Ett lagt kort tas bort med två tryck.
 - Förslaget visas som spökkort på brädet, med EV, FL-chans och foul-risk.
 
+- **Jämför (`solver/CompareView.tsx`):** "⇄ Jämför mot…" när ett helt drag ligger på brädet (`lastMove` i SolverView letar bakifrån i `_history`), eller "Lägg själv och jämför" i FL. Två `useMoveBuilder` (A, B; `load()` gör B till en kopia av A), solvern körs med `pinned: [A, B]`. A–B-felmarginal = `evDiffSEPin0`. FL: låsta uppställningar räknas exakt (`evaluateFLAssign`).
+
 ## Träna-fliken (`src/components/training/`, logik i `src/training/`)
 
 - **Scenarion:** 5/10/20 scenarion. `scenarios.ts` låter datorn spela fram båda bräden med solvern (Normal: 800 sim, max 3 s per drag) och stannar på ett slumpat drag (≈ 25 % öppningar). Scenariokön `useScenarioPool.ts` (ägs av `TrainingView`) håller 3 scenarion redo per variant + läge i en egen worker. Den börjar redan på startsidan, sparar överblivna till nästa omgång och pausas när Solver-fliken visas. Kön bedömer också varje scenario i förväg på Noggrann (`SCENARIO_EVAL`, sparas i `Scenario.evaluation`): tom kö → spela fram, annars bedöm äldsta obedömda, annars spela fram nästa. Saknas bedömningen (scenariot togs för tidigt) räknar ScenarioRun själv. Draget matchas mot `result.options` på kort + rad (`moves.ts`). Om draget sållades bort räknas det om med `pinned` (`pinned.ts`).

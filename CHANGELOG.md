@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-10-14 — Jämför två läggningar i Solver
+
+- **Vanlig hand:** när ett helt drag ligger på brädet (öppningen, ett kort, eller Pineapple: två kort + kortet som kastas kvar i handen) dyker "⇄ Jämför mot…" upp. B börjar som en kopia av A. Flytta kort och tryck "Jämför A och B"
+- **Fantasy Land:** när handen är full finns "⇄ Lägg själv och jämför". Lägg A på ett bräde, sedan B
+- Båda läggningarna räknas lika noga på samma blandningar (låsta drag), och solverns bästa räknas fram samtidigt som referens. Resultatet visar A, B och ★ bästa sida vid sida (litet bräde, EV, foul, FL), vem som vinner och om skillnaden är säker eller ryms i felmarginalen (2 standardfel). Fantasy Land räknas exakt
+- Välj sedan Behåll A / B / ★ (FL: Lägg ut). Rutan som är vald från början är vinnaren
+- Solvern: Fantasy Land tar emot låsta uppställningar (`evaluateFLAssign` i `core/fl.ts`), och varje finalist får `evDiffSEPin0` = felmarginalen mot det första låsta draget
+
 ## 2026-10-14 — Solver: varje läge minns sin hand
 
 - Byter man mellan Vanlig hand och Fantasy Land försvinner inte längre de valda korten. Varje läge har sin egen hand, och den ligger kvar när man byter tillbaka (`_handByMode` i `gameStore`)

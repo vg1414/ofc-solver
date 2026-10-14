@@ -14,6 +14,7 @@
 //                      plats, utanför brädet eller till handen = ta tillbaka
 //  - remove(row,slot)  ta tillbaka ett kort du lagt i detta drag
 //  - reset()           ta tillbaka alla
+//  - load(placements)  börja från en färdig läggning (Jämför: B = kopia av A)
 // Draget är klart när `place` kort ligger ute. Kort som blir kvar i
 // handen kastas (Pineapple: 1 av 3, Fantasy Land: allt utöver 13).
 // ============================================================
@@ -149,6 +150,22 @@ export function useMoveBuilder(base: Board, hand: Card[], place: number) {
     setHeld(null);
   }, []);
 
+  const load = useCallback(
+    (ps: { card: Card; row: RowName; slotIndex: number }[]) => {
+      const used = new Set<number>();
+      const next: Placed[] = [];
+      for (const p of ps) {
+        const id = hand.findIndex((c, i) => !used.has(i) && sameCard(c, p.card));
+        if (id < 0) continue;
+        used.add(id);
+        next.push({ id, row: p.row, slot: p.slotIndex });
+      }
+      setPlaced(next);
+      setHeld(null);
+    },
+    [hand],
+  );
+
   const move: Move = useMemo(
     () => ({
       placements: placed.map((p) => ({ card: hand[p.id], row: p.row, slotIndex: p.slot })),
@@ -159,7 +176,7 @@ export function useMoveBuilder(base: Board, hand: Card[], place: number) {
 
   const heldIndex = held !== null ? remaining.findIndex((r) => r.id === held) : -1;
 
-  return { hand, board, remaining, heldCard, heldIndex, placedCount: placed.length, done, move, tapHand, placeAt, drop, remove, isMine, reset };
+  return { hand, board, remaining, heldCard, heldIndex, placedCount: placed.length, done, move, tapHand, placeAt, drop, remove, isMine, reset, load };
 }
 
 export type MoveBuilder = ReturnType<typeof useMoveBuilder>;

@@ -4,12 +4,12 @@
 import { describe, it, expect } from 'vitest';
 import { rowValues, settle, royaltyOf, catOf, scoreVs, flEntryCards, qualifiesRepeat,
   HC, PAIR, STRAIGHT, FLUSH, FIVE_KIND, ROYAL, STRAIGHT_FLUSH, toInt } from './eval';
-import { solveFantasyLand } from './fl';
+import { solveFantasyLand, evaluateFLAssign } from './fl';
 import { opponentPool, evaluateCandidates } from './sim';
 import { parseCard } from '../engine/card';
 import { createEmptyBoard } from '../engine/types';
 import type { Board, RowName } from '../engine/types';
-import { solveFromBoard, solveOpeningHand } from '../solver/solver';
+import { solveFromBoard, solveOpeningHand, solveFantasyLandMode } from '../solver/solver';
 import type { PinnedMove } from '../solver/solver';
 
 const R = '23456789TJQKA', S = 'cdhs';
@@ -209,4 +209,38 @@ describe('låsta drag (pinned)', () => {
     const full = board('2c 7d', '9s 9d', 'Ah Jh 8h 4h 5h');
     expect(() => solveFromBoard(full, [parseCard('3h')], [], 'regular', { pinned: [[{ card: parseCard('3h'), row: 'bottom' }]] })).toThrow();
   });
+});
+
+describe('Jämför: två låsta drag', () => {
+  it('vanligt drag: båda räknas klart, felmarginal mot det första låsta', () => {
+    const bd = board('2c 7d', '9s 9d', 'Ah Jh 8h 4h');
+    const card = parseCard('3h');
+    const a: PinnedMove = [{ card, row: 'top' }];
+    const b: PinnedMove = [{ card, row: 'middle' }];
+    const r = solveFromBoard(bd, [card], [], 'regular', { simulations: 200, maxMs: 30000, pinned: [a, b] });
+    const oa = r.options.find((o) => o.placements[0].row === 'top')!;
+    const ob = r.options.find((o) => o.placements[0].row === 'middle')!;
+    expect(oa.pinned && ob.pinned).toBe(true);
+    expect(oa.finalist && ob.finalist).toBe(true);
+    expect(oa.evDiffSEPin0).toBe(0);
+    expect(ob.evDiffSEPin0!).toBeGreaterThan(0);
+  }, 60000);
+
+  it('Fantasy Land: egen uppställning räknas exakt och läggs till i listan', () => {
+    const hand = 'Ah Ad Kc Qs Jh Th 9h 8h 7c 6d 5s 4c 3d 2h'.split(' ').map((x) => parseCard(x));
+    // Medvetet svag: de första 3 i topp, nästa 5 i mitten, sista 5 i botten, sista kortet kastas
+    const rows: ('top' | 'middle' | 'bottom' | 'discard')[] = [...Array(3).fill('top'), ...Array(5).fill('middle'), ...Array(5).fill('bottom'), 'discard'];
+    const mine: PinnedMove = hand.map((card, k) => ({ card, row: rows[k] }));
+    const r = solveFantasyLandMode(hand, [], { pinned: [mine] });
+    const o = r.options.find((x) => x.pinned)!;
+    expect(o).toBeDefined();
+    expect(o.ev).toBeLessThanOrEqual(r.best.ev);
+    // Samma värde som den exakta lösarens värdering av samma uppställning
+    const ids = hand.map((x) => toInt(x));
+    const assign = rows.map((x) => (x === 'discard' ? -1 : ['top', 'middle', 'bottom'].indexOf(x)));
+    expect(o.ev).toBeCloseTo(evaluateFLAssign(ids, assign, opponentPool('regular')).ev, 6);
+    // Bästa uppställningen värderas likadant av båda vägarna
+    const best = solveFantasyLand(ids, opponentPool('regular'))[0];
+    expect(evaluateFLAssign(ids, best.assign, opponentPool('regular')).ev).toBeCloseTo(best.ev, 6);
+  }, 60000);
 });
