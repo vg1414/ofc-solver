@@ -10,6 +10,8 @@
 // flyger ner i handen (DealIn), och glöder sedan svagt tills det är lagt.
 // DealIn får handen som key, så animationen körs en gång per utdelning
 // (inte igen efter Ångra).
+// `compact` (Hel hand, Spela): med 1–3 kort ligger handen, ett kort tips,
+// Ångra (bara pilen) och Klar på en enda rad, så att brädena får mer plats.
 // ============================================================
 
 import { useRef, useState } from 'react';
@@ -28,9 +30,11 @@ interface PlayDockProps {
   /** Rad ovanför handen, t.ex. solverns status */
   top?: React.ReactNode;
   disabled?: boolean;
+  /** En rad i stället för två när handen är liten (1–3 kort) */
+  compact?: boolean;
 }
 
-export default function PlayDock({ mb, place, total, onDone, doneLabel = 'Klar', top, disabled }: PlayDockProps) {
+export default function PlayDock({ mb, place, total, onDone, doneLabel = 'Klar', top, disabled, compact = false }: PlayDockProps) {
   const discard = total - place;
   const left = place - mb.placedCount;
   const many = total > 6;
@@ -48,31 +52,62 @@ export default function PlayDock({ mb, place, total, onDone, doneLabel = 'Klar',
   const [landed, setLanded] = useState<string | null>(null);
   const flying = single && landed !== handId;
 
+  const oneRow = compact && !many && total <= 3;
   const hint = (() => {
+    if (oneRow) {
+      if (mb.done) return discard > 0 ? 'Klart! Sista kastas' : 'Klart!';
+      if (mb.heldCard) return 'Tryck på en rad';
+      if (discard > 0 && mb.placedCount === 0) return `Lägg ${place}, kasta ${discard}`;
+      return left === 1 ? 'Tryck på kortet, sedan en rad' : `Lägg ${left} till`;
+    }
     if (mb.done) return discard > 0 ? `Klart! ${discard === 1 ? 'Kortet' : `De ${discard} korten`} som är kvar kastas.` : 'Klart! Dra ett lagt kort för att flytta det, eller ut från brädet för att ta bort det.';
     if (mb.heldCard) return 'Tryck på en rad – eller dra kortet dit';
     if (discard > 0 && mb.placedCount === 0) return `Lägg ${place} kort, ${discard === 1 ? 'det sista' : `de ${discard} sista`} kastas`;
     return left === 1 ? 'Lägg ditt kort: tryck på det, sedan på en rad' : `Lägg ${left} kort till`;
   })();
 
+  const tray = mb.remaining.length > 0 && (
+    <div ref={trayRef} className={`shrink-0 ${single ? 'deal-glow' : ''}`} style={flying ? { opacity: 0 } : undefined}>
+      <HandTray
+        cards={order.map((i) => cards[i])}
+        capacity={mb.remaining.length}
+        heldIndex={order.indexOf(mb.heldIndex)}
+        draggable
+        onTapCard={(i) => mb.tapHand(order[i])}
+        wrap={many}
+        cardWidth={many ? 'min(40px, calc((100vw - 90px) / 8))' : '42px'}
+      />
+    </div>
+  );
+  const dealIn = single && <DealIn key={handId} card={mb.hand[0]} target={() => trayRef.current?.querySelector('button') ?? null} onLanded={() => setLanded(handId)} />;
+
+  if (oneRow) {
+    return (
+      <div className="flex flex-col gap-2">
+        {top}
+        {dealIn}
+        <div className="flex min-h-[60px] items-center gap-2">
+          {tray}
+          <span className="line-clamp-2 min-w-0 flex-1 text-[12px] font-semibold leading-tight text-ink-2" aria-live="polite">
+            {hint}
+          </span>
+          <button type="button" onClick={mb.reset} disabled={mb.placedCount === 0 || disabled} aria-label="Ångra" className="btn-ghost h-11 w-11 shrink-0 rounded-full text-[17px] font-bold">
+            ↶
+          </button>
+          <button type="button" onClick={onDone} disabled={!mb.done || disabled} className="btn-primary h-11 shrink-0 rounded-full px-5 text-[14px] font-bold">
+            {doneLabel}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-2.5">
       {top}
-      {single && <DealIn key={handId} card={mb.hand[0]} target={() => trayRef.current?.querySelector('button') ?? null} onLanded={() => setLanded(handId)} />}
+      {dealIn}
       <div className={`flex gap-2.5 ${many ? 'flex-col' : 'min-h-[60px] items-center'}`}>
-        {mb.remaining.length > 0 && (
-          <div ref={trayRef} className={single ? 'deal-glow' : undefined} style={flying ? { opacity: 0 } : undefined}>
-          <HandTray
-            cards={order.map((i) => cards[i])}
-            capacity={mb.remaining.length}
-            heldIndex={order.indexOf(mb.heldIndex)}
-            draggable
-            onTapCard={(i) => mb.tapHand(order[i])}
-            wrap={many}
-            cardWidth={many ? 'min(40px, calc((100vw - 90px) / 8))' : '42px'}
-          />
-          </div>
-        )}
+        {tray}
         <div className="flex flex-1 items-center gap-2">
           <span className="flex-1 text-[12.5px] font-semibold leading-snug text-ink-2" aria-live="polite">
             {hint}

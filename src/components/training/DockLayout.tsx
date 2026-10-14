@@ -8,6 +8,9 @@
 // `side` (t.ex. draglistan): under docken i högerkolumnen på bred skärm,
 // under innehållet på stående telefon. Renderas på båda ställena och
 // döljs med CSS, så att inget behöver mäta skärmen.
+// Flera flikar kan ha en DockLayout samtidigt (de dolda finns kvar i
+// sidan). Leta därför upp panelen via `dockFor(el)`, inte med en global
+// querySelector — då kan man få en dold flik panel.
 // ============================================================
 
 import { useLayoutEffect, useRef, useState } from 'react';
@@ -17,6 +20,11 @@ interface DockLayoutProps {
   children: React.ReactNode;
   dock: React.ReactNode;
   side?: React.ReactNode;
+}
+
+/** Panelen ([data-dock]) i samma DockLayout som `el` */
+export function dockFor(el: Element | null): Element | null {
+  return el?.closest('[data-dock-layout]')?.querySelector('[data-dock]') ?? null;
 }
 
 export default function DockLayout({ children, dock, side }: DockLayoutProps) {
@@ -33,6 +41,7 @@ export default function DockLayout({ children, dock, side }: DockLayoutProps) {
 
   return (
     <div
+      data-dock-layout
       className="wide:grid wide:grid-cols-[minmax(0,1fr)_minmax(300px,420px)] wide:gap-5 wide:items-start"
       style={{ '--dock-h': `${dockH}px` } as React.CSSProperties}
     >

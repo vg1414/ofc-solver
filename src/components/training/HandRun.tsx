@@ -34,6 +34,9 @@
 //    Efter varje hand avgör sessionOver() om det var den sista. Står
 //    någon på FL och regeln är "spelas ut" fortsätter det med extra
 //    händer (`extraFrom`) tills ingen är i FL längre.
+//  - Telefon: båda brädena + panelen ryms på skärmen utan scroll
+//    (useFitBoards krymper korten lagom, motståndarens lite mindre).
+//    Handraden (+10 −8 …) visas bara på bred skärm; den finns under Poäng.
 //  - ✕ under pågående session öppnar ett ark: visa resultat, fortsätt
 //    eller avsluta utan resultat.
 // ============================================================
@@ -47,6 +50,7 @@ import { pinnedOptions } from '../../training/pinned';
 import { CANCELLED, useSolverJobs } from '../../training/useSolverJobs';
 import { useMoveBuilder } from '../../training/useMoveBuilder';
 import { useRevealAboveDock } from '../../training/useRevealAboveDock';
+import { useFitBoards } from '../../training/useFitBoards';
 import { DragProvider } from '../dnd/DragContext';
 import BoardView from '../board/BoardView';
 import DockLayout from './DockLayout';
@@ -275,6 +279,11 @@ export default function HandRun({ variant, settings, active = true, onExit, onRe
   // Din tur eller handen klar: se till att ditt bräde syns ovanför panelen
   const myBoardRef = useRef<HTMLDivElement>(null);
   useRevealAboveDock(myBoardRef, h.outcome ? `o${h.no}` : myTurn ? `t${h.no}-${h.idx}` : null);
+  // Båda brädena på skärmen samtidigt (telefon). Panelen mäts bara på vanliga
+  // drag efter öppningen — öppning och FL har en högre panel.
+  const fitRef = useRef<HTMLDivElement>(null);
+  const cpuBoardRef = useRef<HTMLDivElement>(null);
+  const fit = useFitBoards(fitRef, myBoardRef, cpuBoardRef, myTurn && !!turn && !turn.fl && turn.round > 1);
 
   const total = records.reduce((n, r) => n + r.net, 0);
   const shownTotal = useCountUp(total);
@@ -365,6 +374,7 @@ export default function HandRun({ variant, settings, active = true, onExit, onRe
         total={h.dealt.length}
         onDone={confirm}
         doneLabel="✓ Klar"
+        compact
         top={
           <div className="flex flex-wrap items-center gap-2">
             <span className="eyebrow">{turn.fl ? `Fantasy Land · ${h.dealt.length} kort` : turn.round === 1 ? 'Öppningshand' : `Runda ${turn.round}`}</span>
@@ -413,8 +423,11 @@ export default function HandRun({ variant, settings, active = true, onExit, onRe
           onExit={askExit}
           onScore={() => setScoreOpen(true)}
         />
-        <HandStrip records={records} onOpen={() => setScoreOpen(true)} />
+        <div className="hidden wide:block">
+          <HandStrip records={records} onOpen={() => setScoreOpen(true)} />
+        </div>
 
+        <div ref={fitRef} className="flex flex-col gap-3">
         {/* Datorns bräde */}
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1 px-1 -mb-1">
           <span className="eyebrow">Datorn</span>
@@ -423,8 +436,10 @@ export default function HandRun({ variant, settings, active = true, onExit, onRe
           {cpuThinking && <span className="think text-accent-ink" aria-label="Datorn tänker"><span /><span /><span /></span>}
           {h.first === 1 && <span className="ml-auto text-[10.5px] font-bold text-ink-3">börjar</span>}
         </div>
+        <div ref={cpuBoardRef} style={fit ? ({ '--card-h-cap': `${fit.opp}px` } as React.CSSProperties) : undefined}>
         {hidden ? (
-          <div className="felt flex h-[150px] items-center justify-center rounded-[26px] p-4 text-center text-[13px] font-semibold text-[color:var(--felt-label)]">
+          // Lika hög som datorns bräde, så att inget hoppar när det visas
+          <div className="felt flex h-[calc(min(40px,var(--card-h-cap,40px))*4.44+48px)] items-center justify-center rounded-[26px] p-4 text-center text-[13px] font-semibold text-[color:var(--felt-label)]">
             {h.seats[1].fl > 0
               ? '★ Datorn spelar Fantasy Land — brädet visas när handen är klar'
               : countPlaced(h.seats[1].board) > 0
@@ -438,6 +453,7 @@ export default function HandRun({ variant, settings, active = true, onExit, onRe
             <BoardView board={h.seats[1].board} recent={cpuRecent} opening={cpuOpening} maxCardWidth={40} fouled={!!h.outcome?.score.p2Foul} earnedRoyalties={h.outcome?.score.p2Royalties} />
           </div>
         )}
+        </div>
 
         {/* Ditt bräde */}
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1 px-1 -mb-1 mt-1">
@@ -446,7 +462,7 @@ export default function HandRun({ variant, settings, active = true, onExit, onRe
           {risk && risk.hand === h.no && !h.outcome && <RiskMeter foul={risk.foul} fl={risk.fl} />}
           {h.first === 0 && <span className="ml-auto text-[10.5px] font-bold text-ink-3">börjar</span>}
         </div>
-        <div ref={myBoardRef} className="relative">
+        <div ref={myBoardRef} className="relative" style={fit ? ({ '--card-h-cap': `${fit.me}px` } as React.CSSProperties) : undefined}>
         <ShareBoards
           boards={() => [
             { name: 'Du', board: myTurn ? mb.board : h.seats[0].board, fouled: !!h.outcome?.score.p1Foul, royalties: h.outcome?.score.p1Royalties, recent: myTurn ? undefined : myRecent, opening: myOpening },
@@ -466,6 +482,7 @@ export default function HandRun({ variant, settings, active = true, onExit, onRe
           earnedRoyalties={h.outcome?.score.p1Royalties}
           maxCardWidth={84}
         />
+        </div>
         </div>
       </DockLayout>
 

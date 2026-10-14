@@ -36,6 +36,7 @@ import { flPending, targetReached } from '../../training/session';
 import { usePlayClock } from '../../training/usePlayClock';
 import { useMoveBuilder } from '../../training/useMoveBuilder';
 import { useRevealAboveDock } from '../../training/useRevealAboveDock';
+import { useFitBoards } from '../../training/useFitBoards';
 import { haptic } from '../cards/cardStyle';
 import { countPlaced, type Move } from '../../training/moves';
 import type { Board } from '../../engine/types';
@@ -174,6 +175,10 @@ export default function DuelRun({ initial, initialElapsed, active = true, onExit
   // Ditt bräde ska synas ovanför panelen när det blir din tur
   const myBoardRef = useRef<HTMLDivElement>(null);
   useRevealAboveDock(myBoardRef, h.outcome ? `o${h.no}` : covered ? null : `t${turnKey}`);
+  // Telefon: båda brädena + panelen på skärmen samtidigt (se useFitBoards)
+  const fitRef = useRef<HTMLDivElement>(null);
+  const oppBoardRef = useRef<HTMLDivElement>(null);
+  const fit = useFitBoards(fitRef, myBoardRef, oppBoardRef, !!turn && !covered && !turn.fl && turn.round > 1);
 
   if (state.finished) {
     return <DuelSummary state={state} elapsed={finishedAt ?? elapsed} onRestart={onRestart} onExit={onExit} openings={openings} />;
@@ -237,6 +242,7 @@ export default function DuelRun({ initial, initialElapsed, active = true, onExit
           total={view.dealt.length}
           onDone={confirm}
           doneLabel={handOver ? `✓ Klar – ge till ${names[nextSeat!]}` : '✓ Klar'}
+          compact
           top={
             <div className="flex flex-col gap-1.5">
               {/* Panelen syns alltid, även när sidan skrollat förbi bannern */}
@@ -303,11 +309,12 @@ export default function DuelRun({ initial, initialElapsed, active = true, onExit
           onScore={() => setScoreOpen(true)}
         />
 
-        {/* Vems tur — stor och omöjlig att missa */}
+        {/* Vems tur — stor och omöjlig att missa. På telefon visas den i
+            panelen i stället (och skärmkanten lyser), så att brädena får plats */}
         {turn ? (
           <div
             key={`${h.no}-${viewer}`}
-            className="flex items-center gap-3 rounded-[24px] px-4 py-3 text-white animate-turn-swap"
+            className="hidden wide:flex items-center gap-3 rounded-[24px] px-4 py-3 text-white animate-turn-swap"
             style={{ background: `var(--grad-p${viewer + 1})`, boxShadow: `var(--glow-p${viewer + 1})`, '--swap-from': viewer === 0 ? '-48px' : '48px' } as React.CSSProperties}
             role="status"
             aria-live="assertive"
@@ -325,16 +332,21 @@ export default function DuelRun({ initial, initialElapsed, active = true, onExit
           </div>
         )}
 
-        <HandStrip records={state.records} onOpen={() => setScoreOpen(true)} names={names} />
+        <div className="hidden wide:block">
+          <HandStrip records={state.records} onOpen={() => setScoreOpen(true)} names={names} />
+        </div>
 
+        <div ref={fitRef} className="flex flex-col gap-3">
         {/* Motståndarens bräde (litet, överst) */}
         <SeatLabel seat={other(viewer)} name={opp.name} fl={opp.fl} starts={h.first === other(viewer)} />
+        <div ref={oppBoardRef} style={fit ? ({ '--card-h-cap': `${fit.opp}px` } as React.CSSProperties) : undefined}>
         {opp.board ? (
           <div className="opacity-85">
             <BoardView board={opp.board} recent={recent[other(viewer)]} opening={opening[other(viewer)]} maxCardWidth={40} fouled={other(viewer) === 0 ? !!h.outcome?.score.p1Foul : !!h.outcome?.score.p2Foul} earnedRoyalties={earnedFor(other(viewer))} />
           </div>
         ) : (
-          <div className="felt flex h-[150px] flex-col items-center justify-center gap-1 rounded-[26px] p-4 text-center text-[13px] font-semibold text-[color:var(--felt-label)]">
+          // Lika hög som motståndarens bräde, så att inget hoppar när det visas
+          <div className="felt flex h-[calc(min(40px,var(--card-h-cap,40px))*4.44+48px)] flex-col items-center justify-center gap-1 rounded-[26px] p-4 text-center text-[13px] font-semibold text-[color:var(--felt-label)]">
             {opp.hidden === 'opening' ? (
               <>
                 <span className="text-[22px]" aria-hidden="true">🂠</span>
@@ -347,6 +359,7 @@ export default function DuelRun({ initial, initialElapsed, active = true, onExit
             )}
           </div>
         )}
+        </div>
 
         {/* Ditt bräde (stort, nederst) — ram i din färg när det är din tur */}
         <div className="mt-1">
@@ -356,7 +369,10 @@ export default function DuelRun({ initial, initialElapsed, active = true, onExit
           ref={myBoardRef}
           key={`b${viewer}`}
           className={`relative rounded-[30px] transition-shadow duration-500 ${turn ? 'animate-fade-in' : ''}`}
-          style={turn ? { boxShadow: `0 0 0 3px color-mix(in srgb, var(--p${viewer + 1}) 70%, transparent), var(--glow-p${viewer + 1})` } : undefined}
+          style={{
+            ...(turn ? { boxShadow: `0 0 0 3px color-mix(in srgb, var(--p${viewer + 1}) 70%, transparent), var(--glow-p${viewer + 1})` } : {}),
+            ...(fit ? { '--card-h-cap': `${fit.me}px` } : {}),
+          } as React.CSSProperties}
         >
           <ShareBoards
             boards={() => [
@@ -378,6 +394,7 @@ export default function DuelRun({ initial, initialElapsed, active = true, onExit
             earnedRoyalties={earnedFor(viewer)}
             maxCardWidth={84}
           />
+        </div>
         </div>
       </DockLayout>
 

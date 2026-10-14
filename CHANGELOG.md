@@ -1,5 +1,15 @@
 # Changelog
 
+## 2026-10-14 — Båda brädena syns hela tiden på telefonen
+
+- **Hel hand och Spela:** båda brädena och panelen får plats på skärmen utan att man scrollar. Korten krymps lagom (motståndarens lite mindre än dina) utifrån skärmens höjd (`useFitBoards`)
+- **Panelen är en rad** när du har 1–3 kort: kortet, ett kort tips, ↶ (Ångra) och Klar
+- Handraden (+10 −8 …) visas bara på bred skärm under spelet. Den finns kvar under Poäng
+- Rubrikraden (hand, klocka, poäng) är tunnare. Gäller även Scenarion
+- Spela: den stora "Spelare X:s tur"-skylten visas bara på bred skärm. På telefon står turen i panelen, och skärmkanten lyser i spelarens färg
+- Dold öppning / FL-ruta är lika hög som brädet, så att inget hoppar när brädet visas
+- **Fix:** panelen letades upp med en global sökning och kunde hitta en dold fliks panel. Det gjorde att brädet ibland inte scrollades upp ovanför panelen. Nu används alltid panelen i samma vy (`dockFor`)
+
 ## 2026-10-14 — Jokern lila igen, men tydligare
 
 - Regnbågen är borta. Jokern har en tydligare lila toning (ljust lila uppe till vänster → mer mättat nere till höger), mörkare lila text och en lila kant. Samma på dela-bilden och i mörkt läge

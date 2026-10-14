@@ -31,7 +31,7 @@ interface Props {
 
 export default function SessionHeader({ length, handNo, dots, elapsed, extra, score, onExit, onScore }: Props) {
   return (
-    <div className="glass flex items-center gap-3 rounded-[22px] px-3.5 py-2.5">
+    <div className="glass flex items-center gap-3 rounded-[20px] px-3.5 py-1.5">
       <div className="min-w-0 flex-1">
         {length.kind === 'hands' ? (
           <HandsProgress n={length.n} handNo={handNo} dots={dots} extra={extra} />
@@ -52,7 +52,7 @@ export default function SessionHeader({ length, handNo, dots, elapsed, extra, sc
         aria-label="Visa ställningen"
         className="-my-1 rounded-[14px] px-2 py-1 text-right leading-none transition-[background,transform] duration-200 hover:bg-sunken/70 active:scale-95"
       >
-        <div className="text-[20px] font-extrabold tabular text-gold">{score}</div>
+        <div className="text-[18px] font-extrabold tabular text-gold">{score}</div>
         <div className="mt-0.5 flex items-center justify-end gap-0.5 text-[10px] font-bold uppercase tracking-[0.06em] text-ink-3">
           poäng <span className="text-[11px]">›</span>
         </div>

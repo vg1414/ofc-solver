@@ -12,20 +12,21 @@
 // ============================================================
 
 import { useEffect, type RefObject } from 'react';
+import { dockFor } from '../components/training/DockLayout';
 
 export function useRevealAboveDock(ref: RefObject<HTMLElement | null>, trigger: unknown) {
   useEffect(() => {
     if (!trigger) return;
     const reveal = () => {
       const b = ref.current?.getBoundingClientRect();
-      const d = document.querySelector('[data-dock]')?.getBoundingClientRect();
+      const d = dockFor(ref.current)?.getBoundingClientRect();
       if (!b || !d || d.height === 0 || window.matchMedia('(min-width: 1024px)').matches) return;
       const overlap = b.bottom - d.top + 10;
       if (overlap > 0) window.scrollBy({ top: overlap, behavior: 'smooth' });
     };
     const t = window.setTimeout(reveal, 120);
 
-    const dock = document.querySelector('[data-dock]');
+    const dock = dockFor(ref.current);
     let lastH = dock?.getBoundingClientRect().height ?? 0;
     let grow = 0;
     const ro = dock
