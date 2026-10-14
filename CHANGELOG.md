@@ -1,5 +1,10 @@
 # Changelog
 
+## 2026-10-14 — Regnbågsjokrar + guldglöden på rätt plats
+
+- **Jokrarna har regnbågens färger:** bakgrunden är en pastellregnbåge (röd → violett) som skimrar långsamt i sidled. Gäller korten i appen, jokerknappen och dela-bilden (där står regnbågen stilla). Mörkt läge har lite nedtonade färger. "Minska rörelse" stänger av skimret
+- **Guldglöden kring ett ensamt kort låg snett:** den satt på knappen runt kortet, men kortet är lyft (lite högre och större). Nu sitter glöden på själva kortet
+
 ## 2026-10-14 — Scenarion bedöms i förväg + foul/FL för båda dragen
 
 - **Scenarion bedöms redan i kön:** varje scenario räknas på Noggrann medan det väntar, så bedömningen är klar så fort du låst ditt drag. Är kön tom spelas ett scenario fram först (ingen längre väntan än förut). Tar du ett scenario mitt i bedömningen räknas det som förut

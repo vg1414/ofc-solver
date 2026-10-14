@@ -74,6 +74,7 @@ export default function PlayingCard({
         ${lifted ? '-translate-y-[0.12em] scale-[1.04]' : ''}
         ${ghost ? 'animate-ghost' : ''}
         ${snap ? 'animate-card-snap' : ''}
+        ${isJoker && !ghost ? 'joker-shimmer' : ''}
         ${className}
       `}
       style={cssVars}

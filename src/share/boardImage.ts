@@ -10,13 +10,14 @@
 //    läge som pussel — utan svaret).
 //  - Korten ritas som i appen: fyrfärgslek, valör uppe till vänster
 //    (Barlow Condensed), färgsymbol nere till höger (samma SVG-banor
-//    som SuitIcon), joker = gul stjärna.
+//    som SuitIcon), joker = gul stjärna på pastellregnbåge (stilla).
 // Alltid ljust tema, så bilden ser likadan ut för den som tar emot den.
 // Ritas i 2× upplösning så att den blir skarp på telefoner.
 // ============================================================
 
 import type { Board, Card, RowName, Suit } from '../engine/types';
 import { SUIT_PATHS } from '../components/cards/suitPaths';
+import { JOKER_RAINBOW } from '../components/cards/cardStyle';
 
 export interface ShareBoard {
   name: string;
@@ -75,7 +76,12 @@ function drawSuit(ctx: CanvasRenderingContext2D, suit: Suit | 'star', x: number,
 function drawCard(ctx: CanvasRenderingContext2D, card: Card, x: number, y: number) {
   const col = SUIT_COLORS[card.kind === 'joker' ? 'joker' : card.suit];
   roundRect(ctx, x, y, CARD_W, CARD_H, CARD_W * 0.14);
-  ctx.fillStyle = col.bg;
+  if (card.kind === 'joker') {
+    // Samma regnbåge som i appen (ett varv, vänster → höger som i CSS)
+    const rb = ctx.createLinearGradient(x, y, x + CARD_W, y);
+    JOKER_RAINBOW.forEach((c, i) => rb.addColorStop(i / (JOKER_RAINBOW.length - 1), c));
+    ctx.fillStyle = rb;
+  } else ctx.fillStyle = col.bg;
   ctx.fill();
   ctx.lineWidth = 1;
   ctx.strokeStyle = col.line;
