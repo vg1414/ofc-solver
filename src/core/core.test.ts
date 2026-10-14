@@ -183,6 +183,18 @@ describe('låsta drag (pinned)', () => {
     expect(Math.abs(alone.ev - mine.ev)).toBeLessThan(1);
   }, 120000);
 
+  it('pinnedOnly: räknar bara de låsta dragen, med samma siffror som en hel körning', () => {
+    const full = solveOpeningHand(cards, [], { simulations: 300, maxMs: 60000, pinned: [bad] });
+    const mine = full.options.find((o) => o.pinned)!;
+    const best: PinnedMove = [...full.best.placements.map((p) => ({ card: p.card, row: p.row })), ...full.best.discards.map((card) => ({ card, row: 'discard' as const }))];
+    const r = solveOpeningHand(cards, [], { simulations: 300, maxMs: 60000, pinned: [bad, best], pinnedOnly: true });
+    expect(r.options).toHaveLength(2);
+    expect(r.options.every((o) => o.pinned && o.finalist)).toBe(true);
+    // Samma blandningar och samma provframtider → exakt samma EV som i den hela körningen
+    expect(r.best.ev).toBe(full.best.ev);
+    expect(r.options.find((o) => sameMove(o))!.ev).toBe(mine.ev);
+  }, 120000);
+
   it('utan pinned: inga låsta, finalist-flaggan finns', () => {
     const bd = board('2c 7d', '9s 9d', 'Ah Jh 8h 4h');
     const r = solveFromBoard(bd, [parseCard('3h')], [], 'regular', { simulations: 200 });

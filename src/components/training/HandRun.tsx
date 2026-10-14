@@ -43,7 +43,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { GameVariant } from '../../engine/types';
-import type { SolverOptions } from '../../solver/solver';
+import type { DetailedSolverResult, SolverOptions } from '../../solver/solver';
 import { played, solverInput, startHand, type HandState } from '../../training/game';
 import { countPlaced, judge, type Move } from '../../training/moves';
 import { pinnedOptions } from '../../training/pinned';
@@ -167,6 +167,38 @@ export default function HandRun({ variant, settings, active = true, onExit, onRe
 
   // ---------- Din tur ----------
   const { solve: coachSolve } = coachJobs;
+
+  /** Solverinput för din tur (utan options) */
+  const turnInput = () =>
+    solverInput({
+      seat: h.seats[0],
+      cards: h.dealt,
+      variant,
+      opponent: h.seats[1].fl > 0 || turn!.round === 1 ? undefined : h.seats[1].board,
+      fl: turn!.fl,
+      options: {},
+    });
+
+  // Förberäknad bedömning: coachen börjar räkna när din tur börjar (solvern
+  // räknar ändå alla sätt att lägga korten), så svaret oftast är klart när
+  // du trycker Klar. Läget ändras inte under din tur, så input blir densamma.
+  const precomputed = useRef<{ key: string; promise: Promise<DetailedSolverResult> } | null>(null);
+  useEffect(() => {
+    if (!turn || turn.seat !== 0) return;
+    const key = `${h.no}-${h.idx}`;
+    if (precomputed.current?.key === key) return; // StrictMode kör effekten två gånger
+    const last = countPlaced(h.seats[0].board) + turn.place >= 13;
+    if (!coach && (turn.fl || last)) return; // inget att visa → ingen räkning
+    const promise = coachSolve({
+      ...turnInput(),
+      options: turn.fl ? {} : coach ? COACH_OPTIONS : RISK_OPTIONS,
+    });
+    promise.catch(() => {}); // fel hanteras när draget bedöms
+    precomputed.current = { key, promise };
+    // Kör en gång per tur (h.no + h.idx identifierar turen)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [h.no, h.idx]);
+
   const confirm = () => {
     if (!turn || !myTurn || !mb.done) return;
     const move = mb.move;
@@ -176,26 +208,35 @@ export default function HandRun({ variant, settings, active = true, onExit, onRe
     // Draget bedöms alltid när det finns något att visa: coachen och/eller
     // risk-mätaren (foul/FL). Utan coach räcker en snabbare räkning.
     if (coach || (!turn.fl && !last)) {
-      const input = solverInput({
-        seat: h.seats[0],
-        cards: h.dealt,
-        variant,
-        opponent: h.seats[1].fl > 0 || turn.round === 1 ? undefined : h.seats[1].board,
-        fl: turn.fl,
-        options: {},
-      });
+      const input = turnInput();
       const entry: CoachEntry = { key, hand: h.no, round: turn.round, fl: turn.fl, board: h.seats[0].board, move, input, j: null, opening: myOpening };
       setCoachLog((l) => [...l, entry]);
       if (!turn.fl && !last) setRisk({ key, hand: h.no, foul: null, fl: null });
-      coachSolve({
-        ...input,
-        // Ditt drag låses (pinned): det sållas aldrig bort och räknas lika noga
-        // som solverns val, på samma blandningar — annars kan ett bortsållat
-        // drag få en slumpmässigt för hög/låg EV och foul-procent
-        options: turn.fl ? {} : pinnedOptions(coach ? COACH_OPTIONS : RISK_OPTIONS, move),
-      })
-        .then((res) => {
-          const j = judge(res, move);
+      // Ditt drag låst (pinned): det sållas aldrig bort och räknas lika noga
+      // som solverns val, på samma blandningar — annars kan ett bortsållat
+      // drag få en slumpmässigt för hög/låg EV och foul-procent
+      const pinnedRun = () =>
+        coachSolve({ ...input, options: turn.fl ? {} : pinnedOptions(coach ? COACH_OPTIONS : RISK_OPTIONS, move) }).then((res) => judge(res, move));
+      // Förberäkningen räcker om ditt drag räknades klart (finalist). Sållades
+      // det bort räknas BARA ditt drag och bästa draget om (pinnedOnly), på
+      // samma blandningar — mycket snabbare än att räkna alla drag igen.
+      // Misslyckades förberäkningen räknas allt om med draget låst.
+      const pre = precomputed.current?.key === key ? precomputed.current.promise : null;
+      precomputed.current = null;
+      const judged = pre
+        ? pre.then(
+            (res) => {
+              const j = judge(res, move);
+              if (turn.fl || (!j.screened && !j.missing)) return j;
+              const opts = pinnedOptions(coach ? COACH_OPTIONS : RISK_OPTIONS, move);
+              const pinned = [...(opts.pinned ?? []), ...(pinnedOptions({}, j.best).pinned ?? [])];
+              return coachSolve({ ...input, options: { ...opts, pinned, pinnedOnly: true } }).then((r) => judge(r, move));
+            },
+            () => pinnedRun(),
+          )
+        : pinnedRun();
+      judged
+        .then((j) => {
           if (!turn.fl && !last) {
             const o = j.player ?? j.best;
             setRisk((r) => (r?.key === key ? { ...r, foul: o.foulProbability ?? null, fl: o.flProbability ?? null } : r));
@@ -212,7 +253,7 @@ export default function HandRun({ variant, settings, active = true, onExit, onRe
         });
     } else {
       // Ingen räkning (sista draget / FL utan coach) — draget hamnar ändå i listan
-      const input = solverInput({ seat: h.seats[0], cards: h.dealt, variant, opponent: h.seats[1].fl > 0 || turn.round === 1 ? undefined : h.seats[1].board, fl: turn.fl, options: {} });
+      const input = turnInput();
       setCoachLog((l) => [...l, { key, hand: h.no, round: turn.round, fl: turn.fl, board: h.seats[0].board, move, input, j: null, opening: myOpening }]);
     }
     setToast(null);

@@ -1,5 +1,10 @@
 # Changelog
 
+## 2026-10-14 — Coachen räknar medan du funderar (Hel hand)
+
+- **Coachen börjar räkna när din tur börjar**, så bedömningen oftast är klar direkt när du trycker Klar (uppmätt: 85 ms i stället för flera sekunder). Gäller även foul/FL-mätaren utan coach
+- Sållades ditt drag bort i förberäkningen räknas bara ditt drag och bästa draget om, på samma blandningar (nytt solveralternativ `pinnedOnly`). Det tar några sekunder i stället för upp till 10 och ger exakt samma siffror som en hel omräkning
+
 ## 2026-10-14 — Jämför två läggningar i Solver
 
 - **Vanlig hand:** när ett helt drag ligger på brädet (öppningen, ett kort, eller Pineapple: två kort + kortet som kastas kvar i handen) dyker "⇄ Jämför mot…" upp. B börjar som en kopia av A. Flytta kort och tryck "Jämför A och B"

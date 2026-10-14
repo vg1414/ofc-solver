@@ -35,6 +35,13 @@ export interface SolverOptions {
    * de exakt och läggs till i listan om de inte redan är med.
    */
   pinned?: PinnedMove[];
+  /**
+   * Räkna BARA de låsta dragen (inte Fantasy Land). Snabb omräkning när
+   * man redan vet vilka drag som ska jämföras, t.ex. ditt drag mot bästa
+   * draget från en tidigare körning — samma blandningar, så siffrorna går
+   * att jämföra direkt.
+   */
+  pinnedOnly?: boolean;
 }
 
 /** Ett komplett drag: vilket kort som hamnar i vilken rad (eller kastas) */
@@ -214,7 +221,7 @@ export function solveFromBoard(
   const t0 = Date.now();
   const res: CandidateResult[] = evaluateCandidates(
     { rows, hand, unseen, opponent: opp, variant, maxSims: simulations, maxMs, onProgress },
-    cands,
+    options.pinnedOnly && options.pinned?.length ? cands.filter((c) => c.pinned) : cands,
   );
   const timedOut = Date.now() - t0 >= maxMs;
 
