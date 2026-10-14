@@ -5,6 +5,7 @@
 - `CLAUDE.md` är nu kort (ca en tredjedel så stor) med en karta som visar vilken fil som ska läsas för varje del av appen
 - Detaljerna ligger i `docs/`: `solver.md`, `traning.md`, `spela.md` och `ui.md`
 - Den gamla ursprungsplanen `toasty-questing-dove.md` är borttagen (finns kvar i git-historiken)
+- README har ett nytt avsnitt, "Dokumentation för utveckling", som pekar ut filerna
 
 ## 2026-10-14 — Coachen räknar medan du funderar (Hel hand)
 

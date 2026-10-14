@@ -76,6 +76,14 @@ En webbaserad solver för Open Face Chinese Poker (OFC) med stöd för hemspels-
 - Tailwind CSS 4 (styling, temat ligger som CSS-variabler i `src/index.css`)
 - Web Worker (solver körs i bakgrunden utan att frysa UI)
 
+## Dokumentation för utveckling
+
+- `CLAUDE.md`: kort översikt med husregler, arbetsrutin och en karta över vilken fil som beskriver vad
+- `docs/solver.md`: hur solvern räknar och hur den används från UI
+- `docs/traning.md`: Träna-fliken (scenarion, joker, hel hand, coach, sparade drag)
+- `docs/spela.md`: 2-spelarläget och förberedelsen för online
+- `docs/ui.md`: bräden, kort, dela-bild, animationer, splash och ikoner
+
 ## Köra lokalt
 
 ```bash
