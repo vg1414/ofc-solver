@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-10-14 — Foul/FL i coachens bricka
+
+- **Hel hand:** coachens bricka efter varje drag visar nu Foul % och FL % för ditt drag ("Du · Foul 44 % · FL 4 %") och för bästa draget i den gula delen. Fantasy Land-drag har inga sådana siffror
+
 ## 2026-10-14 — Regnbågsjokrar + guldglöden på rätt plats
 
 - **Jokrarna har regnbågens färger:** bakgrunden är en pastellregnbåge (röd → violett) som skimrar långsamt i sidled. Gäller korten i appen, jokerknappen och dela-bilden (där står regnbågen stilla). Mörkt läge har lite nedtonade färger. "Minska rörelse" stänger av skimret

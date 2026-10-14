@@ -19,7 +19,7 @@ import { explainMove, type Slot } from '../../training/explain';
 import PlayingCard from '../cards/PlayingCard';
 import BottomSheet from '../ui/BottomSheet';
 import { GradeBadge } from './ScenarioFeedback';
-import ReviewBoard, { evFmt } from './ReviewBoard';
+import ReviewBoard, { RiskText, evFmt } from './ReviewBoard';
 import { haptic } from '../cards/cardStyle';
 
 export interface CoachEntry {
@@ -90,10 +90,13 @@ export function CoachPill({ entry, onOpen }: { entry: CoachEntry; onOpen: (e: Co
           <span className="text-ink-2">Coach: </span>
           <span className="tabular text-ink">{best ? 'bästa draget!' : `${evFmt.format(-j.diff)} EV`}</span>
         </span>
+        {/* Foul och FL: ditt drag, och bästa draget i den gula brickan (inte i Fantasy Land) */}
+        {!entry.fl && <RiskText opt={j.player} label={best ? undefined : 'Du'} className="text-[11px]" />}
         {showCards && (
-          <span className="flex items-center gap-1.5 rounded-full bg-gold-soft px-1.5 py-[2px]">
+          <span className="flex flex-wrap items-center gap-1.5 rounded-[12px] bg-gold-soft px-1.5 py-[2px]">
             <span className="text-[10.5px] font-extrabold text-gold">★ Bästa</span>
             <BestMove j={j} />
+            <RiskText opt={j.best} className="text-[11px]" />
           </span>
         )}
       </span>

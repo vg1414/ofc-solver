@@ -38,15 +38,23 @@ const pct = (p: number) => {
   return v > 0 && v < 1 ? '<1 %' : `${Math.round(v)} %`;
 };
 
-/** Foul-risk och FL-chans för ett drag (bara det solvern har räknat) */
-function Risk({ opt, label }: { opt: Judgement['best'] | null; label?: string }) {
-  if (!opt || (opt.foulProbability === undefined && opt.flProbability === undefined)) return <div />;
+/** Foul-risk och FL-chans för ett drag (bara det solvern har räknat). Används även i coachens bricka. */
+export function RiskText({ opt, label, className = '' }: { opt: Judgement['best'] | null; label?: string; className?: string }) {
+  if (!opt || (opt.foulProbability === undefined && opt.flProbability === undefined)) return null;
   return (
-    <div className="text-center text-[11.5px] font-bold tabular">
+    <span className={`font-bold tabular ${className}`}>
       {label && <span className="text-ink-3">{label} · </span>}
       {opt.foulProbability !== undefined && <span className={opt.foulProbability >= 0.25 ? 'text-danger' : 'text-ink-2'}>Foul {pct(opt.foulProbability)}</span>}
       {opt.foulProbability !== undefined && opt.flProbability !== undefined && <span className="text-ink-3"> · </span>}
       {opt.flProbability !== undefined && <span className="text-fl">FL {pct(opt.flProbability)}</span>}
+    </span>
+  );
+}
+
+function Risk({ opt, label }: { opt: Judgement['best'] | null; label?: string }) {
+  return (
+    <div className="text-center text-[11.5px]">
+      <RiskText opt={opt} label={label} />
     </div>
   );
 }
