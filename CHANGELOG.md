@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-10-14 — Snabbare scenariokö (särskilt ★ Joker)
+
+- Scenariokön använder nu **två räknare samtidigt**: en spelar fram nya scenarion och en bedömer dem. Förut gjorde en enda räknare båda sakerna i tur och ordning
+- Kön fylls med scenarion först, och bedömningen sker vid sidan av. Du ser alltså mer sällan "Datorn spelar fram…" mellan scenarion
+- Bakgrund: en bedömning med joker i handen tar ungefär 4× så lång tid som en vanlig (uppmätt: ~14 s mot ~3,6 s på dator) och blockerade förut framspelningen av nästa scenario
+
 ## 2026-10-14 — Projektdokumentationen uppdelad
 
 - `CLAUDE.md` är nu kort (ca en tredjedel så stor) med en karta som visar vilken fil som ska läsas för varje del av appen
