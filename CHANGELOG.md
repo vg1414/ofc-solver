@@ -1,5 +1,10 @@
 # Changelog
 
+## 2026-10-14 — Scenarion bedöms i förväg + foul/FL för båda dragen
+
+- **Scenarion bedöms redan i kön:** varje scenario räknas på Noggrann medan det väntar, så bedömningen är klar så fort du låst ditt drag. Är kön tom spelas ett scenario fram först (ingen längre väntan än förut). Tar du ett scenario mitt i bedömningen räknas det som förut
+- **Foul % och FL % visas alltid** under både "Ditt drag" och "★ Bästa draget" (Scenarion, coachens ark och sparade drag). Foul ≥ 25 % är röd
+
 ## 2026-10-14 — Nytt kort syns tydligt + panelen täcker inte bottenraden
 
 - **Nytt kort flyger in:** när du får ett enda kort att lägga (Hel hand, Spela, Scenarion/Joker) visas det först stort mitt på skärmen och flyger sedan ner i handen. Där glöder det svagt i guld tills det är lagt. Öppning och Pineapple som förut. "Minska rörelse" hoppar över animationen

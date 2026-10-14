@@ -18,6 +18,8 @@
 // ============================================================
 
 import type { Board, Card, GameVariant } from '../engine/types';
+import type { SolverInput } from '../hooks/useSolver';
+import type { DetailedSolverResult, SolverOptions } from '../solver/solver';
 import { ROWS, countPlaced } from './moves';
 import { GEN_OPTIONS, applyToSeat, computerMove, newDeck, newSeat, roundsFor, turnOrder, type Seat, type SeatId, type Solve } from './game';
 
@@ -32,6 +34,23 @@ export interface Scenario {
   deadCards: Card[];
   /** Antal kort som ska läggas (resten kastas) */
   place: number;
+  /** Färdig bedömning (SCENARIO_EVAL), räknad i förväg av scenariokön */
+  evaluation?: DetailedSolverResult;
+}
+
+/** Bedömningsnivå för scenarion: Noggrann */
+export const SCENARIO_EVAL: SolverOptions = { simulations: 2000 };
+
+/** Solver-input för att bedöma scenariot */
+export function scenarioInput(s: Scenario, options: SolverOptions): SolverInput {
+  return {
+    board: s.board,
+    cards: s.hand,
+    deadCards: s.deadCards,
+    variant: s.variant,
+    opponentBoard: countPlaced(s.opponentBoard) > 0 ? s.opponentBoard : undefined,
+    options,
+  };
 }
 
 export function scenarioLabel(s: Scenario): string {

@@ -5,9 +5,9 @@
 // Två solver-workers arbetar samtidigt:
 //  - scenariokön (useScenarioPool, ägs av TrainingView) spelar fram
 //           kommande scenarion i förväg — redan från startsidan.
-//  - `ev`   bedömer scenariot du ser just nu (Noggrann, 2000 sim). Den
-//           startar direkt när scenariot visas, så resultatet oftast är
-//           klart när du har lagt dina kort.
+//  - `ev`   bedömer scenariot du ser just nu (Noggrann, 2000 sim) — men
+//           bara om kön inte redan hann bedöma det (Scenario.evaluation),
+//           och när ditt drag måste räknas om med draget låst.
 //
 // Faser:  loading → play → (judging) → feedback → loading … → summary
 //   loading  väntar på nästa scenario från kön
@@ -21,9 +21,9 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { GameVariant } from '../../engine/types';
-import type { DetailedSolverResult, SolverOptions } from '../../solver/solver';
+import type { DetailedSolverResult } from '../../solver/solver';
 import { countPlaced, judge, type Judgement, type Move } from '../../training/moves';
-import { scenarioLabel, type Scenario } from '../../training/scenarios';
+import { SCENARIO_EVAL, scenarioInput, scenarioLabel, type Scenario } from '../../training/scenarios';
 import type { ScenarioPool } from '../../training/useScenarioPool';
 import { CANCELLED, useSolverJobs } from '../../training/useSolverJobs';
 import { SOLVER_HAS_PINNED, pinnedOptions } from '../../training/pinned';
@@ -42,9 +42,6 @@ import ShareBoards from '../share/ShareBoards';
 import { applyMove } from '../../training/moves';
 import { MoveExplain, MoveReviewSheet } from './CoachReview';
 import { newRunId, toggleSaved, useSavedMoves } from '../../training/savedMoves';
-
-/** Bedömningsnivå: Noggrann */
-const EVAL_OPTIONS: SolverOptions = { simulations: 2000 };
 
 interface ScenarioRunProps {
   variant: GameVariant;
@@ -105,14 +102,7 @@ export default function ScenarioRun({ variant, jokers = false, pool, count, onEx
   const startEval = useCallback(
     (s: Scenario, pin?: Move) => {
       setRerun(!!pin);
-      evSolve({
-        board: s.board,
-        cards: s.hand,
-        deadCards: s.deadCards,
-        variant: s.variant,
-        opponentBoard: countPlaced(s.opponentBoard) > 0 ? s.opponentBoard : undefined,
-        options: pin ? pinnedOptions(EVAL_OPTIONS, pin) : EVAL_OPTIONS,
-      })
+      evSolve(scenarioInput(s, pin ? pinnedOptions(SCENARIO_EVAL, pin) : SCENARIO_EVAL))
         .then((res) => setResult({ id: s.id, res, pinned: !!pin }))
         .catch((e: Error) => {
           if (e.message !== CANCELLED) setEvalError(e.message);
@@ -130,12 +120,20 @@ export default function ScenarioRun({ variant, jokers = false, pool, count, onEx
     const s = take();
     if (!s) return;
     takenFor.current = done.length;
-    setCurrent(s);
-    setResult(null);
+    // Bedömningen följer inte med i current (den ligger i result)
+    const { evaluation, ...scenario } = s;
+    setCurrent(scenario);
     setEvalError(null);
     setLocked(null);
     setPhase('play');
-    startEval(s);
+    if (evaluation) {
+      // Kön har redan bedömt scenariot → svaret finns direkt
+      setRerun(false);
+      setResult({ id: s.id, res: evaluation, pinned: false });
+    } else {
+      setResult(null);
+      startEval(scenario);
+    }
   }, [phase, ready, take, done.length, startEval]);
 
   // Klar + resultat finns → bedöm

@@ -33,6 +33,24 @@ function Discards({ cards, label }: { cards: Card[]; label: string }) {
   );
 }
 
+const pct = (p: number) => {
+  const v = p * 100;
+  return v > 0 && v < 1 ? '<1 %' : `${Math.round(v)} %`;
+};
+
+/** Foul-risk och FL-chans för ett drag (bara det solvern har räknat) */
+function Risk({ opt, label }: { opt: Judgement['best'] | null; label?: string }) {
+  if (!opt || (opt.foulProbability === undefined && opt.flProbability === undefined)) return <div />;
+  return (
+    <div className="text-center text-[11.5px] font-bold tabular">
+      {label && <span className="text-ink-3">{label} · </span>}
+      {opt.foulProbability !== undefined && <span className={opt.foulProbability >= 0.25 ? 'text-danger' : 'text-ink-2'}>Foul {pct(opt.foulProbability)}</span>}
+      {opt.foulProbability !== undefined && opt.flProbability !== undefined && <span className="text-ink-3"> · </span>}
+      {opt.flProbability !== undefined && <span className="text-fl">FL {pct(opt.flProbability)}</span>}
+    </div>
+  );
+}
+
 interface ReviewBoardProps {
   board: Board;
   move: Move;
@@ -67,6 +85,15 @@ export default function ReviewBoard({ board, move, judgement, maxCardWidth = 92,
             { value: 'best', label: judgement.playerEv > judgement.bestEv ? 'Solverns val' : '★ Bästa draget', sub: evFmt.format(judgement.bestEv) },
           ]}
         />
+      )}
+      {/* Foul och FL för båda dragen, alltid (under respektive knapp) */}
+      {same ? (
+        <Risk opt={judgement.player ?? best} label="Ditt drag" />
+      ) : (
+        <div className="grid grid-cols-2 gap-2">
+          <Risk opt={judgement.player} />
+          <Risk opt={best} />
+        </div>
       )}
       {view === 'mine' ? (
         // Öppningshand: alla kort är nya, så de visas som vanliga kort
