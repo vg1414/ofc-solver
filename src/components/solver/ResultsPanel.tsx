@@ -7,6 +7,8 @@
 // - Övriga alternativ fälls ut i en lista. Tryck på ett → det visas
 //   som spökkort på brädet och får en egen "Lägg så här"-knapp.
 // - Öppning/FL: minibild av brädet med royalties.
+// - "≈ lika bra": skillnaden mot bästa draget är mindre än 2 × dess
+//   standardfel (evDiffSE) → kan lika gärna vara slump.
 // ============================================================
 
 import { useEffect, useRef, useState } from 'react';
@@ -19,6 +21,17 @@ import ResultBoardPreview from './ResultBoardPreview';
 const ROW_LABEL: Record<RowName, string> = { top: 'Toppen', middle: 'Mitten', bottom: 'Botten' };
 
 const evFmt = new Intl.NumberFormat('sv-SE', { signDisplay: 'always', minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+/**
+ * Är skillnaden mot bästa draget bara simuleringsbrus?
+ * evDiffSE = standardfelet för EV-skillnaden mot bästa draget, mätt på
+ * samma blandningar. |skillnad| < 2·SE ≈ 95 % felmarginal. Saknas SE
+ * (exakt uträknat, eller bortsållat alternativ) räknas det inte som lika.
+ */
+function withinMargin(opt: DetailedPlacementOption, best: DetailedPlacementOption) {
+  const se = opt.evDiffSE;
+  return opt !== best && se !== undefined && se > 0 && Math.abs(opt.ev - best.ev) < 2 * se;
+}
 
 function pct(p: number) {
   const v = p * 100;
@@ -147,6 +160,9 @@ export default function ResultsPanel({
   const featured = options[previewIndex] ?? best;
   const isBest = previewIndex === 0;
   const ev = useCountUp(featured.ev);
+  const featuredEqual = withinMargin(featured, best);
+  const equalCount = options.filter((o) => withinMargin(o, best)).length;
+  const anyEqual = equalCount > 0;
 
   return (
     <div className="flex flex-col gap-2 animate-rise-in">
@@ -200,9 +216,16 @@ export default function ResultsPanel({
               <div className={`text-[32px] font-extrabold leading-none tabular tracking-[-0.03em] ${isBest ? 'text-gold' : 'text-ink'}`}>
                 {evFmt.format(ev)}
               </div>
-              <div className={`mt-1 text-[11px] font-bold tabular ${isBest ? 'text-ink-3' : 'text-danger'}`}>
+              <div className={`mt-1 text-[11px] font-bold tabular ${isBest ? 'text-ink-3' : featuredEqual ? 'text-ink-3' : 'text-danger'}`}>
                 {isBest ? 'EV i poäng' : `${evFmt.format(featured.ev - best.ev)} mot bästa`}
               </div>
+              {featuredEqual && (
+                <div className="mt-1 flex justify-end">
+                  <Chip tone="good" small title={`Skillnaden är mindre än felmarginalen ±${evFmt.format(2 * featured.evDiffSE!).slice(1)}`}>
+                    ≈ lika bra
+                  </Chip>
+                </div>
+              )}
             </div>
           </div>
           <div className="mt-2.5">
@@ -231,7 +254,8 @@ export default function ResultsPanel({
           onClick={() => setExpanded(true)}
           className="btn-ghost self-center rounded-full px-4 py-1.5 text-[12.5px] font-bold"
         >
-          Visa alla {options.length} alternativ ▾
+          Visa alla {options.length} alternativ
+          {anyEqual && <span className="text-accent-ink"> · {equalCount} ≈ lika bra</span>} ▾
         </button>
       )}
 
@@ -240,6 +264,7 @@ export default function ResultsPanel({
         <div className="glass overflow-hidden rounded-[22px] divide-y divide-line animate-fade-in">
           {options.map((opt, i) => {
             const active = previewIndex === i;
+            const equal = withinMargin(opt, best);
             return (
               <div
                 key={i}
@@ -275,13 +300,30 @@ export default function ResultsPanel({
                   </div>
                   <div className="text-right shrink-0">
                     <div className="text-[16px] font-extrabold tabular">{evFmt.format(opt.ev)}</div>
-                    {i > 0 && <div className="text-[10.5px] font-bold text-danger tabular">{evFmt.format(opt.ev - best.ev)}</div>}
+                    {i > 0 && (
+                      <div className={`text-[10.5px] font-bold tabular ${equal ? 'text-ink-3' : 'text-danger'}`}>
+                        {evFmt.format(opt.ev - best.ev)}
+                      </div>
+                    )}
+                    {equal && (
+                      <div className="mt-0.5">
+                        <Chip tone="good" small title={`Inom felmarginalen ±${evFmt.format(2 * opt.evDiffSE!).slice(1)}`}>
+                          ≈ lika bra
+                        </Chip>
+                      </div>
+                    )}
                     {active && <div className="text-[10.5px] font-bold text-accent-ink">visas</div>}
                   </div>
                 </div>
               </div>
             );
           })}
+          {anyEqual && (
+            <p className="px-3.5 py-2.5 text-[11.5px] font-medium leading-snug text-ink-3">
+              <span className="font-bold text-accent-ink">≈ lika bra</span> = skillnaden mot bästa draget är mindre än
+              simuleringarnas felmarginal. Dragen är i praktiken lika bra – en ny körning kan byta ordning på dem.
+            </p>
+          )}
         </div>
       )}
     </div>

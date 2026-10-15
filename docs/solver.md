@@ -17,6 +17,8 @@ Nivåer: Snabb 300 sim (max 8 s), Normal 800 (20 s), Noggrann 2000 (45 s).
 
 **Viktigt i resultatet:** `result.options` innehåller ALLA kandidater, inte bara de som visas. `result.best` är solverns val. Fält per alternativ: `finalist` (räknades klart), `pinned`, `evDiffSE`. `useSolver` sorterar för visning (`solverOrder.ts`): bästa draget först, resten efter EV.
 
+**"≈ lika bra" i resultatlistan** (`ResultsPanel` `withinMargin`): ett alternativ vars |EV − bästa EV| < 2·`evDiffSE` märks med en grön "≈ lika bra"-bricka, skillnaden visas grå i stället för röd, och en förklaring står under listan. Ihopfälld lista: "Visa alla 6 alternativ · N ≈ lika bra". Bara finalister har `evDiffSE` (bortsållade och exakt uträknade märks aldrig).
+
 **Förberäknad data som bygger på husreglerna:** `core/poolData.ts` (motståndarbräden, genereras av `scripts/buildPool.ts`) och `core/flValue.ts`. Ändras reglerna måste båda räknas om.
 
 ## Använda solvern från UI

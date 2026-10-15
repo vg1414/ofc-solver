@@ -1,5 +1,10 @@
 # Changelog
 
+## 2026-10-15 — Solvern: "≈ lika bra" när skillnaden är brus
+
+- Alternativ som ligger **inom simuleringarnas felmarginal** från bästa draget (skillnaden mindre än 2 standardfel) märks nu **≈ lika bra**, och skillnaden visas grå i stället för röd. Gäller listan, det förhandsvisade alternativet och knappen "Visa alla … alternativ"
+- En kort förklaring under listan: dragen är i praktiken lika bra, en ny körning kan byta ordning på dem. Exempel: öppningen 8♠ 5♣ 7♦ joker 4♦, där de två bästa dragen bytte plats vid 6000 simuleringar
+
 ## 2026-10-15 — Fota brädet: öppningshand och räkna direkt
 
 - Ett foto med högst 5 kort och inget löst kort tolkas nu som en **öppningshand**, även om korten ligger i rader (t.ex. mitten 8♠5♣, botten 7♦ joker 4♦). Förut blev de två raderna ett lagt bräde
