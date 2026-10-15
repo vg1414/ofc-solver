@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-10-15 — Fota brädet
+
+- Ny knapp **📷 Fota brädet** i Solver-fliken: fota ditt (eller motståndarens) bräde, så läses korten av automatiskt
+- Arket **"Stämmer det här?"** visar raderna. Kort som modellen var osäker på har gul ring. Tryck ett kort för att byta eller ta bort det, "+" för att lägga till, och flytta en rad med knapparna Toppen/Mitten/Botten/Att lägga. Omöjliga lägen (dubbla kort, för många i en rad, fler än 2 jokrar) stoppas
+- Ett kort som ligger för sig självt blir nästa kort att lägga. Fullt bräde + lösa kort = Fantasy Land-hand (14–16 kort) direkt till FL-lösaren
+- Efter ditt bräde: "Fota motståndaren också" eller "Räkna bara på mitt bräde"
+- Avläsningen görs av Googles Gemini (gratisnivå) via en egen Cloudflare Worker (`worker/photo-worker.js`), så att nyckeln aldrig syns i appen. Snabb modell först (≈ 2 s), en noggrannare dubbelkollar bara när svaret ser fel ut eller är osäkert
+
 ## 2026-10-14 — Dold motståndare vid öppningshand (Scenarion/★ Joker)
 
 - När scenariot är din öppningshand visas inte längre motståndarens 5 kort. Öppningen läggs dolt, precis som i Hel hand mot datorn

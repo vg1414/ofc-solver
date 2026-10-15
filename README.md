@@ -10,6 +10,7 @@ En webbaserad solver för Open Face Chinese Poker (OFC) med stöd för hemspels-
 - 5-tal som handkategori (20p bottom / 40p middle) — möjligt med joker
 - Monte Carlo-solver som räknar ut förväntat poängvärde (EV) per placering, inklusive FL-chans och foul-risk
 - Exakt Fantasy Land-lösare (13–16 kort, provar alla uppställningar)
+- **Fota brädet:** korten läses av från ett foto (Gemini via en egen Cloudflare Worker), sedan "Stämmer det här?" där osäkra kort är markerade och kan rättas
 
 ## Gränssnitt
 
@@ -83,6 +84,7 @@ En webbaserad solver för Open Face Chinese Poker (OFC) med stöd för hemspels-
 - `docs/traning.md`: Träna-fliken (scenarion, joker, hel hand, coach, sparade drag)
 - `docs/spela.md`: 2-spelarläget och förberedelsen för online
 - `docs/ui.md`: bräden, kort, dela-bild, animationer, splash och ikoner
+- `docs/foto.md`: Fota brädet (fotoarket, Workern, modellerna, fototester)
 
 ## Köra lokalt
 

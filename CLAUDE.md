@@ -6,7 +6,7 @@ Läses automatiskt av varje ny Claude-session. Håll den kort: bara sånt som g�
 
 Webbapp för **Open Face Chinese Poker** med Davids hemspelsregler. Tre flikar:
 
-- **Solver** – mata in läget, få bästa draget med EV (förväntade poäng).
+- **Solver** – mata in läget (eller fota brädet), få bästa draget med EV (förväntade poäng).
 - **Träna** – öva mot solvern: Scenarion, ★ Joker och Hel hand mot datorn.
 - **Spela** – 2 spelare på samma telefon (förberett för online).
 
@@ -31,6 +31,7 @@ Förhandsvisning i Claude-appen: `.claude/launch.json` ligger i föräldermappen
 | Solvern (`src/core/`, `src/solver/`, `src/workers/`, `useSolver`), Solver-fliken | [docs/solver.md](docs/solver.md) |
 | Träna-fliken (`src/components/training/`, `src/training/`) | [docs/traning.md](docs/traning.md) |
 | Spela-fliken (`src/components/play/`, `src/match/`) | [docs/spela.md](docs/spela.md) |
+| Fota brädet (`src/photo/`, `PhotoSheet`, `worker/`) | [docs/foto.md](docs/foto.md) |
 | Bräden, kort, dela-bild, nytt kort-animation, splash, ikoner | [docs/ui.md](docs/ui.md) |
 | Vad som ändrats och när | `CHANGELOG.md` |
 

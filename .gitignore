@@ -22,3 +22,8 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Worker: lokala hemligheter och wranglers cache
+worker/.dev.vars
+.wrangler
+worker/.wrangler

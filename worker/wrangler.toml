@@ -1,0 +1,12 @@
+name = "ofc-photo"
+main = "photo-worker.js"
+compatibility_date = "2026-10-01"
+
+# Läser av fotade bräden med Gemini – se photo-worker.js och docs/foto.md.
+# Ingen KV/D1/cron: drar bara Workers-anrop (1 per foto) på kontots gemensamma kvot,
+# se KVOTER.md i Claude-mappen.
+#
+# --- Secrets (sätts med wrangler, ALDRIG här) ---
+#   GEMINI_KEY   Gemini API-nyckel (projekt "OFC Solver", gratisnivå, ingen fakturering)
+#                    npx wrangler secret put GEMINI_KEY
+#   Lokalt (npx wrangler dev): lägg GEMINI_KEY=... i worker/.dev.vars (gitignorerad).

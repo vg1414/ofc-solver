@@ -48,6 +48,8 @@ import Segmented from '../ui/Segmented';
 import ResultsPanel, { SolverProgress } from './ResultsPanel';
 import ResultBoardPreview from './ResultBoardPreview';
 import { simPreset } from './simPresets';
+import PhotoSheet, { type PhotoChoice } from './PhotoSheet';
+import { collect, type PhotoRow } from '../../photo/photoLayout';
 
 const ROWS: RowName[] = ['top', 'middle', 'bottom'];
 
@@ -112,6 +114,8 @@ export default function SolverView({ simulations }: SolverViewProps) {
   // FL-handens visningsordning (ändrar inte handen). Börjar osorterad.
   const [flSort, setFlSort] = useState<SortMode>('dealt');
   const [compare, setCompare] = useState<CompareSetup | null>(null);
+  // Fota brädet: vems bräde arket fotar just nu (null = stängt)
+  const [photoFor, setPhotoFor] = useState<'me' | 'opponent' | null>(null);
 
   const placed = countPlaced(myBoard);
   const oppPlaced = countPlaced(opponentBoard);
@@ -418,6 +422,55 @@ export default function SolverView({ simulations }: SolverViewProps) {
     useGameStore.getState().clearSelectedCard();
   };
 
+  // ---------- Fota brädet ----------
+  const boardCards = (b: Board) => ROWS.flatMap((r) => b[r].cards.filter((c): c is Card => c !== null));
+
+  /** Lägger ut det fotade läget. Mitt bräde = ny hand; motståndaren = byt ut hens bräde. */
+  const applyPhoto = (rows: PhotoRow[], choice: PhotoChoice) => {
+    const who = photoFor;
+    const c = collect(rows);
+    cancelSolver();
+    clearResult();
+    const put = (cards: Card[], row: RowName) =>
+      cards.forEach((card, i) => {
+        useGameStore.getState().selectCard(card);
+        useGameStore.getState().placeCard(row, i);
+      });
+
+    if (who === 'me') {
+      resetGame();
+      const st = useGameStore.getState();
+      if (choice === 'fantasyLand') {
+        const hand = [...c.top, ...c.middle, ...c.bottom, ...c.hand];
+        st.setSolverMode('fantasyLand');
+        useGameStore.getState().setFLCardCount(hand.length as FLCardCount);
+        hand.forEach((card) => useGameStore.getState().addSelectedCard(card));
+        setPhotoFor(null);
+        return;
+      }
+      st.setActivePlayer('me');
+      ROWS.forEach((r) => put(c[r], r));
+      useGameStore.getState().clearSelectedCard();
+      const placedNow = c.top.length + c.middle.length + c.bottom.length;
+      // Kortet som låg för sig självt blir nästa kort (flera = handen att välja ur)
+      if (placedNow > 0 && c.hand.length === 1) useGameStore.getState().selectCard(c.hand[0]);
+      else c.hand.forEach((card) => useGameStore.getState().addSelectedCard(card));
+      setPhotoFor(choice === 'opponent' ? 'opponent' : null);
+      return;
+    }
+
+    // Motståndaren: töm hens bräde och lägg ut det fotade. Mitt lyfta kort ska ligga kvar.
+    const st = useGameStore.getState();
+    const held = st.selectedCard;
+    ROWS.forEach((r) => st.opponentBoard[r].cards.forEach((card, i) => card && useGameStore.getState().removeCard(r, i, 'opponent')));
+    useGameStore.getState().setActivePlayer('opponent');
+    ROWS.forEach((r) => put(c[r], r));
+    useGameStore.getState().setActivePlayer('me');
+    if (held) useGameStore.getState().selectCard(held);
+    else useGameStore.getState().clearSelectedCard();
+    setPhotoFor(null);
+  };
+
   const newHand = () => {
     cancelSolver();
     resetGame();
@@ -511,6 +564,15 @@ export default function SolverView({ simulations }: SolverViewProps) {
 
   return (
     <DragProvider onDrop={onDrop}>
+      <PhotoSheet
+        open={photoFor !== null}
+        who={photoFor ?? 'me'}
+        onClose={() => setPhotoFor(null)}
+        takenElsewhere={
+          photoFor === 'opponent' ? [...boardCards(myBoard), ...selectedCards, ...(selectedCard && !selectedCards.some((x) => sameCard(x, selectedCard)) ? [selectedCard] : [])] : []
+        }
+        onDone={applyPhoto}
+      />
       <div
         className="wide:grid wide:grid-cols-[minmax(0,1fr)_minmax(300px,420px)] wide:gap-5 wide:items-start"
         style={{ '--dock-h': `${dockH}px` } as React.CSSProperties}
@@ -573,11 +635,22 @@ export default function SolverView({ simulations }: SolverViewProps) {
                 </button>
               </div>
 
-              {onMine && (
-                <div className="px-1 -mb-1">
-                  <span className="eyebrow">{placed === 0 ? 'Öppningshand' : placed === 13 ? 'Klar hand' : `${placed} av 13 kort`}</span>
-                </div>
-              )}
+              <div className="flex items-center justify-between gap-2 px-1 -mb-1">
+                <span className="eyebrow">
+                  {!onMine ? 'Motståndarens bräde' : placed === 0 ? 'Öppningshand' : placed === 13 ? 'Klar hand' : `${placed} av 13 kort`}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    haptic(6);
+                    setPhotoFor(activePlayer);
+                  }}
+                  disabled={isLoading}
+                  className="btn-ghost h-8 rounded-full px-3 text-[12px] font-bold"
+                >
+                  📷 Fota {onMine ? 'brädet' : 'motståndaren'}
+                </button>
+              </div>
               <div ref={boardWrapRef} className="relative">
               {(placed > 0 || oppPlaced > 0 || handCards.length > 0) && <ShareBoards boards={shareBoards} hand={shareHand} />}
               <BoardView
