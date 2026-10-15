@@ -10,14 +10,23 @@ describe('guessRows', () => {
     expect(targets(ans([['Jh'], ['8d', '6d'], ['Kc', '9c']], ['7c']))).toEqual(['top', 'middle', 'bottom', 'hand']);
   });
   it('två rader: kort första rad = topp+mitten, lång = mitten+botten', () => {
-    expect(targets(ans([['Ks', '7d'], ['9h', '9c', 'Tc']]))).toEqual(['top', 'middle']);
+    expect(targets(ans([['Ks', '7d'], ['9h', '9c', 'Tc'], ]), true).length).toBe(1); // 5 kort = öppning
+    expect(targets(ans([['Ks', '7d', '2c'], ['9h', '9c', 'Tc']]))).toEqual(['top', 'middle']);
     expect(targets(ans([['5d', '2d', '3s', 'Ad'], ['3h', '4h']]))).toEqual(['middle', 'bottom']);
   });
-  it('en ensam rad = öppningshand', () => {
+  it('högst 5 kort utan löst kort = öppningshand, även i flera rader', () => {
     expect(targets(ans([['As', 'Kd', '7h', '7c', 'JK']]))).toEqual(['hand']);
+    const rows = guessRows(ans([['8s', '5c'], ['7d', 'JK', '4d']]));
+    expect(rows).toHaveLength(1);
+    expect(rows[0].target).toBe('hand');
+    expect(rows[0].cards).toHaveLength(5);
+  });
+  it('5 lagda kort + ett löst = mitt i handen, inte öppning', () => {
+    expect(targets(ans([['8s', '5c'], ['7d', 'JK', '4d']], ['Qh']))).toEqual(['top', 'middle', 'hand']);
   });
   it('motståndaren får aldrig "att lägga"', () => {
     expect(targets(ans([['As', 'Kd']]), false)).toEqual(['top']);
+    expect(targets(ans([['8s', '5c'], ['7d', 'JK', '4d']]), false)).toEqual(['top', 'middle']);
   });
 });
 
@@ -46,7 +55,7 @@ describe('flHand', () => {
     expect(flHand(guessRows(ans([['Jh'], ['8d']], ['7c'])))).toBeNull();
   });
   it('collect slår ihop rader med samma mål', () => {
-    const rows = guessRows(ans([['Jh'], ['8d']]));
+    const rows = guessRows(ans([['Jh'], ['8d']]), false);
     rows[1].target = 'top';
     expect(collect(rows).top.length).toBe(2);
   });

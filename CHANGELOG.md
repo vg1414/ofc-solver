@@ -1,5 +1,10 @@
 # Changelog
 
+## 2026-10-15 — Fota brädet: öppningshand och räkna direkt
+
+- Ett foto med högst 5 kort och inget löst kort tolkas nu som en **öppningshand**, även om korten ligger i rader (t.ex. mitten 8♠5♣, botten 7♦ joker 4♦). Förut blev de två raderna ett lagt bräde
+- "Ja – räkna…" i fotoarket **startar solvern direkt**. Knappen heter "Ja – räkna bästa öppning" för en öppningshand. Fotar du motståndaren också räknas det när hens bräde är bekräftat
+
 ## 2026-10-15 — Fota brädet
 
 - Ny knapp **📷 Fota brädet** i Solver-fliken: fota ditt (eller motståndarens) bräde, så läses korten av automatiskt

@@ -116,6 +116,14 @@ export default function SolverView({ simulations }: SolverViewProps) {
   const [compare, setCompare] = useState<CompareSetup | null>(null);
   // Fota brädet: vems bräde arket fotar just nu (null = stängt)
   const [photoFor, setPhotoFor] = useState<'me' | 'opponent' | null>(null);
+  // Sätts när fotoarket bekräftats: räkna så fort det fotade läget ligger ute
+  const [autoRun, setAutoRun] = useState(false);
+  // Ny key varje gång arket öppnas = arket börjar om från "Ta foto"
+  const [photoKey, setPhotoKey] = useState(0);
+  const openPhoto = (who: 'me' | 'opponent' | null) => {
+    if (who) setPhotoKey((k) => k + 1);
+    setPhotoFor(who);
+  };
 
   const placed = countPlaced(myBoard);
   const oppPlaced = countPlaced(opponentBoard);
@@ -369,6 +377,15 @@ export default function SolverView({ simulations }: SolverViewProps) {
     });
   };
 
+  // Efter "Ja – räkna…" i fotoarket. Körs i renderingen efter att läget lagts ut,
+  // så att run() ser det nya brädet (och efter effekten som rensar gamla resultat).
+  useEffect(() => {
+    if (!autoRun || photoFor) return;
+    setAutoRun(false);
+    run();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoRun, photoFor]);
+
   const canApply = normal ? onMine : placed === 0;
 
   const apply = (opt: DetailedPlacementOption) => {
@@ -446,6 +463,7 @@ export default function SolverView({ simulations }: SolverViewProps) {
         useGameStore.getState().setFLCardCount(hand.length as FLCardCount);
         hand.forEach((card) => useGameStore.getState().addSelectedCard(card));
         setPhotoFor(null);
+        setAutoRun(true);
         return;
       }
       st.setActivePlayer('me');
@@ -455,7 +473,9 @@ export default function SolverView({ simulations }: SolverViewProps) {
       // Kortet som låg för sig självt blir nästa kort (flera = handen att välja ur)
       if (placedNow > 0 && c.hand.length === 1) useGameStore.getState().selectCard(c.hand[0]);
       else c.hand.forEach((card) => useGameStore.getState().addSelectedCard(card));
-      setPhotoFor(choice === 'opponent' ? 'opponent' : null);
+      openPhoto(choice === 'opponent' ? 'opponent' : null);
+      // Fotas motståndaren också räknar vi först när hens bräde är klart
+      setAutoRun(choice !== 'opponent');
       return;
     }
 
@@ -469,6 +489,7 @@ export default function SolverView({ simulations }: SolverViewProps) {
     if (held) useGameStore.getState().selectCard(held);
     else useGameStore.getState().clearSelectedCard();
     setPhotoFor(null);
+    setAutoRun(true);
   };
 
   const newHand = () => {
@@ -565,6 +586,7 @@ export default function SolverView({ simulations }: SolverViewProps) {
   return (
     <DragProvider onDrop={onDrop}>
       <PhotoSheet
+        key={photoKey}
         open={photoFor !== null}
         who={photoFor ?? 'me'}
         onClose={() => setPhotoFor(null)}
@@ -643,7 +665,7 @@ export default function SolverView({ simulations }: SolverViewProps) {
                   type="button"
                   onClick={() => {
                     haptic(6);
-                    setPhotoFor(activePlayer);
+                    openPhoto(activePlayer);
                   }}
                   disabled={isLoading}
                   className="btn-ghost h-8 rounded-full px-3 text-[12px] font-bold"

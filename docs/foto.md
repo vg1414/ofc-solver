@@ -8,11 +8,11 @@ Läs detta innan du ändrar i `src/photo/`, `components/solver/PhotoSheet.tsx`, 
 2. Fotot krymps till max 1600 px JPEG i telefonen (`photoRead.shrinkPhoto`) och skickas som base64-text till Workern.
 3. Workern svarar en rad JSON i taget (NDJSON): `reading` → ev. `checking` → `result`/`error`. Arket visar stegen och räknar sekunder.
 4. "Stämmer det här?": raderna gissas av `photoLayout.guessRows`, osäkra kort får gul ring. Tryck ett kort = byt/ta bort, "+" = lägg till, chipsen flyttar raden (Toppen/Mitten/Botten/Att lägga). `problems()` stoppar omöjliga lägen (överfull rad, dubbletter, >2 jokrar, även mot det andra brädet).
-5. Mitt bräde: "Fota motståndaren också" eller "Räkna bara på mitt bräde" (ny hand, korten läggs ut, ett löst kort lyfts som nästa kort). Fullt bräde + 1–3 lösa kort → "Lös Fantasy Land" (alla 14–16 kort till FL-läget). Motståndaren: hens bräde byts ut, mitt lyfta kort ligger kvar.
+5. Mitt bräde: "Fota motståndaren också" eller "Räkna bara på mitt bräde" (ny hand, korten läggs ut, ett löst kort lyfts som nästa kort). Fullt bräde + 1–3 lösa kort → "Lös Fantasy Land" (alla 14–16 kort till FL-läget). Motståndaren: hens bräde byts ut, mitt lyfta kort ligger kvar. Efter "Ja – räkna…" startar solvern direkt (`autoRun` i SolverView; med motståndaren först när hens bräde är bekräftat). Arket får en ny `key` varje gång det öppnas, så det börjar alltid om från "Ta foto".
 
 ## Fotokonventionen (Davids)
 
-Raderna på bordet = brädet uppifrån och ner. Ett kort som ligger för sig självt = kortet att lägga. Alla kort i en enda rad utan bräde = öppningshand. Två rader är tvetydiga: gissningen är topp+mitten om första raden har ≤ 3 kort, annars mitten+botten.
+Raderna på bordet = brädet uppifrån och ner. Ett kort som ligger för sig självt = kortet att lägga. **Högst 5 kort och inget löst kort = öppningshand**, hur raderna än ligger (David lägger ofta öppningen i rader, t.ex. M: 8♠5♣, B: 7♦ joker 4♦, men vill ha bästa öppningen). Ett bräde mitt i handen har alltid ≥ 5 kort + kortet att lägga. Två rader i övrigt: topp+mitten om första raden har ≤ 3 kort, annars mitten+botten.
 
 ## Workern (`worker/photo-worker.js`, `ofc-photo.davhef.workers.dev`)
 

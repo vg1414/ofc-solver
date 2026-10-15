@@ -50,21 +50,23 @@ function toCards(list: string[]): Card[] {
 
 /**
  * Gissar vilken rad på brädet varje fotad rad är.
- * 3 rader → topp/mitten/botten. 2 rader → topp+mitten om första raden får plats i
- * toppen (≤ 3 kort), annars mitten+botten. 1 rad → en öppningshand om inget mer
- * finns, annars den rad där den får plats. Användaren kan alltid ändra i arket.
+ * Högst 5 kort utan löst kort → öppningshand. 3 rader → topp/mitten/botten.
+ * 2 rader → topp+mitten om första raden får plats i toppen (≤ 3 kort), annars
+ * mitten+botten. Användaren kan alltid ändra i arket.
  */
 export function guessRows(answer: PhotoAnswer, allowHand = true): PhotoRow[] {
   const rows = answer.rows.map(toCards).filter((r) => r.length);
   const loose = toCards(answer.loose);
+  // Högst 5 kort och inget löst kort = en öppningshand, hur raderna än ligger
+  // (ett lagt bräde mitt i handen har minst 5 kort + kortet som ska läggas)
+  const total = rows.reduce((n, r) => n + r.length, 0);
+  if (allowHand && loose.length === 0 && total > 0 && total <= 5) return [{ target: 'hand', cards: rows.flat() }];
   let targets: RowName[];
   if (rows.length >= 3) targets = ['top', 'middle', 'bottom'];
   else if (rows.length === 2) targets = rows[0].length <= 3 ? ['top', 'middle'] : ['middle', 'bottom'];
   else targets = rows[0] && rows[0].length <= 3 ? ['top'] : ['middle'];
 
   const out: PhotoRow[] = rows.slice(0, 3).map((cards, i) => ({ target: targets[i], cards }));
-  // En ensam rad utan lösa kort = öppningshanden som ska läggas
-  if (allowHand && out.length === 1 && loose.length === 0 && out[0].cards.length <= 5) out[0].target = 'hand';
   if (loose.length) out.push({ target: allowHand ? 'hand' : 'bottom', cards: loose });
   return out;
 }

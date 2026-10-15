@@ -20,7 +20,7 @@ import CardGrid, { JokerButton } from '../cards/CardGrid';
 import { cardAriaLabel, haptic, sameCard } from '../cards/cardStyle';
 import { readPhoto, shrinkPhoto, type PhotoStage } from '../../photo/photoRead';
 import {
-  flHand, guessRows, isUncertain, problems, TARGET_LABEL,
+  collect, flHand, guessRows, isUncertain, problems, TARGET_LABEL,
   type PhotoAnswer, type PhotoRow, type PhotoTarget,
 } from '../../photo/photoLayout';
 
@@ -46,7 +46,8 @@ export default function PhotoSheet({ open, onClose, who, takenElsewhere, onDone 
   const mine = who === 'me';
   const [phase, setPhase] = useState<Phase>('pick');
   const [stage, setStage] = useState<PhotoStage | 'shrinking'>('shrinking');
-  const [seconds, setSeconds] = useState(0);
+  const [startedAt, setStartedAt] = useState(0);
+  const [now, setNow] = useState(0);
   const [error, setError] = useState('');
   const [answer, setAnswer] = useState<PhotoAnswer | null>(null);
   const [rows, setRows] = useState<PhotoRow[]>([]);
@@ -55,23 +56,15 @@ export default function PhotoSheet({ open, onClose, who, takenElsewhere, onDone 
   const cameraRef = useRef<HTMLInputElement>(null);
   const libraryRef = useRef<HTMLInputElement>(null);
 
-  // Nytt ark = börja om från början
-  useEffect(() => {
-    if (!open) return;
-    setPhase('pick');
-    setAnswer(null);
-    setRows([]);
-    setEdit(null);
-    setError('');
-  }, [open, who]);
+  // Ett nytt ark börjar om från början: SolverView ger arket en ny key varje gång det öppnas.
 
   // Räknar sekunder medan vi väntar, så att det syns att något händer
   useEffect(() => {
     if (phase !== 'reading') return;
-    setSeconds(0);
-    const t = window.setInterval(() => setSeconds((s) => s + 1), 1000);
+    const t = window.setInterval(() => setNow(Date.now()), 1000);
     return () => window.clearInterval(t);
   }, [phase]);
+  const seconds = Math.max(0, Math.floor((now - startedAt) / 1000));
 
   const close = () => {
     abortRef.current?.abort();
@@ -83,6 +76,8 @@ export default function PhotoSheet({ open, onClose, who, takenElsewhere, onDone 
     haptic(8);
     setPhase('reading');
     setStage('shrinking');
+    setStartedAt(Date.now());
+    setNow(Date.now());
     const ctrl = new AbortController();
     abortRef.current = ctrl;
     try {
@@ -145,6 +140,8 @@ export default function PhotoSheet({ open, onClose, who, takenElsewhere, onDone 
   const jokers = [...allCards, ...takenElsewhere].filter((c) => c.kind === 'joker').length;
   const issues = problems(rows.filter((r) => r.cards.length), takenElsewhere, mine);
   const fl = mine ? flHand(rows) : null;
+  const c = collect(rows);
+  const opening = mine && c.top.length + c.middle.length + c.bottom.length === 0 && c.hand.length > 0;
   const ok = issues.length === 0;
   const unsure = answer ? allCards.filter((c) => isUncertain(c, answer)).length : 0;
 
@@ -318,7 +315,7 @@ export default function PhotoSheet({ open, onClose, who, takenElsewhere, onDone 
                   ✓ Ja – fota motståndaren också
                 </button>
                 <button type="button" disabled={!ok} onClick={() => finish('solve')} className="btn-ghost h-11 rounded-full text-[14px] font-bold">
-                  Ja – räkna bara på mitt bräde
+                  {opening ? 'Ja – räkna bästa öppning' : 'Ja – räkna bara på mitt bräde'}
                 </button>
               </>
             )}
