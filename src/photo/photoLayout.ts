@@ -50,12 +50,15 @@ function toCards(list: string[]): Card[] {
 
 /**
  * Gissar vilken rad på brädet varje fotad rad är.
- * Högst 5 kort utan löst kort → öppningshand. 3 rader → topp/mitten/botten.
+ * Högst 5 kort utan löst kort → öppningshand. 3 rader → topp/mitten/botten
+ * (omvänt om bara den sista raden ryms i toppen).
  * 2 rader → topp+mitten om första raden får plats i toppen (≤ 3 kort), annars
  * mitten+botten. Användaren kan alltid ändra i arket.
  */
 export function guessRows(answer: PhotoAnswer, allowHand = true): PhotoRow[] {
   const rows = answer.rows.map(toCards).filter((r) => r.length);
+  // Tre rader där bara den sista ryms i toppen: fotot är upp och ner, så vänd ordningen
+  if (rows.length === 3 && rows[0].length > 3 && rows[2].length <= 3) rows.reverse();
   const loose = toCards(answer.loose);
   // Högst 5 kort och inget löst kort = en öppningshand, hur raderna än ligger
   // (ett lagt bräde mitt i handen har minst 5 kort + kortet som ska läggas)

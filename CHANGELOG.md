@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-10-16 — Fota brädet: upp-och-ner-foton och skämt medan den läser
+
+- **Motståndarens foto vänds 180° automatiskt** innan det läses, eftersom du fotar hens bräde från din sida av bordet. Förut kom raderna i omvänd ordning (botten blev toppen) och korten lästes sämre. Testat på 11 foton vända upp och ner: Gemini kan inte själv avgöra om ett bräde ligger upp och ner, så vändningen görs i telefonen (inga extra anrop)
+- Ny knapp **"↻ Vänd och läs igen"** på "Stämmer det här?": läser samma bild åt andra hållet (ett extra anrop, bara när du trycker)
+- Tre rader där bara den sista ryms i toppen vänds automatiskt (toppen kan ha högst 3 kort)
+- **Skämt medan den läser**, t.ex. "Ringer Lennart och frågar efter facit…", under den riktiga statusen. Byts var 3:e sekund
+
 ## 2026-10-16 — Spela mot datorn, svårare scenarion, fritt Jämför
 
 - **Spela mot datorn:** nytt val "2 spelare / Mot datorn" på Spela-fliken. Datorns nivå: **Lätt** (gör ofta misstag), **Medel** (ibland fel), **Svår** (solvern) och **Proffs** (räknar extra noga). Svagare nivåer väljer ibland ett sämre drag bland solverns bästa — oftare ju mindre det kostar. Datorn ser bara det en spelare får se (din öppning är dold i runda 1). Partiet sparas som vanligt

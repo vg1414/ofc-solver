@@ -9,6 +9,8 @@
 //              för att byta/ta bort det, "+" lägger till. Varje rad kan
 //              flyttas till Toppen/Mitten/Botten/Att lägga.
 //   error    – något gick fel: försök igen eller fyll i för hand
+// Motståndarens bräde fotas från andra sidan bordet, så den bilden vänds 180°
+// innan den skickas. "↻ Vänd och läs igen" läser samma bild åt andra hållet.
 // Arket lägger inget själv: onDone får raderna och SolverView lägger ut dem.
 // ============================================================
 
@@ -42,17 +44,38 @@ type Edit = { row: number; index: number | null };
 
 const CARD_W = 44;
 
+/** Skämt som byts var 3:e sekund under den riktiga statusen medan fotot läses */
+const JOKES = [
+  'Ringer Lennart och frågar efter facit…',
+  'Skiljer på 6:or och 9:or…',
+  'Letar efter den andra jokern…',
+  'Putsar glasögonen…',
+  'Räknar hjärter, ruter, klöver och spader…',
+  'Kollar att ingen har ett ess i ärmen…',
+  'Frågar en croupier i Las Vegas…',
+  'Mutar Gemini med kaffe…',
+  'Vänder på korten åt rätt håll…',
+  'Lovar att inte titta på motståndarens hand…',
+  'Räknar till 13. Två gånger.',
+  'Övertalar damen att sluta blinka…',
+];
+
 export default function PhotoSheet({ open, onClose, who, takenElsewhere, onDone }: PhotoSheetProps) {
   const mine = who === 'me';
   const [phase, setPhase] = useState<Phase>('pick');
   const [stage, setStage] = useState<PhotoStage | 'shrinking'>('shrinking');
   const [startedAt, setStartedAt] = useState(0);
   const [now, setNow] = useState(0);
+  // Var i skämtlistan vi börjar – slumpas vid varje läsning så att det inte blir samma först
+  const [jokeStart, setJokeStart] = useState(0);
   const [error, setError] = useState('');
   const [answer, setAnswer] = useState<PhotoAnswer | null>(null);
   const [rows, setRows] = useState<PhotoRow[]>([]);
   const [edit, setEdit] = useState<Edit | null>(null);
   const abortRef = useRef<AbortController | null>(null);
+  // Senaste fotot och om det skickades vänt – för "Vänd och läs igen"
+  const fileRef = useRef<File | null>(null);
+  const [upsideDown, setUpsideDown] = useState(false);
   const cameraRef = useRef<HTMLInputElement>(null);
   const libraryRef = useRef<HTMLInputElement>(null);
 
@@ -65,23 +88,27 @@ export default function PhotoSheet({ open, onClose, who, takenElsewhere, onDone 
     return () => window.clearInterval(t);
   }, [phase]);
   const seconds = Math.max(0, Math.floor((now - startedAt) / 1000));
+  const joke = JOKES[(jokeStart + Math.floor(seconds / 3)) % JOKES.length];
 
   const close = () => {
     abortRef.current?.abort();
     onClose();
   };
 
-  const onFile = async (file: File | undefined) => {
+  const onFile = async (file: File | null | undefined, turn = !mine) => {
     if (!file) return;
     haptic(8);
+    fileRef.current = file;
+    setUpsideDown(turn);
     setPhase('reading');
     setStage('shrinking');
     setStartedAt(Date.now());
     setNow(Date.now());
+    setJokeStart(Math.floor(Math.random() * JOKES.length));
     const ctrl = new AbortController();
     abortRef.current = ctrl;
     try {
-      const base64 = await shrinkPhoto(file);
+      const base64 = await shrinkPhoto(file, turn);
       setStage('reading');
       const a = await readPhoto(base64, setStage, ctrl.signal);
       setAnswer(a);
@@ -164,7 +191,9 @@ export default function PhotoSheet({ open, onClose, who, takenElsewhere, onDone 
         <div className="flex flex-col gap-3">
           <p className="text-[13px] leading-relaxed text-ink-2">
             Fota {mine ? 'ditt' : 'motståndarens'} bräde rakt ovanifrån så att korthörnen syns.
-            {mine && <> Lägg kortet som ska läggas härnäst <b>för sig självt</b> en bit bort.</>}
+            {mine
+              ? <> Lägg kortet som ska läggas härnäst <b>för sig självt</b> en bit bort.</>
+              : <> Fota från <b>din sida</b> av bordet – appen vänder bilden själv.</>}
           </p>
           <button type="button" onClick={() => cameraRef.current?.click()} className="btn-primary h-12 rounded-full text-[15px] font-bold">
             📷 Ta foto
@@ -184,6 +213,7 @@ export default function PhotoSheet({ open, onClose, who, takenElsewhere, onDone 
           <div className="text-[12px] text-ink-3 tabular">
             {seconds} s{stage === 'checking' && ' · kan ta upp till en minut'}
           </div>
+          <div key={joke} className="min-h-[18px] text-[12.5px] italic text-ink-2 animate-fade-in">{joke}</div>
           <button type="button" onClick={close} className="btn-ghost mt-1 h-10 rounded-full px-5 text-[13px] font-bold">
             Avbryt
           </button>
@@ -319,9 +349,14 @@ export default function PhotoSheet({ open, onClose, who, takenElsewhere, onDone 
                 </button>
               </>
             )}
-            <button type="button" onClick={() => setPhase('pick')} className="h-9 text-[12.5px] font-bold text-ink-3">
-              Fota igen
-            </button>
+            <div className="flex justify-center gap-5">
+              <button type="button" onClick={() => onFile(fileRef.current, !upsideDown)} className="h-9 text-[12.5px] font-bold text-ink-3">
+                ↻ Vänd och läs igen
+              </button>
+              <button type="button" onClick={() => setPhase('pick')} className="h-9 text-[12.5px] font-bold text-ink-3">
+                Fota igen
+              </button>
+            </div>
           </div>
         </div>
       )}

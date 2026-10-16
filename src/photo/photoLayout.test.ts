@@ -24,6 +24,12 @@ describe('guessRows', () => {
   it('5 lagda kort + ett löst = mitt i handen, inte öppning', () => {
     expect(targets(ans([['8s', '5c'], ['7d', 'JK', '4d']], ['Qh']))).toEqual(['top', 'middle', 'hand']);
   });
+  it('tre rader där bara den sista ryms i toppen = upp och ner, vänds', () => {
+    const rows = guessRows(ans([['8c', 'Td', 'Jh', 'Js', 'Th'], ['4d', '7h', '6s', '6h'], ['Ac', 'Kh', 'Kd']]), false);
+    expect(rows.map((r) => r.target)).toEqual(['top', 'middle', 'bottom']);
+    expect(rows[0].cards).toHaveLength(3);
+    expect(rows[2].cards).toHaveLength(5);
+  });
   it('motståndaren får aldrig "att lägga"', () => {
     expect(targets(ans([['As', 'Kd']]), false)).toEqual(['top']);
     expect(targets(ans([['8s', '5c'], ['7d', 'JK', '4d']]), false)).toEqual(['top', 'middle']);
@@ -35,7 +41,7 @@ describe('problems', () => {
     expect(problems(guessRows(ans([['Jh'], ['8d', '6d'], ['Kc', '9c']], ['7c'])))).toEqual([]);
   });
   it('hittar dubbletter, för många jokrar och överfulla rader', () => {
-    const p = problems(guessRows(ans([['Jh', 'Jh', 'JK', 'JK'], ['8d'], ['JK']])));
+    const p = problems(guessRows(ans([['Jh', 'Jh', 'JK', 'JK'], ['8d'], ['JK', '2c', '3c', '4c']])));
     expect(p).toContain('Toppen har 4 kort (max 3)');
     expect(p).toContain('Fler än 2 jokrar');
     expect(p).toContain('Jh finns två gånger');

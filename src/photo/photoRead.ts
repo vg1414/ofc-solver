@@ -13,15 +13,26 @@ const MAX_SIDE = 1600; // testat: räcker för att läsa korthörnen, ≈ 300 kB
 
 export type PhotoStage = 'reading' | 'checking';
 
-/** Krymper bilden till max 1600 px och gör om den till JPEG (base64 utan "data:"-början) */
-export async function shrinkPhoto(file: Blob): Promise<string> {
+/**
+ * Krymper bilden till max 1600 px och gör om den till JPEG (base64 utan "data:"-början).
+ * `upsideDown` vänder bilden 180° – för ett bräde fotat från andra sidan bordet.
+ * Gemini kan inte själv avgöra om brädet ligger upp och ner (testat 2026-10-16): den
+ * listar då raderna botten först och läser korten sämre.
+ */
+export async function shrinkPhoto(file: Blob, upsideDown = false): Promise<string> {
   // createImageBitmap vänder bilden rätt efter kamerans EXIF-läge
   const bmp = await createImageBitmap(file);
   const k = Math.min(1, MAX_SIDE / Math.max(bmp.width, bmp.height));
   const canvas = document.createElement('canvas');
   canvas.width = Math.round(bmp.width * k);
   canvas.height = Math.round(bmp.height * k);
-  canvas.getContext('2d')!.drawImage(bmp, 0, 0, canvas.width, canvas.height);
+  const ctx = canvas.getContext('2d')!;
+  if (upsideDown) {
+    // Flytta origo till nedre högra hörnet och vrid ett halvt varv
+    ctx.translate(canvas.width, canvas.height);
+    ctx.rotate(Math.PI);
+  }
+  ctx.drawImage(bmp, 0, 0, canvas.width, canvas.height);
   bmp.close();
   const url = canvas.toDataURL('image/jpeg', 0.85);
   return url.slice(url.indexOf(',') + 1);

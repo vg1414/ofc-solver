@@ -5,14 +5,16 @@ Läs detta innan du ändrar i `src/photo/`, `components/solver/PhotoSheet.tsx`, 
 ## Flöde
 
 1. "📷 Fota brädet" (Solver-fliken, raden ovanför brädet) öppnar `PhotoSheet` för det bräde som visas.
-2. Fotot krymps till max 1600 px JPEG i telefonen (`photoRead.shrinkPhoto`) och skickas som base64-text till Workern.
-3. Workern svarar en rad JSON i taget (NDJSON): `reading` → ev. `checking` → `result`/`error`. Arket visar stegen och räknar sekunder.
+2. Fotot krymps till max 1600 px JPEG i telefonen (`photoRead.shrinkPhoto`) och skickas som base64-text till Workern. **Motståndarens foto vänds 180° först** (David fotar hens bräde från sin sida av bordet). "↻ Vänd och läs igen" läser samma fil åt andra hållet.
+3. Workern svarar en rad JSON i taget (NDJSON): `reading` → ev. `checking` → `result`/`error`. Arket visar stegen, räknar sekunder och visar ett skämt som byts var 3:e sekund (`JOKES` i PhotoSheet).
 4. "Stämmer det här?": raderna gissas av `photoLayout.guessRows`, osäkra kort får gul ring. Tryck ett kort = byt/ta bort, "+" = lägg till, chipsen flyttar raden (Toppen/Mitten/Botten/Att lägga). `problems()` stoppar omöjliga lägen (överfull rad, dubbletter, >2 jokrar, även mot det andra brädet).
 5. Mitt bräde: "Fota motståndaren också" eller "Räkna bara på mitt bräde" (ny hand, korten läggs ut, ett löst kort lyfts som nästa kort). Fullt bräde + 1–3 lösa kort → "Lös Fantasy Land" (alla 14–16 kort till FL-läget). Motståndaren: hens bräde byts ut, mitt lyfta kort ligger kvar. Efter "Ja – räkna…" startar solvern direkt (`autoRun` i SolverView; med motståndaren först när hens bräde är bekräftat). Arket får en ny `key` varje gång det öppnas, så det börjar alltid om från "Ta foto".
 
 ## Fotokonventionen (Davids)
 
-Raderna på bordet = brädet uppifrån och ner. Ett kort som ligger för sig självt = kortet att lägga. **Högst 5 kort och inget löst kort = öppningshand**, hur raderna än ligger (David lägger ofta öppningen i rader, t.ex. M: 8♠5♣, B: 7♦ joker 4♦, men vill ha bästa öppningen). Ett bräde mitt i handen har alltid ≥ 5 kort + kortet att lägga. Två rader i övrigt: topp+mitten om första raden har ≤ 3 kort, annars mitten+botten.
+Raderna på bordet = brädet uppifrån och ner. Ett kort som ligger för sig självt = kortet att lägga. **Högst 5 kort och inget löst kort = öppningshand**, hur raderna än ligger (David lägger ofta öppningen i rader, t.ex. M: 8♠5♣, B: 7♦ joker 4♦, men vill ha bästa öppningen). Ett bräde mitt i handen har alltid ≥ 5 kort + kortet att lägga. Två rader i övrigt: topp+mitten om första raden har ≤ 3 kort, annars mitten+botten. Tre rader där bara den sista ryms i toppen (första > 3, sista ≤ 3) vänds.
+
+**Upp och ner (testat 2026-10-16):** på 11 foton vända 180° läste Flash Lite raderna i fotots ordning (botten först) och gjorde fler läsfel (dubbletter). Att i prompten be modellen avgöra var ägaren sitter, eller åt vilket håll korten överlappar, gav samma svar för vända och ovända foton – modellen ser inte skillnad. Därför vänds bilden i telefonen i stället.
 
 ## Workern (`worker/photo-worker.js`, `ofc-photo.davhef.workers.dev`)
 
@@ -25,6 +27,6 @@ Raderna på bordet = brädet uppifrån och ner. Ett kort som ligger för sig sj�
 
 ## Testa träffsäkerheten
 
-`OFC/foto-test/` (utanför repot): 11 foton + facit (`score.py`). 2026-10-15 via Workern: 9/11 helt rätt, ≈ 1,5 s. Missarna var nästan helt dolda kort och ett ensamt kort ovanför raderna som lästes som en egen rad.
+`OFC/foto-test/` (utanför repot): 11 foton + facit (`score.py`, facit finns även för nr 12–17 som inte är sparade än). `python forbered.py` gör `jpg/`, `rot180/` och `rot90/` av nya bilder i `original/`. 2026-10-15 via Workern: 9/11 helt rätt, ≈ 1,5 s. Missarna var nästan helt dolda kort och ett ensamt kort ovanför raderna som lästes som en egen rad.
 
 Testa i förhandsvisningen utan kamera: lägg en bild i `public/`, och sätt `input[type=file]` via `DataTransfer` i javascript_tool (ta bort bilden efteråt).
