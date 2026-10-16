@@ -2,6 +2,12 @@
 // useScenarioPool.ts — Kö med färdiga scenarion, förberedda i förväg
 // ============================================================
 //
+// Först och främst används banken med förberäknade scenarion
+// (scenarioBank.ts): filen för läget hämtas när kön startar, och kön
+// fylls direkt med slumpade scenarion du inte sett nyligen — redan
+// bedömda, så telefonen behöver inte räkna alls. Bara om banken saknas
+// (t.ex. ingen nätverksanslutning) spelar datorn fram scenarion live:
+//
 // Datorn behöver några sekunder för att spela fram ett realistiskt
 // scenario. För att du aldrig ska behöva vänta fylls en kö på i
 // bakgrunden, redan medan du står på startsidan. Två workers jobbar
@@ -27,6 +33,20 @@ import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
 import type { GameVariant } from '../engine/types';
 import { SCENARIO_EVAL, generateScenario, scenarioInput, type Scenario } from './scenarios';
 import { CANCELLED, useSolverJobs } from './useSolverJobs';
+import { bankKey, fetchBank, markSeen, pickFromBank } from './scenarioBank';
+
+/** Hämtade banker per läge (delas av alla köer; null = saknas → live) */
+const banks = new Map<string, Promise<Scenario[] | null>>();
+
+function loadBank(variant: GameVariant, jokers: boolean): Promise<Scenario[] | null> {
+  const k = bankKey(variant, jokers);
+  let p = banks.get(k);
+  if (!p) {
+    p = fetchBank(variant, jokers);
+    banks.set(k, p);
+  }
+  return p;
+}
 
 export const POOL_SIZE = 3;
 
@@ -73,11 +93,18 @@ export function useScenarioPool(variant: GameVariant, jokers: boolean, active: b
       }
     };
 
-    // Framspelaren: håll kön full
+    // Framspelaren: håll kön full — ur banken om den finns, annars live
     (async () => {
+      const bank = await loadBank(variant, jokers);
       while (alive) {
         if (list().length >= POOL_SIZE) {
           await sleep();
+          continue;
+        }
+        const fromBank = bank && pickFromBank(bank, bankKey(variant, jokers), new Set(list().map((s) => s.id)));
+        if (fromBank) {
+          pools.current.set(key, [...list(), fromBank]);
+          rerender();
           continue;
         }
         await step(async () => {
@@ -120,13 +147,17 @@ export function useScenarioPool(variant: GameVariant, jokers: boolean, active: b
     if (list.length === 0) return null;
     const [s, ...rest] = list;
     pools.current.set(key, rest);
+    // Bankscenario → kom ihåg att du sett det
+    if (s.id.startsWith('bank-')) {
+      void loadBank(variant, jokers).then((b) => b && markSeen(bankKey(variant, jokers), s.id, b.length));
+    }
     // Räknade bedömaren just på det här scenariot? Avbryt — ScenarioRun
     // räknar själv, så att två workers inte gör samma jobb samtidigt.
     if (evaluating.current === s.id) judgeCancel();
     wakeAll();
     rerender();
     return s;
-  }, [key, judgeCancel, wakeAll]);
+  }, [key, variant, jokers, judgeCancel, wakeAll]);
 
   return { take, ready: pools.current.get(key)?.length ?? 0, error };
 }

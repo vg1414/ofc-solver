@@ -3,8 +3,9 @@
 // ============================================================
 //
 // Två solver-workers arbetar samtidigt:
-//  - scenariokön (useScenarioPool, ägs av TrainingView) spelar fram
-//           kommande scenarion i förväg — redan från startsidan.
+//  - scenariokön (useScenarioPool, ägs av TrainingView) tar kommande
+//           scenarion ur banken (förberäknade) eller spelar fram dem i
+//           förväg — redan från startsidan.
 //  - `ev`   bedömer scenariot du ser just nu (Noggrann, 2000 sim) — men
 //           bara om kön inte redan hann bedöma det (Scenario.evaluation),
 //           och när ditt drag måste räknas om med draget låst.
@@ -140,7 +141,8 @@ export default function ScenarioRun({ variant, jokers = false, pool, count, onEx
   useEffect(() => {
     if (phase !== 'judging' || !current || !locked || !result || result.id !== current.id) return;
     const j = judge(result.res, locked);
-    if (SOLVER_HAS_PINNED && j.screened && !result.pinned) {
+    // Sållat bort, eller saknas (banken sparar bara de bästa alternativen)
+    if (SOLVER_HAS_PINNED && (j.screened || j.missing) && !result.pinned) {
       // Räkna om med ditt drag låst, lika noga som bästa draget
       setResult(null);
       startEval(current, locked);

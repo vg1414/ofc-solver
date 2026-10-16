@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-10-16 — Scenarion startar direkt (förberäknad bank)
+
+- **Scenarion och ★ Joker startar direkt** utan "Datorn spelar fram…": appen hämtar en bank med scenarion som redan spelats fram och bedömts på Noggrann på datorn (`public/scenarios/`, 9–15 kB per läge, en fil per variant + läge, laddas på ≈ 20 ms lokalt). Telefonen behöver inte räkna alls om du inte lägger ett drag som solvern sållade bort — då räknas bara ditt drag om, som förut
+- Du får inte samma scenario igen förrän du spelat igenom det mesta av banken (sedda scenarion sparas i telefonen)
+- Saknas banken (t.ex. offline) spelas scenarion fram live som förut
+- Första banken: ≈ 22 scenarion per läge. Fler byggs med `scripts/buildScenarioBank.ts` (se docs/traning.md)
+
 ## 2026-10-16 — Fota brädet: upp-och-ner-foton och skämt medan den läser
 
 - **Motståndarens foto vänds 180° automatiskt** innan det läses, eftersom du fotar hens bräde från din sida av bordet. Förut kom raderna i omvänd ordning (botten blev toppen) och korten lästes sämre. Testat på 11 foton vända upp och ner: Gemini kan inte själv avgöra om ett bräde ligger upp och ner, så vändningen görs i telefonen (inga extra anrop)

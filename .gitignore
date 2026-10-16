@@ -27,3 +27,6 @@ dist-ssr
 worker/.dev.vars
 .wrangler
 worker/.wrangler
+
+# Mellanfiler från scripts/buildScenarioBank.ts
+scenarios-tmp
