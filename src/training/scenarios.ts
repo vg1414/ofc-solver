@@ -15,11 +15,21 @@
 // vanligt, så brädena ser lika realistiska ut. Den andra jokern ligger
 // kvar slumpvis — ibland har någon redan fått den på brädet.
 // Triviala lägen (bara en rad ledig för ett kort) slängs och görs om.
+//
+// Svårighet: varje framspelat läge räknas snabbt (Normal + tumregelspelaren,
+// options.naive) och bedöms av scenarioDifficulty():
+//   - Fälla: tumregelspelarens "naturliga" drag är fel (≥ 0,15 sämre,
+//     eller utsållat).
+//   - Nära val: något annat drag som klarade sållningen ligger 0,05–0,6
+//     under bästa — man måste verkligen veta vilket som är bäst.
+// Är läget givet (inget av dem) spelar datorn vidare i samma hand till
+// din nästa tur och provar där (billigt: bara ett par drag till). Hittas
+// inget svårt läge används det första icke-triviala som reserv.
 // ============================================================
 
 import type { Board, Card, GameVariant } from '../engine/types';
 import type { SolverInput } from '../hooks/useSolver';
-import type { DetailedSolverResult, SolverOptions } from '../solver/solver';
+import type { DetailedPlacementOption, DetailedSolverResult, SolverOptions } from '../solver/solver';
 import { ROWS, countPlaced } from './moves';
 import { GEN_OPTIONS, applyToSeat, computerMove, newDeck, newSeat, roundsFor, turnOrder, type Seat, type SeatId, type Solve } from './game';
 
@@ -74,6 +84,31 @@ function pickRound(variant: GameVariant, rand: () => number): number {
 
 let seq = 0;
 
+/** Gränser för svårighetsbedömningen (EV-förlust mot bästa draget) */
+export const TRAP_MIN = 0.15;
+export const CLOSE_MIN = 0.05;
+export const CLOSE_MAX = 0.6;
+
+export interface Difficulty {
+  /** Tumregelspelarens drag är fel */
+  trap: boolean;
+  /** Antal andra drag (som klarade sållningen) 0,05–0,6 under bästa */
+  close: number;
+  hard: boolean;
+  /** 2 = fälla, 1 = nära val, 0 = givet */
+  score: number;
+}
+
+/** Hur svårt är läget? (resultat räknat med options.naive) */
+export function scenarioDifficulty(res: DetailedSolverResult): Difficulty {
+  const best = res.best;
+  const naive: DetailedPlacementOption | undefined = res.options.find((o) => o.naive);
+  const trap = !!naive && naive !== best && (!naive.finalist || best.ev - naive.ev >= TRAP_MIN);
+  const close = res.options.filter((o) => o !== best && o.finalist && best.ev - o.ev > CLOSE_MIN && best.ev - o.ev <= CLOSE_MAX).length;
+  const score = trap ? 2 : close > 0 ? 1 : 0;
+  return { trap, close, hard: score > 0, score };
+}
+
 /** Flytta `want` jokrar till lekens platser start … start+want-1 */
 export function placeJokers(deck: Card[], start: number, want: number): void {
   for (let k = 0; k < want; k++) {
@@ -100,13 +135,16 @@ export async function generateScenario(
   rand: () => number = Math.random,
   opts: ScenarioOptions = {},
 ): Promise<Scenario> {
-  for (let attempt = 0; attempt < 5; attempt++) {
+  // Sista rundan man kan stanna på (Vanlig: runda 9 = sista kortet, nästan alltid givet)
+  const lastRound = variant === 'regular' ? roundsFor(variant) - 1 : roundsFor(variant);
+  let fallback: Scenario | null = null;
+  for (let attempt = 0; attempt < (opts.jokers ? 6 : 4); attempt++) {
     const deck = newDeck();
     let pos = 0;
     const first: SeatId = rand() < 0.5 ? 0 : 1;
     const turns = turnOrder(variant, first);
     const stopRound = pickRound(variant, rand);
-    const stop = turns.findIndex((t) => t.seat === 0 && t.round === stopRound);
+    let stop = turns.findIndex((t) => t.seat === 0 && t.round === stopRound);
     if (opts.jokers) {
       const start = turns.slice(0, stop).reduce((n, t) => n + t.count, 0);
       const size = turns[stop].count;
@@ -114,32 +152,46 @@ export async function generateScenario(
       placeJokers(deck, start, size >= 2 && rand() < 0.3 ? 2 : 1);
     }
     const seats: [Seat, Seat] = [newSeat(), newSeat()];
+    let i = 0;
 
-    for (let i = 0; i < stop; i++) {
-      if (!alive()) throw new Error('cancelled');
-      const t = turns[i];
-      const cards = deck.slice(pos, pos + t.count);
-      pos += t.count;
-      const me = seats[t.seat];
-      const opp = seats[t.seat === 0 ? 1 : 0];
-      const move = await computerMove(solve, { seat: me, cards, variant, opponent: opp.board, fl: false, options: GEN_OPTIONS });
-      seats[t.seat] = applyToSeat(me, move);
+    while (stop >= 0) {
+      for (; i < stop; i++) {
+        if (!alive()) throw new Error('cancelled');
+        const t = turns[i];
+        const cards = deck.slice(pos, pos + t.count);
+        pos += t.count;
+        const me = seats[t.seat];
+        const opp = seats[t.seat === 0 ? 1 : 0];
+        const move = await computerMove(solve, { seat: me, cards, variant, opponent: opp.board, fl: false, options: GEN_OPTIONS });
+        seats[t.seat] = applyToSeat(me, move);
+      }
+
+      const t = turns[stop];
+      const hand = deck.slice(pos, pos + t.count);
+      if (!isTrivial(seats[0].board, t.place, hand.length)) {
+        const s: Scenario = {
+          id: `s${Date.now()}-${seq++}`,
+          variant,
+          round: t.round,
+          board: seats[0].board,
+          // Öppningshanden läggs samtidigt (dold) → motståndarens kort syns inte än
+          opponentBoard: t.round === 1 ? newSeat().board : seats[1].board,
+          hand,
+          deadCards: seats[0].discards,
+          place: t.place,
+        };
+        if (!alive()) throw new Error('cancelled');
+        const d = scenarioDifficulty(await solve(scenarioInput(s, { ...GEN_OPTIONS, naive: true })));
+        if (d.hard) return s;
+        fallback ??= s;
+      }
+      // Jokerläget: jokern delades ut just här, så prova inte senare rundor
+      if (opts.jokers) break;
+      // Givet läge → spela vidare till din nästa tur i samma hand
+      const next = turns.findIndex((x, k) => k > stop && x.seat === 0 && x.round <= lastRound);
+      stop = next;
     }
-
-    const t = turns[stop];
-    const hand = deck.slice(pos, pos + t.count);
-    if (isTrivial(seats[0].board, t.place, hand.length)) continue;
-    return {
-      id: `s${Date.now()}-${seq++}`,
-      variant,
-      round: t.round,
-      board: seats[0].board,
-      // Öppningshanden läggs samtidigt (dold) → motståndarens kort syns inte än
-      opponentBoard: t.round === 1 ? newSeat().board : seats[1].board,
-      hand,
-      deadCards: seats[0].discards,
-      place: t.place,
-    };
   }
+  if (fallback) return fallback;
   throw new Error('Kunde inte skapa ett scenario');
 }

@@ -15,7 +15,7 @@ Läs detta innan du ändrar i `src/components/board/`, `cards/`, `dnd/`, `share/
 
 ## Senaste dragets kort
 
-`training/useRecentSlots.ts` jämför varje plats bräde före/efter (oföränderliga Board-objekt) → `BoardView recent` (streckad ram via `PlayingCard recent`) och `ShareBoard.recent`; öppningshanden → `opening` (fast mörk ram hela handen, streckas inte). FL-drag markeras inte. Används i HandRun och DuelRun. Radetiketter: Toppen / Mitten / Botten (T/M/B i kompakta listor).
+`training/useRecentSlots.ts` jämför varje plats bräde före/efter (oföränderliga Board-objekt) → `BoardView recent` (röd streckad blinkande ram: `PlayingCard recent` ritar `.recent-ring` i index.css som eget lager, så att den inte krockar med snäpp-animationen; stilla vid prefers-reduced-motion) och `ShareBoard.recent`; öppningshanden → `opening` (fast mörk ram hela handen, streckas inte). FL-drag markeras inte. Används i HandRun och DuelRun. Radetiketter: Toppen / Mitten / Botten (T/M/B i kompakta listor).
 
 ## Båda brädena på skärmen (telefon)
 

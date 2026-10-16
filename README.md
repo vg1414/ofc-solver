@@ -20,20 +20,21 @@ En webbaserad solver för Open Face Chinese Poker (OFC) med stöd för hemspels-
 - **Kompakt 4×13-rutnät** för kortinmatning, alltid nåbart med tummen
 - **Två lägen: Vanlig hand och Fantasy Land.** Öppningen ingår i vanlig hand: med tomt bräde väljer du 5 kort → "Bästa öppning" → "Lägg så här" lägger ut alla. Sedan ett kort i taget
 - **Solverns förslag visas som spökkort direkt på brädet**, med EV, FL-chans, foul-risk och "↻ FL igen"
-- **Jämför läggningar:** lägg ditt drag, tryck "⇄ Jämför mot…", ändra ett eller flera kort och se vilken läggning som är bäst. Båda räknas lika noga på samma kortlekar, och solverns bästa visas som referens. Svaret säger om skillnaden är säker eller bara slump. Fungerar även i Fantasy Land ("Lägg själv och jämför", exakt uträknat)
+- **Jämför läggningar:** lägg ditt drag, tryck "⇄ Jämför mot…", ändra vilka kort du vill — även de från tidigare rundor — och se vilken läggning som är bäst. Båda räknas lika noga på samma kortlekar, och solverns bästa visas som referens. Svaret säger om skillnaden är säker eller bara slump. Fungerar även i Fantasy Land ("Lägg själv och jämför", exakt uträknat)
 - Följer telefonens ljusa/mörka läge. Ark sveps ner för att stängas
 - **Splash vid start:** korten delas ut och vänds till en hand, virvlar runt som solverns simuleringar och slår ihop till appikonen med ett fjädrande klick. Ett tryck hoppar över
 - **Egen appikon** (grönt kort med vit spader). Appen kan läggas till på hemskärmen och öppnas då i helskärm som "OFC"
 
 ## Träna
 
-- **Scenarion (poängjakt):** riktiga lägen som datorn spelar fram. Lägg dina kort; solvern (Noggrann) bedömer draget. Sållades ditt drag bort tidigt räknas det om, lika noga som bästa draget och på samma kortlekar, så att poängen blir rättvis. Max 100 p per scenario (100 − EV-förlust × 100), gradering Perfekt / Bra / Miss och en sammanfattning med sämsta beslutet
+- **Scenarion (poängjakt):** riktiga, svåra lägen som datorn spelar fram (givna lägen slängs; bara fällor och nära val blir kvar). Lägg dina kort; solvern (Noggrann) bedömer draget. Sållades ditt drag bort tidigt räknas det om, lika noga som bästa draget och på samma kortlekar, så att poängen blir rättvis. Max 100 p per scenario (100 − EV-förlust × 100), gradering Perfekt / Bra / Miss och en sammanfattning med sämsta beslutet
 - **★ Joker:** samma poängjakt, men varje scenario har minst en joker i handen (ibland båda) — öva på var jokern gör mest nytta
 - **Hel hand mot datorn:** spela sessioner med husreglerna, inklusive Fantasy Land. Längd: antal händer, minuter eller fritt spel. Sessionen slutar som standard även om någon står på FL, men man kan välja att FL ska spelas ut. Ställningen och varje hands poäng syns under spelet, och foul-risk och FL-chans visas efter varje drag, både för dig och datorn. Datorns styrka går att välja (Snabb/Normal/Noggrann). Valfritt coach-läge visar EV-förlusten och bästa draget, och ett drag kan räknas om noggrant
 - **Topplistor** sparas lokalt i webbläsaren (topp 10 per läge, variant och antal)
 
-## Spela (2 spelare)
+## Spela (2 spelare eller mot datorn)
 
+- **Mot datorn:** välj nivå Lätt (gör ofta misstag), Medel (ibland fel), Svår (spelar som solvern) eller Proffs (räknar extra noga). Datorn ser bara det en spelare får se
 - **Två spelare på samma telefon:** skriv in namnen, välj variant och längd (händer, minuter eller fritt, och om FL ska spelas ut). Skicka telefonen mellan er
 - **Tydligt vems tur det är:** stor banner i spelarens färg (grön = spelare 1, blå = spelare 2), skärmkanten lyser i samma färg, och Klar-knappen säger "ge till Anna" när telefonen ska lämnas över. Den som har turen ser alltid sitt bräde nederst
 - **Dolt det som ska vara dolt:** öppningshänderna läggs dolt och visas när båda lagt sin, kastade kort (Pineapple) visas aldrig för motståndaren, och Fantasy Land-brädet är dolt tills handen är klar. FL-spelaren trycker själv "visa mina kort"

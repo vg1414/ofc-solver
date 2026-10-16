@@ -12,7 +12,8 @@
 import type { Card, Board, GameVariant, RowName } from '../engine/types';
 import { createEmptyBoard } from '../engine/types';
 import { toInt } from '../core/eval';
-import { allAssignments } from '../core/policy';
+import { allAssignments, makeUnseen } from '../core/policy';
+import { choose, LA } from '../core/lookahead';
 import { evaluateCandidates, opponentPool } from '../core/sim';
 import type { Candidate, CandidateResult } from '../core/sim';
 import { solveFantasyLand, evaluateFLAssign } from '../core/fl';
@@ -42,6 +43,12 @@ export interface SolverOptions {
    * att jämföra direkt.
    */
   pinnedOnly?: boolean;
+  /**
+   * Markera draget som den enkla tumregelspelaren (policy-heuristiken utan
+   * provframtider) skulle välja: `naive: true` på det alternativet. Används
+   * för att hitta "fällor" bland träningsscenariona.
+   */
+  naive?: boolean;
 }
 
 /** Ett komplett drag: vilket kort som hamnar i vilken rad (eller kastas) */
@@ -78,6 +85,8 @@ export interface DetailedPlacementOption {
   finalist?: boolean;
   /** true = draget var låst via options.pinned */
   pinned?: boolean;
+  /** true = tumregelspelarens val (options.naive) */
+  naive?: boolean;
   /** Standardfel för EV-skillnaden mot bästa draget, parvis på samma blandningar (bara finalister) */
   evDiffSE?: number;
   /** Standardfel för EV-skillnaden mot det första låsta draget (options.pinned[0]). 0 i Fantasy Land (exakt) */
@@ -191,13 +200,27 @@ export function solveFromBoard(
   const unseen = unseenFrom(seen);
 
   const free = 13 - rows.flat().length;
-  if (hand.length > free + (variant === 'pineapple' && hand.length === 3 ? 1 : 0)) {
+  const onlyPinned = !!(options.pinnedOnly && options.pinned?.length);
+  if (!onlyPinned && hand.length > free + (variant === 'pineapple' && hand.length === 3 ? 1 : 0)) {
     throw new Error('Fler kort än lediga platser på brädet.');
   }
 
-  // Kandidater: alla sätt att lägga ut korten (Pineapple: ett av tre kastas)
+  // Kandidater: alla sätt att lägga ut korten (Pineapple: ett av tre kastas).
+  // Bara låsta drag: kandidaterna = de låsta dragen direkt. Då kan ett drag
+  // vara större än ett vanligt (Jämför: hela brädet läggs om från tomt bräde).
   const cands: Candidate[] = [];
-  if (variant === 'pineapple' && hand.length === 3) {
+  if (onlyPinned) {
+    const room = ROWS.map((r) => (r === 'top' ? 3 : 5) - board[r].cards.filter((c) => c !== null).length);
+    const byKey = new Map<string, Candidate>();
+    options.pinned!.forEach((move, idx) => {
+      const assign = pinnedAssign(move, cards);
+      for (let r = 0; r < 3; r++) if (assign.filter((a) => a === r).length > room[r]) throw new Error('Låst drag får inte plats på brädet.');
+      const key = assignKey(hand, assign);
+      const cand = byKey.get(key) ?? { assign, pinned: true };
+      if (cand.pinIndex === undefined) cand.pinIndex = idx;
+      if (!byKey.has(key)) { byKey.set(key, cand); cands.push(cand); }
+    });
+  } else if (variant === 'pineapple' && hand.length === 3) {
     for (let d = 0; d < 3; d++) {
       const keep = hand.filter((_, k) => k !== d);
       for (const a of allAssignments(rows, keep)) cands.push({ assign: [...a.slice(0, d), -1, ...a.slice(d)] });
@@ -208,7 +231,7 @@ export function solveFromBoard(
   if (cands.length === 0) throw new Error('Inga giltiga placeringar hittades.');
 
   // Låsta drag → markera motsvarande kandidat
-  if (options.pinned?.length) {
+  if (options.pinned?.length && !onlyPinned) {
     const byKey = new Map(cands.map((c) => [assignKey(hand, c.assign), c]));
     options.pinned.forEach((move, idx) => {
       const cand = byKey.get(assignKey(hand, pinnedAssign(move, cards)));
@@ -221,9 +244,22 @@ export function solveFromBoard(
   const t0 = Date.now();
   const res: CandidateResult[] = evaluateCandidates(
     { rows, hand, unseen, opponent: opp, variant, maxSims: simulations, maxMs, onProgress },
-    options.pinnedOnly && options.pinned?.length ? cands.filter((c) => c.pinned) : cands,
+    cands,
   );
   const timedOut = Date.now() - t0 >= maxMs;
+
+  // Tumregelspelarens val (bara heuristiken, inga provframtider)
+  let naiveKey: string | null = null;
+  if (options.naive && !onlyPinned) {
+    const saved = LA.samples;
+    LA.samples = 0;
+    try {
+      const pineDiscard = variant === 'pineapple' && hand.length === 3;
+      naiveKey = assignKey(hand, choose(rows.map((r) => r.slice()), hand, makeUnseen(unseen), variant, pineDiscard));
+    } finally {
+      LA.samples = saved;
+    }
+  }
 
   const out = res.map((r) => {
     const o = buildOption(board, cards, r.assign, r.ev, r.sims);
@@ -231,6 +267,7 @@ export function solveFromBoard(
     o.foulProbability = r.foulRate;
     o.finalist = r.finalist;
     if (r.pinned) o.pinned = true;
+    if (naiveKey !== null && assignKey(hand, r.assign) === naiveKey) o.naive = true;
     if (r.evDiffSE !== undefined) o.evDiffSE = r.evDiffSE;
     if (r.evDiffSEPin0 !== undefined) o.evDiffSEPin0 = r.evDiffSEPin0;
     return o;

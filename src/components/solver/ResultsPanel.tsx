@@ -85,7 +85,7 @@ function Badges({ opt, small = false }: { opt: DetailedPlacementOption; small?: 
         </Chip>
       )}
       {opt.foulProbability !== undefined && (
-        <Chip tone={opt.foulProbability >= 0.25 ? 'danger' : 'muted'} small={small} title="Risk att handen slutar i foul">
+        <Chip tone="danger" small={small} title="Risk att handen slutar i foul">
           Foul {pct(opt.foulProbability)}%
         </Chip>
       )}

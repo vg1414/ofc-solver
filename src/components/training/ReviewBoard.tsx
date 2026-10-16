@@ -44,7 +44,7 @@ export function RiskText({ opt, label, className = '' }: { opt: Judgement['best'
   return (
     <span className={`font-bold tabular ${className}`}>
       {label && <span className="text-ink-3">{label} · </span>}
-      {opt.foulProbability !== undefined && <span className={opt.foulProbability >= 0.25 ? 'text-danger' : 'text-ink-2'}>Foul {pct(opt.foulProbability)}</span>}
+      {opt.foulProbability !== undefined && <span className="text-danger">Foul {pct(opt.foulProbability)}</span>}
       {opt.foulProbability !== undefined && opt.flProbability !== undefined && <span className="text-ink-3"> · </span>}
       {opt.flProbability !== undefined && <span className="text-fl">FL {pct(opt.flProbability)}</span>}
     </span>

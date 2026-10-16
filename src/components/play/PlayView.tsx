@@ -1,8 +1,9 @@
 // ============================================================
-// PlayView.tsx — "Spela"-fliken: 2 spelare på samma telefon
+// PlayView.tsx — "Spela"-fliken: 2 spelare på samma telefon, eller mot datorn
 // ============================================================
-// Startsidan: skriv in namnen, välj variant och längd (samma ark som
-// Hel hand, men utan dator och coach). Namn och val sparas till nästa gång.
+// Startsidan: välj motståndare (2 spelare / mot datorn + nivå), skriv in
+// namnen, välj variant och längd (samma ark som Hel hand, men utan
+// coach). Namn och val sparas till nästa gång.
 // Ett pågående parti sparas efter varje drag (useLocalMatch), så här
 // finns "Fortsätt" om appen har stängts mitt i ett parti.
 // "Spela igen" byter `id`, vilket monterar om partiet från noll.
@@ -20,21 +21,31 @@ import Segmented from '../ui/Segmented';
 import Footer from '../layout/Footer';
 import HandSettingsSheet, { SettingsSummary } from '../training/HandSettingsSheet';
 import DuelRun from './DuelRun';
+import { DUEL_CPU_IDS, DUEL_CPU_LEVELS, isCpuLevel, type DuelCpuLevel } from '../../match/cpu';
+
+type Opponent = 'human' | 'cpu';
 
 const CFG_KEY = 'ofc-duel-config';
 
 interface DuelConfig {
   names: [string, string];
   hand: HandSettings;
+  opponent: Opponent;
+  cpu: DuelCpuLevel;
 }
 
 function loadConfig(): DuelConfig {
-  const def: DuelConfig = { names: ['', ''], hand: sanitizeHandSettings(null) };
+  const def: DuelConfig = { names: ['', ''], hand: sanitizeHandSettings(null), opponent: 'human', cpu: 'medium' };
   try {
     const v = JSON.parse(localStorage.getItem(CFG_KEY) ?? '{}') as Partial<DuelConfig>;
     const n = Array.isArray(v.names) ? v.names : [];
     const name = (i: 0 | 1) => (typeof n[i] === 'string' ? n[i].slice(0, MAX_NAME) : '');
-    return { names: [name(0), name(1)], hand: sanitizeHandSettings(v.hand) };
+    return {
+      names: [name(0), name(1)],
+      hand: sanitizeHandSettings(v.hand),
+      opponent: v.opponent === 'cpu' ? 'cpu' : 'human',
+      cpu: isCpuLevel(v.cpu) ? v.cpu : def.cpu,
+    };
   } catch {
     return def;
   }
@@ -59,12 +70,21 @@ export default function PlayView({ active = true }: { active?: boolean }) {
     haptic([8, 30, 8]);
     window.scrollTo({ top: 0 });
     const match = createMatch(
-      config ?? {
-        variant,
-        names: [cleanName(cfg.names[0], 0), cleanName(cfg.names[1], 1)],
-        length: cfg.hand.length,
-        flEnd: cfg.hand.flEnd,
-      },
+      config ??
+        (cfg.opponent === 'cpu'
+          ? {
+              variant,
+              names: [cleanName(cfg.names[0], 0), 'Datorn'],
+              length: cfg.hand.length,
+              flEnd: cfg.hand.flEnd,
+              cpu: cfg.cpu,
+            }
+          : {
+              variant,
+              names: [cleanName(cfg.names[0], 0), cleanName(cfg.names[1], 1)],
+              length: cfg.hand.length,
+              flEnd: cfg.hand.flEnd,
+            }),
     );
     setRunning((r) => ({ id: (r?.id ?? 0) + 1, match, elapsed: 0 }));
   };
@@ -120,6 +140,7 @@ function Setup({
   onDiscard: () => void;
 }) {
   const [sheet, setSheet] = useState(false);
+  const vsCpu = cfg.opponent === 'cpu';
   const setName = (i: 0 | 1, v: string) => {
     const names: [string, string] = [...cfg.names];
     names[i] = v.slice(0, MAX_NAME);
@@ -131,16 +152,49 @@ function Setup({
       <div className="flex flex-col gap-3">
         <div className="px-1 pt-1">
           <h1 className="title-serif text-[30px]">Spela</h1>
-          <p className="text-[13px] font-medium text-ink-2">Två spelare, en telefon — skicka den mellan er.</p>
+          <p className="text-[13px] font-medium text-ink-2">{vsCpu ? 'Du mot datorn — välj hur bra den ska vara.' : 'Två spelare, en telefon — skicka den mellan er.'}</p>
         </div>
 
         {saved && <ResumeCard saved={saved} onResume={onResume} onDiscard={onDiscard} />}
 
         <div className="glass flex flex-col gap-3 rounded-[24px] p-4">
           <div>
-            <div className="mb-1.5 px-1 text-[11px] font-extrabold uppercase tracking-[0.08em] text-ink-3">Spelare</div>
+            <div className="mb-1.5 px-1 text-[11px] font-extrabold uppercase tracking-[0.08em] text-ink-3">Motståndare</div>
+            <Segmented<Opponent>
+              size="sm"
+              ariaLabel="Motståndare"
+              value={cfg.opponent}
+              onChange={(v) => {
+                haptic(4);
+                setCfg({ ...cfg, opponent: v });
+              }}
+              options={[
+                { value: 'human', label: '2 spelare', sub: 'samma telefon' },
+                { value: 'cpu', label: 'Mot datorn', sub: 'välj nivå' },
+              ]}
+            />
+          </div>
+
+          {vsCpu && (
+            <div className="animate-fade-in">
+              <div className="mb-1.5 px-1 text-[11px] font-extrabold uppercase tracking-[0.08em] text-ink-3">Datorns nivå</div>
+              <Segmented<DuelCpuLevel>
+                size="sm"
+                ariaLabel="Datorns nivå"
+                value={cfg.cpu}
+                onChange={(v) => {
+                  haptic(4);
+                  setCfg({ ...cfg, cpu: v });
+                }}
+                options={DUEL_CPU_IDS.map((id) => ({ value: id, label: DUEL_CPU_LEVELS[id].label, sub: DUEL_CPU_LEVELS[id].sub }))}
+              />
+            </div>
+          )}
+
+          <div>
+            <div className="mb-1.5 px-1 text-[11px] font-extrabold uppercase tracking-[0.08em] text-ink-3">{vsCpu ? 'Ditt namn' : 'Spelare'}</div>
             <div className="flex flex-col gap-2">
-              {([0, 1] as const).map((i) => (
+              {(vsCpu ? ([0] as const) : ([0, 1] as const)).map((i) => (
                 <label
                   key={i}
                   className={`flex items-center gap-3 rounded-[18px] px-3 py-2 shadow-[inset_0_0_0_1.5px_var(--line)] transition-shadow duration-200 ${i === 0 ? 'bg-p1-soft/60 focus-within:shadow-[inset_0_0_0_2px_var(--p1)]' : 'bg-p2-soft/60 focus-within:shadow-[inset_0_0_0_2px_var(--p2)]'}`}
@@ -197,6 +251,15 @@ function Setup({
 
       <div className="glass rounded-[24px] p-4 wide:sticky wide:top-[84px]">
         <div className="font-serif text-[18px] font-extrabold text-ink">Så funkar det</div>
+        {vsCpu ? (
+        <ul className="mt-1.5 flex flex-col gap-1 text-[13px] text-ink-2">
+          <li>• <b>Lätt</b> gör ofta misstag, <b>Medel</b> ibland, <b>Svår</b> spelar som solvern och <b>Proffs</b> räknar extra noga.</li>
+          <li>• Datorn ser bara det du ser: din öppning är dold för den tills båda lagt.</li>
+          <li>• Ingen solverhjälp under partiet — tryck ☆ på ett drag för att analysera det under Träna.</li>
+          <li>• Husreglerna: 1 p/rad, scoop +3, royalties, foul, FL 13–16 kort.</li>
+          <li>• Partiet sparas efter varje drag — stängs appen kan du fortsätta.</li>
+        </ul>
+        ) : (
         <ul className="mt-1.5 flex flex-col gap-1 text-[13px] text-ink-2">
           <li>• Den som har turen ser alltid sitt eget bräde längst ner.</li>
           <li>• Banner och skärmkant i spelarens färg visar vems tur det är.</li>
@@ -207,6 +270,7 @@ function Setup({
           <li>• Husreglerna: 1 p/rad, scoop +3, royalties, foul, FL 13–16 kort.</li>
           <li>• Partiet sparas efter varje drag — stängs appen kan ni fortsätta.</li>
         </ul>
+        )}
       </div>
 
       <HandSettingsSheet open={sheet} onClose={() => setSheet(false)} value={cfg.hand} onChange={(hand) => setCfg({ ...cfg, hand })} duel />
@@ -231,6 +295,7 @@ function ResumeCard({ saved, onResume, onDiscard }: { saved: SavedMatch; onResum
           <div className="text-[14px] font-extrabold text-ink">Pågående parti</div>
           <div className="truncate text-[12px] font-semibold text-ink-3">
             Hand {s.hand.no} · {lengthLabel(s.config.length)} · {s.config.variant === 'regular' ? 'Vanlig' : 'Pineapple'}
+            {s.config.cpu && ` · Datorn ${DUEL_CPU_LEVELS[s.config.cpu].label}`}
           </div>
         </div>
       </div>

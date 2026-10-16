@@ -256,3 +256,21 @@ describe('Jämför: två låsta drag', () => {
     expect(evaluateFLAssign(ids, best.assign, opponentPool('regular')).ev).toBeCloseTo(best.ev, 6);
   }, 60000);
 });
+
+describe('Jämför fritt: hela bräden från tomt bräde', () => {
+  it('samma läggning ger samma EV som draget från det riktiga brädet', () => {
+    const bd = board('2c 7d', '9s 9d', 'Ah Jh 8h 4h');
+    const card = parseCard('3h');
+    const normal = solveFromBoard(bd, [card], [], 'regular', { simulations: 150, maxMs: 30000, pinned: [[{ card, row: 'bottom' }]], pinnedOnly: true });
+    const rowsOf: [string, RowName][] = [['2c 7d', 'top'], ['9s 9d', 'middle'], ['Ah Jh 8h 4h', 'bottom']];
+    const earlier = rowsOf.flatMap(([s, row]) => s.split(' ').map((x) => ({ card: parseCard(x), row })));
+    const all = [...earlier.map((p) => p.card), card];
+    const a: PinnedMove = [...earlier, { card, row: 'bottom' }];
+    // B: 9:orna flyttade till botten, flushkorten upp i mitten
+    const b: PinnedMove = a.map((p) => ({ ...p, row: p.card.kind === 'card' && p.card.rank === '9' ? 'bottom' : p.row === 'bottom' && p.card.kind === 'card' && p.card.suit === 'hearts' && p.card.rank !== 'A' ? 'middle' : p.row })) as PinnedMove;
+    const free = solveFromBoard(createEmptyBoard(), all, [], 'regular', { simulations: 150, maxMs: 30000, pinned: [a, b], pinnedOnly: true });
+    expect(free.options).toHaveLength(2);
+    const fa = free.options.find((o) => o.placements.find((p) => p.card === all[2])!.row === 'middle')!;
+    expect(fa.ev).toBeCloseTo(normal.best.ev, 1);
+  }, 60000);
+});

@@ -661,3 +661,22 @@ button:disabled {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Senast lagda kort: röd streckad ram som blinkar (eget lager, så att den
+   inte krockar med kortets snäpp-animation) */
+.recent-ring {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  border-radius: inherit;
+  border: 3.5px dashed var(--danger);
+  pointer-events: none;
+  animation: recent-blink 1s ease-in-out infinite;
+}
+@keyframes recent-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.15; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .recent-ring { animation: none; }
+}

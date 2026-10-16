@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-10-16 — Spela mot datorn, svårare scenarion, fritt Jämför
+
+- **Spela mot datorn:** nytt val "2 spelare / Mot datorn" på Spela-fliken. Datorns nivå: **Lätt** (gör ofta misstag), **Medel** (ibland fel), **Svår** (solvern) och **Proffs** (räknar extra noga). Svagare nivåer väljer ibland ett sämre drag bland solverns bästa — oftare ju mindre det kostar. Datorn ser bara det en spelare får se (din öppning är dold i runda 1). Partiet sparas som vanligt
+- **Svårare scenarion (Scenarion och ★ Joker):** givna lägen slängs. Ett läge behålls bara om det är en *fälla* (det "naturliga" tumregeldraget är fel) eller ett *nära val* (ett annat drag ligger 0,05–0,6 poäng under bästa). Är läget givet spelar datorn vidare till din nästa tur i samma hand och provar där. Mätt: ungefär 6 av 10 lägen klarar filtret direkt, och ungefär hälften av de behållna är fällor
+- **Jämför: flytta vilka kort du vill**, även de från tidigare rundor. Då räknas A och B som hela bräden på samma kortlekar, och solverns bästa drag räknas samtidigt i en egen räknare. Ett B som ändrar tidigare kort kan inte läggas ut, men jämförelsen gäller
+- **Senast lagda kort syns tydligt:** röd, streckad ram som blinkar (förut en tunn grön streckad ram)
+- **Foul alltid röd, FL alltid lila** (Jämför, solverns lista, coachen och mätaren i Hel hand). Förut var Foul grå under 25 %
+
 ## 2026-10-15 — Solvern: "≈ lika bra" när skillnaden är brus
 
 - Alternativ som ligger **inom simuleringarnas felmarginal** från bästa draget (skillnaden mindre än 2 standardfel) märks nu **≈ lika bra**, och skillnaden visas grå i stället för röd. Gäller listan, det förhandsvisade alternativet och knappen "Visa alla … alternativ"

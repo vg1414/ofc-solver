@@ -21,7 +21,7 @@ export interface PlayingCardProps extends React.HTMLAttributes<HTMLDivElement> {
   ghost?: boolean;
   /** Upplyft (valt kort) */
   lifted?: boolean;
-  /** Lagt i senaste draget: streckad ram, men kortet syns som vanligt */
+  /** Lagt i senaste draget: röd, streckad, blinkande ram (eget lager .recent-ring) */
   recent?: boolean;
   /** Del av öppningshanden: fast mörk ram */
   opening?: boolean;
@@ -57,8 +57,8 @@ export default function PlayingCard({
       : lifted
         ? `inset 0 0 0 1px ${v.line}, 0 0 0 2px var(--accent), var(--shadow-lift)`
         : `inset 0 0 0 1px ${v.line}, var(--shadow-card)`,
-    outline: ghost || recent ? '2px dashed var(--accent)' : opening ? '2px solid var(--ink)' : undefined,
-    outlineOffset: ghost || recent || opening ? '-1px' : undefined,
+    outline: ghost ? '2px dashed var(--accent)' : opening ? '2px solid var(--ink)' : undefined,
+    outlineOffset: ghost || opening ? '-1px' : undefined,
     ...style,
   } as React.CSSProperties;
 
@@ -78,6 +78,7 @@ export default function PlayingCard({
       `}
       style={cssVars}
     >
+      {recent && !ghost && <span className="recent-ring" aria-hidden="true" />}
       {/* Vattenstämpel: stor, svag färgsymbol centrerad bakom allt */}
       <SuitIcon
         suit={isJoker ? 'star' : card.suit}

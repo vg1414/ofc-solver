@@ -575,14 +575,13 @@ function RiskMeter({ foul, fl }: { foul: number | null; fl: number | null }) {
     );
   }
   const f = foul ?? 0;
-  const danger = f >= 0.25;
   return (
     <span className="flex items-center gap-1 animate-badge-in" aria-live="polite" title="Räknat från brädet efter senaste draget">
       <span
-        className={`flex items-center gap-1 rounded-full px-2 py-[1px] text-[10.5px] font-extrabold tabular ${danger ? 'bg-danger-soft text-danger' : 'bg-sunken text-ink-2'}`}
+        className={`flex items-center gap-1 rounded-full px-2 py-[1px] text-[10.5px] font-extrabold tabular bg-danger-soft text-danger`}
       >
         <span className="relative h-1.5 w-7 overflow-hidden rounded-full bg-line-strong">
-          <span className="absolute inset-y-0 left-0 rounded-full transition-[width] duration-500" style={{ width: `${Math.max(4, f * 100)}%`, background: danger ? 'var(--danger)' : 'var(--ink-3)' }} />
+          <span className="absolute inset-y-0 left-0 rounded-full transition-[width] duration-500" style={{ width: `${Math.max(4, f * 100)}%`, background: 'var(--danger)' }} />
         </span>
         Foul {pct(f)}
       </span>

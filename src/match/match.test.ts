@@ -4,6 +4,8 @@ import type { Board, Card, RowName } from '../engine/types';
 import type { Move } from '../training/moves';
 import { startHand } from '../training/game';
 import { applyAction, createMatch, currentTurn, MatchError, parseMatch, totals, viewFor, type MatchConfig, type MatchState } from './match';
+import { pickCpuOption } from './cpu';
+import type { DetailedPlacementOption, DetailedSolverResult } from '../solver/solver';
 
 const CFG: MatchConfig = { variant: 'regular', names: ['David', 'Anna'], length: { kind: 'hands', n: 2 }, flEnd: 'stop' };
 
@@ -123,5 +125,38 @@ describe('2 spelare: spelmotorn', () => {
     expect(t).toMatchObject({ count: 3, place: 2 });
     s = playHand(s);
     expect(s.hand.seats[0].discards).toHaveLength(4);
+  });
+});
+
+describe('datorn som motståndare', () => {
+  const opt = (ev: number) => ({ ev, rank: 0, primaryRow: 'bottom', placements: [], discards: [], simulations: 1 }) as unknown as DetailedPlacementOption;
+  const res = (evs: number[]) => {
+    const options = evs.map(opt);
+    return { options, best: options[0], simulations: 1, timedOut: false, method: 'monteCarlo' } as DetailedSolverResult;
+  };
+  it('Svår och Proffs tar alltid bästa draget', () => {
+    const r = res([1, 0.99, 0.5]);
+    for (let i = 0; i < 50; i++) {
+      expect(pickCpuOption(r, 'hard')).toBe(r.best);
+      expect(pickCpuOption(r, 'pro')).toBe(r.best);
+    }
+  });
+  it('Lätt gör oftare misstag än Medel, och sällan grova', () => {
+    const r = res([1, 0.8, 0.6, -1]);
+    let seed = 1;
+    const rand = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+    const miss = (lvl: 'easy' | 'medium') => {
+      let n = 0, gross = 0;
+      for (let i = 0; i < 2000; i++) {
+        const o = pickCpuOption(r, lvl, rand);
+        if (o !== r.best) n++;
+        if (o.ev === -1) gross++;
+      }
+      return { n, gross };
+    };
+    const e = miss('easy'), m = miss('medium');
+    expect(e.n).toBeGreaterThan(m.n);
+    expect(m.n).toBeGreaterThan(0);
+    expect(e.gross / 2000).toBeLessThan(0.1);
   });
 });

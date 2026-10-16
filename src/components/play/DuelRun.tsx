@@ -25,9 +25,14 @@
 //    sidan är öppen; ett återupptaget parti börjar med en tom lista.
 //  - Sessionen: samma regler som mot datorn (antal händer, minuter,
 //    fritt spel, FL spelas ut eller inte) — motorn avgör när det är slut.
+//  - Mot datorn (config.cpu): du är alltid spelare 1 och ser ditt bräde
+//    nederst. På datorns tur räknar solvern (egen worker) fram ett drag
+//    utifrån datorns vy (viewFor seat 1 — din öppning är dold i runda 1),
+//    nivån väljer drag (match/cpu.ts) och draget skickas som en vanlig
+//    action. Ingen överlämning och ingen dold FL-skärm.
 // ============================================================
 
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { SeatId } from '../../training/game';
 import { currentTurn, isLastHand, playsOutFl, totals, viewFor, type MatchState } from '../../match/match';
 import { clearSavedMatch, useLocalMatch } from '../../match/useLocalMatch';
@@ -55,6 +60,11 @@ import HandOver from '../training/HandOver';
 import SessionHeader, { type Dot } from '../training/SessionHeader';
 import { HandStrip, ScoreSheet } from '../training/Scoreboard';
 import DuelSummary from './DuelSummary';
+import { cpuMove, DUEL_CPU_LEVELS } from '../../match/cpu';
+import { CANCELLED, useSolverJobs } from '../../training/useSolverJobs';
+
+/** Kort paus innan datorns drag syns, så att man hinner se att det är datorns tur */
+const CPU_PAUSE_MS = 450;
 
 interface Props {
   initial: MatchState;
@@ -86,8 +96,13 @@ export default function DuelRun({ initial, initialElapsed, active = true, onExit
   const { state, dispatch } = useLocalMatch(initial, elapsed);
   const h = state.hand;
   const turn = currentTurn(state);
+  const cpu = state.config.cpu;
+  const cpuTurn = !!cpu && turn?.seat === 1;
   // Den som har turen tittar. När handen är klar: den som lade sista draget.
-  const viewer: SeatId = turn?.seat ?? h.turns[h.turns.length - 1].seat;
+  // Mot datorn: alltid du (spelare 1).
+  const viewer: SeatId = cpu ? 0 : (turn?.seat ?? h.turns[h.turns.length - 1].seat);
+  /** Den som har turen (bannern) */
+  const actor: SeatId = turn?.seat ?? viewer;
   const view = viewFor(state, viewer);
   const me = view.seats[viewer];
   const opp = view.seats[other(viewer)];
@@ -97,14 +112,57 @@ export default function DuelRun({ initial, initialElapsed, active = true, onExit
 
   // Fantasy Land: korten visas först när FL-spelaren själv trycker "Visa"
   const [revealed, setRevealed] = useState<string | null>(null);
-  const covered = !!turn?.fl && revealed !== turnKey;
+  const covered = !cpu && !!turn?.fl && revealed !== turnKey;
 
   const mb = useMoveBuilder(me.board!, covered ? [] : view.dealt, turn?.place ?? 0);
   const [error, setError] = useState<string | null>(null);
 
   // Vem som spelar efter det här draget — byts spelare, ska telefonen lämnas över
   const nextSeat = h.turns[h.idx + 1]?.seat;
-  const handOver = nextSeat !== undefined && nextSeat !== viewer;
+  const handOver = !cpu && nextSeat !== undefined && nextSeat !== viewer;
+
+  // ---------- Datorns tur ----------
+  const cpuJobs = useSolverJobs();
+  const { solve: cpuSolve, cancel: cpuCancel } = cpuJobs;
+  const [cpuError, setCpuError] = useState<string | null>(null);
+  const [cpuRetry, setCpuRetry] = useState(0);
+  useEffect(() => {
+    if (!cpu || !turn || turn.seat !== 1 || state.finished) return;
+    let alive = true;
+    let finished = false;
+    setCpuError(null);
+    const lvl = DUEL_CPU_LEVELS[cpu];
+    // Bara det datorn får se: din öppning är dold i runda 1, ditt FL-bräde likaså
+    const cv = viewFor(state, 1);
+    cpuSolve(
+      solverInput({
+        seat: h.seats[1],
+        cards: h.dealt,
+        variant: state.config.variant,
+        opponent: cv.seats[0].board ?? undefined,
+        fl: turn.fl,
+        options: { simulations: lvl.simulations, maxMs: lvl.maxMs },
+      }),
+    )
+      .then(async (res) => {
+        finished = true;
+        const move = cpuMove(res, cpu);
+        await new Promise((r) => setTimeout(r, CPU_PAUSE_MS));
+        if (!alive) return;
+        const err = dispatch({ type: 'move', hand: h.no, turn: h.idx, seat: 1, move });
+        if (err) setCpuError(err);
+      })
+      .catch((e: Error) => {
+        finished = true;
+        if (alive && e.message !== CANCELLED) setCpuError(e.message);
+      });
+    return () => {
+      alive = false;
+      if (!finished) cpuCancel();
+    };
+    // Kör en gång per tur (h.no + h.idx identifierar turen)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [h.no, h.idx, cpuRetry, !!state.finished]);
 
   // Dragen i partiet (för draglistan och ☆ spara)
   const [log, setLog] = useState<DuelEntry[]>([]);
@@ -233,6 +291,33 @@ export default function DuelRun({ initial, initialElapsed, active = true, onExit
         </button>
       </div>
     );
+  } else if (turn && cpuTurn) {
+    dock = (
+      <div className="flex flex-col gap-2 py-0.5" style={seatVars(1)}>
+        <div
+          key={`${h.no}-cpu`}
+          className="flex items-center gap-2 rounded-full px-3 py-1.5 text-white animate-turn-swap"
+          style={{ background: 'var(--grad-p2)', boxShadow: 'var(--glow-p2)', '--swap-from': '32px' } as React.CSSProperties}
+        >
+          <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white/25 text-[12px] font-extrabold">2</span>
+          <span className="truncate text-[15px] font-extrabold">{genitive(names[1])} tur</span>
+          <span className="ml-auto shrink-0 text-[11.5px] font-semibold text-white/85">{turnText}</span>
+        </div>
+        {cpuError ? (
+          <div className="flex items-center gap-2">
+            <span className="flex-1 text-[12px] font-bold text-danger">{cpuError}</span>
+            <button type="button" onClick={() => setCpuRetry((n) => n + 1)} className="btn-ghost h-9 rounded-full px-3 text-[13px] font-bold">
+              Försök igen
+            </button>
+          </div>
+        ) : (
+          <div className="flex items-center justify-center gap-2 py-1.5 text-[13px] font-semibold text-ink-2">
+            <span className="h-2 w-2 animate-pulse rounded-full bg-p2" aria-hidden="true" />
+            Datorn tänker{turn.fl ? ' (Fantasy Land)' : ''}…
+          </div>
+        )}
+      </div>
+    );
   } else if (turn) {
     dock = (
       <div style={seatVars(viewer)}>
@@ -266,7 +351,7 @@ export default function DuelRun({ initial, initialElapsed, active = true, onExit
   return (
     <DragProvider onDrop={mb.drop}>
       {/* Skärmkanten lyser i färgen för den som har turen */}
-      {turn && <div className="turn-edge" style={{ '--edge': `color-mix(in srgb, var(--p${viewer + 1}) 75%, transparent)` } as React.CSSProperties} aria-hidden="true" />}
+      {turn && <div className="turn-edge" style={{ '--edge': `color-mix(in srgb, var(--p${actor + 1}) 75%, transparent)` } as React.CSSProperties} aria-hidden="true" />}
 
       <DockLayout
         dock={dock}
@@ -313,15 +398,15 @@ export default function DuelRun({ initial, initialElapsed, active = true, onExit
             panelen i stället (och skärmkanten lyser), så att brädena får plats */}
         {turn ? (
           <div
-            key={`${h.no}-${viewer}`}
+            key={`${h.no}-${actor}`}
             className="hidden wide:flex items-center gap-3 rounded-[24px] px-4 py-3 text-white animate-turn-swap"
-            style={{ background: `var(--grad-p${viewer + 1})`, boxShadow: `var(--glow-p${viewer + 1})`, '--swap-from': viewer === 0 ? '-48px' : '48px' } as React.CSSProperties}
+            style={{ background: `var(--grad-p${actor + 1})`, boxShadow: `var(--glow-p${actor + 1})`, '--swap-from': actor === 0 ? '-48px' : '48px' } as React.CSSProperties}
             role="status"
             aria-live="assertive"
           >
-            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white/25 text-[19px] font-extrabold ring-2 ring-white/60">{viewer + 1}</span>
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white/25 text-[19px] font-extrabold ring-2 ring-white/60">{actor + 1}</span>
             <div className="min-w-0 flex-1">
-              <div className="truncate font-serif text-[26px] font-extrabold leading-tight">{genitive(me.name)} tur</div>
+              <div className="truncate font-serif text-[26px] font-extrabold leading-tight">{genitive(names[actor])} tur</div>
               <div className="text-[12.5px] font-semibold text-white/85">{turnText}</div>
             </div>
           </div>
@@ -363,32 +448,32 @@ export default function DuelRun({ initial, initialElapsed, active = true, onExit
 
         {/* Ditt bräde (stort, nederst) — ram i din färg när det är din tur */}
         <div className="mt-1">
-          <SeatLabel seat={viewer} name={me.name} fl={me.fl} starts={h.first === viewer} you={!!turn} />
+          <SeatLabel seat={viewer} name={me.name} fl={me.fl} starts={h.first === viewer} you={!!turn && !cpuTurn} />
         </div>
         <div
           ref={myBoardRef}
           key={`b${viewer}`}
           className={`relative rounded-[30px] transition-shadow duration-500 ${turn ? 'animate-fade-in' : ''}`}
           style={{
-            ...(turn ? { boxShadow: `0 0 0 3px color-mix(in srgb, var(--p${viewer + 1}) 70%, transparent), var(--glow-p${viewer + 1})` } : {}),
+            ...(turn && !cpuTurn ? { boxShadow: `0 0 0 3px color-mix(in srgb, var(--p${viewer + 1}) 70%, transparent), var(--glow-p${viewer + 1})` } : {}),
             ...(fit ? { '--card-h-cap': `${fit.me}px` } : {}),
           } as React.CSSProperties}
         >
           <ShareBoards
             boards={() => [
-              { name: me.name, board: turn ? mb.board : me.board!, fouled: viewer === 0 ? !!h.outcome?.score.p1Foul : !!h.outcome?.score.p2Foul, royalties: earnedFor(viewer), recent: turn ? undefined : recent[viewer], opening: opening[viewer] },
+              { name: me.name, board: turn && !cpuTurn ? mb.board : me.board!, fouled: viewer === 0 ? !!h.outcome?.score.p1Foul : !!h.outcome?.score.p2Foul, royalties: earnedFor(viewer), recent: turn ? undefined : recent[viewer], opening: opening[viewer] },
               // Motståndarens bräde bara om det syns (dold öppning / FL delas inte)
               ...(opp.board ? [{ name: opp.name, board: opp.board, fouled: other(viewer) === 0 ? !!h.outcome?.score.p1Foul : !!h.outcome?.score.p2Foul, royalties: earnedFor(other(viewer)), recent: recent[other(viewer)], opening: opening[other(viewer)] }] : []),
             ]}
           />
           <BoardView
-            board={turn ? mb.board : me.board!}
-            recent={turn ? undefined : recent[viewer]}
+            board={turn && !cpuTurn ? mb.board : me.board!}
+            recent={turn && !cpuTurn ? undefined : recent[viewer]}
             opening={opening[viewer]}
-            heldCard={turn ? mb.heldCard : null}
-            interactive={!!turn && !covered}
+            heldCard={turn && !cpuTurn ? mb.heldCard : null}
+            interactive={!!turn && !covered && !cpuTurn}
             onPlace={mb.placeAt}
-            onRemove={turn ? mb.remove : undefined}
+            onRemove={turn && !cpuTurn ? mb.remove : undefined}
             canRemove={mb.isMine}
             fouled={viewer === 0 ? !!h.outcome?.score.p1Foul : !!h.outcome?.score.p2Foul}
             earnedRoyalties={earnedFor(viewer)}
@@ -403,7 +488,7 @@ export default function DuelRun({ initial, initialElapsed, active = true, onExit
       <BottomSheet open={exitOpen} onClose={() => setExitOpen(false)} title="Avsluta partiet?">
         <div className="flex flex-col gap-2.5">
           <p className="text-[13px] text-ink-2">
-            Ni har spelat {state.records.length} {state.records.length === 1 ? 'hand' : 'händer'}.
+            {cpu ? 'Du har' : 'Ni har'} spelat {state.records.length} {state.records.length === 1 ? 'hand' : 'händer'}.
             {t1 !== 0 && (
               <>
                 {' '}
@@ -413,7 +498,7 @@ export default function DuelRun({ initial, initialElapsed, active = true, onExit
                 .
               </>
             )}
-            {!h.outcome && ' Handen som pågår räknas inte.'} Partiet är sparat, så ni kan också bara byta flik och fortsätta senare.
+            {!h.outcome && ' Handen som pågår räknas inte.'} Partiet är sparat, så {cpu ? 'du' : 'ni'} kan också bara byta flik och fortsätta senare.
           </p>
           <button type="button" onClick={() => finish(length.kind === 'free')} className="btn-primary h-12 rounded-full text-[15px] font-bold">
             Visa resultat ★

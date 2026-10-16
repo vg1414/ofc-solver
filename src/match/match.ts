@@ -27,6 +27,7 @@
 import type { Board, Card, GameVariant } from '../engine/types';
 import { played, startHand, type HandOutcome, type HandState, type SeatId, type Turn } from '../training/game';
 import { applyMove, cardKey, type Move } from '../training/moves';
+import type { DuelCpuLevel } from './cpu';
 import { flPending, sessionOver, targetReached, type FlEnd, type SessionLength } from '../training/session';
 
 /** Version av sparformatet — höj om strukturen ändras, så gamla sparningar ignoreras */
@@ -37,6 +38,8 @@ export interface MatchConfig {
   names: [string, string];
   length: SessionLength;
   flEnd: FlEnd;
+  /** Mot datorn: datorns nivå (datorn sitter på plats 2). Saknas = 2 spelare */
+  cpu?: DuelCpuLevel;
 }
 
 /** En färdig hand (samma form som HandRecord i Scoreboard) */

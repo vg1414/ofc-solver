@@ -7,7 +7,13 @@
 //      Fantasy Land: du lägger den här först (steg "a").
 //   2. "Jämför mot…" → B börjar som en kopia av A. Flytta kort mellan
 //      raderna (dra, eller tryck två gånger för att ta tillbaka ett kort).
+//      ALLA kort på brädet går att flytta, även de från tidigare rundor.
 //      ↶ återställer B till A.
+//      B ändrar tidigare kort ("fritt läge") → båda räknas som hela bräden
+//      från ett tomt bräde (options.pinnedOnly, samma blandningar), och
+//      solverns bästa drag räknas i en egen worker från det riktiga brädet.
+//      Bästa dragets EV flyttas så att A får samma värde i båda körningarna.
+//      Ett sådant B går inte att lägga ut (historiken skulle inte stämma).
 //   3. "Jämför" kör solvern med BÅDA läggningarna låsta (options.pinned):
 //      de räknas lika noga, på exakt samma blandningar, och solverns eget
 //      bästa drag räknas fram samtidigt som referens. Fantasy Land räknas
@@ -24,7 +30,7 @@ import type { Board, Card, GameVariant, RowName } from '../../engine/types';
 import { createEmptyBoard } from '../../engine/types';
 import type { DetailedPlacementOption, PinnedMove } from '../../solver/solver';
 import { useSolver } from '../../hooks/useSolver';
-import { applyMove, findOption, moveKey, type Move } from '../../training/moves';
+import { applyMove, findOption, moveKey, placementsOn, type Move } from '../../training/moves';
 import { useMoveBuilder } from '../../training/useMoveBuilder';
 import { DragProvider } from '../dnd/DragContext';
 import BoardView from '../board/BoardView';
@@ -34,6 +40,7 @@ import DockLayout from '../training/DockLayout';
 import PlayDock from '../training/PlayDock';
 import Segmented from '../ui/Segmented';
 import { SolverProgress } from './ResultsPanel';
+import { RiskText } from '../training/ReviewBoard';
 import { isFoul } from '../../engine/foulCheck';
 import { rowCards } from '../../training/moves';
 
@@ -68,7 +75,6 @@ type Pick = 'a' | 'b' | 'best';
 
 const evFmt = new Intl.NumberFormat('sv-SE', { signDisplay: 'always', minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const numFmt = new Intl.NumberFormat('sv-SE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-const pct = (p?: number) => (p === undefined ? '–' : p > 0 && p < 0.01 ? '<1 %' : `${Math.round(p * 100)} %`);
 
 const toPinned = (m: Move): PinnedMove => [
   ...m.placements.map((p) => ({ card: p.card, row: p.row })),
@@ -100,12 +106,22 @@ export default function CompareView({ setup, onClose, onKeep, canKeep }: Compare
   const { mode, base, hand, place } = setup;
   const fl = mode === 'fantasyLand';
   const mbA = useMoveBuilder(base, hand, place);
-  const mbB = useMoveBuilder(base, hand, place);
+  // B: tidigare kort ingår i "handen" så att de också går att flytta
+  const baseCards = useMemo(
+    () => ROWS.flatMap((row) => base[row].cards.flatMap((card, slotIndex) => (card ? [{ card, row, slotIndex }] : []))),
+    [base],
+  );
+  const emptyBase = useMemo(() => createEmptyBoard(), []);
+  const fullHand = useMemo(() => [...baseCards.map((p) => p.card), ...hand], [baseCards, hand]);
+  const mbB = useMoveBuilder(emptyBase, fullHand, baseCards.length + place);
   const [phase, setPhase] = useState<Phase>(setup.a ? 'b' : 'a');
   const [peekA, setPeekA] = useState(false);
   const [pick, setPick] = useState<Pick>('b');
   const [flash, setFlash] = useState<string | null>(null);
   const { result, error, progress, doneId, runSolver, cancelSolver } = useSolver();
+  // Fritt läge: solverns bästa drag räknas samtidigt i en egen worker
+  const ref = useSolver();
+  const refRunId = useRef(0);
   /** Id för jämförelsens körning (useSolver doneId säger när just den är klar) */
   const runId = useRef(0);
 
@@ -115,7 +131,7 @@ export default function CompareView({ setup, onClose, onKeep, canKeep }: Compare
   useEffect(() => {
     if (!setup.a) return;
     loadA(setup.a.placements);
-    loadB(setup.a.placements);
+    loadB([...baseCards, ...setup.a.placements]);
     // Bara när vyn öppnas
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -127,16 +143,34 @@ export default function CompareView({ setup, onClose, onKeep, canKeep }: Compare
   }, [flash]);
 
   const a = setup.a ?? mbA.move;
-  const same = mbB.done && moveKey(mbB.move) === moveKey(a);
+  /** A som helt bräde (tidigare kort + draget) */
+  const aFull: Move = useMemo(() => ({ placements: [...baseCards, ...a.placements], discards: a.discards }), [baseCards, a]);
+
+  // Har B flyttat något tidigare kort (annan rad eller kastat)?
+  const bFull = mbB.move;
+  const freeMode = useMemo(
+    () =>
+      baseCards.some((bc) => {
+        const p = bFull.placements.find((x) => x.card === bc.card);
+        return !p || p.row !== bc.row;
+      }),
+    [baseCards, bFull],
+  );
+  /** B som vanligt drag från grundbrädet (bara när tidigare kort ligger kvar i sina rader) */
+  const bMove: Move = useMemo(() => {
+    const own = bFull.placements.filter((p) => !baseCards.some((bc) => bc.card === p.card));
+    return { placements: placementsOn(base, own), discards: bFull.discards };
+  }, [bFull, baseCards, base]);
+  const same = mbB.done && (freeMode ? moveKey(bFull) === moveKey(aFull) : moveKey(bMove) === moveKey(a));
 
   // B:s ↶ återställer till A (inte till tomt)
-  const builderB = useMemo(() => ({ ...mbB, reset: () => mbB.load(a.placements) }), [mbB, a]);
+  const builderB = useMemo(() => ({ ...mbB, reset: () => mbB.load(aFull.placements) }), [mbB, aFull]);
   const active = phase === 'a' ? mbA : builderB;
 
   const toB = () => {
     if (!mbA.done) return;
     haptic(8);
-    mbB.load(mbA.move.placements);
+    mbB.load([...baseCards, ...mbA.move.placements]);
     setPhase('b');
   };
 
@@ -150,7 +184,30 @@ export default function CompareView({ setup, onClose, onKeep, canKeep }: Compare
     haptic(8);
     setPhase('run');
     setPeekA(false);
-    const options = { simulations: setup.simulations, pinned: [toPinned(a), toPinned(mbB.move)] };
+    if (freeMode) {
+      // Båda som hela bräden från tomt bräde: samma osedda kort → samma blandningar
+      refRunId.current = ref.runSolver({
+        board: base,
+        cards: hand,
+        deadCards: setup.deadCards,
+        variant: setup.variant,
+        opponentBoard: setup.opponentBoard,
+        options: { simulations: setup.simulations, pinned: [toPinned(a)] },
+        mode: 'normal',
+      });
+      runId.current = runSolver({
+        board: createEmptyBoard(),
+        cards: fullHand,
+        deadCards: setup.deadCards,
+        variant: setup.variant,
+        opponentBoard: setup.opponentBoard,
+        options: { simulations: setup.simulations, pinned: [toPinned(aFull), toPinned(bFull)], pinnedOnly: true },
+        mode: 'normal',
+      });
+      return;
+    }
+    refRunId.current = 0;
+    const options = { simulations: setup.simulations, pinned: [toPinned(a), toPinned(bMove)] };
     if (fl) runId.current = runSolver({ board: createEmptyBoard(), cards: hand, deadCards: [], options, mode: 'fantasyLand' });
     else
       runId.current = runSolver({
@@ -165,25 +222,40 @@ export default function CompareView({ setup, onClose, onKeep, canKeep }: Compare
   };
 
   // Solvern klar → resultatet (eller tillbaka till B med felet)
+  const refDone = refRunId.current === 0 || ref.doneId === refRunId.current;
   useEffect(() => {
-    if (phase !== 'run' || doneId !== runId.current) return;
-    if (error) setFlash(error);
-    setPhase(error ? 'b' : 'done');
-    if (!error) haptic([8, 40, 8]);
-  }, [phase, doneId, error]);
+    if (phase !== 'run' || doneId !== runId.current || !refDone) return;
+    const err = error ?? (refRunId.current ? ref.error : null);
+    if (err) setFlash(err);
+    setPhase(err ? 'b' : 'done');
+    if (!err) haptic([8, 40, 8]);
+  }, [phase, doneId, error, refDone, ref.error]);
 
   const backToB = () => {
     cancelSolver();
+    ref.cancelSolver();
     setPhase('b');
   };
 
   // ---------- Resultatet ----------
   const res = phase === 'done' ? result : null;
-  const oa = res ? findOption(res, a) : undefined;
-  const ob = res ? findOption(res, mbB.move) : undefined;
-  const best = res?.best;
+  const doneFree = phase === 'done' && refRunId.current !== 0;
+  const oa = res ? findOption(res, doneFree ? aFull : a) : undefined;
+  const ob = res ? findOption(res, doneFree ? bFull : bMove) : undefined;
+  // Fritt läge: bästa draget kommer från den andra körningen. Flytta dess EV
+  // så att A har samma värde i båda (samma blandningar → nästan exakt lika ändå)
+  const refResult = ref.result;
+  const best = useMemo(() => {
+    if (!res) return undefined;
+    if (!doneFree) return res.best;
+    const a2 = refResult ? findOption(refResult, a) : undefined;
+    if (!refResult || !a2 || !oa) return undefined;
+    const b2 = refResult.best;
+    if (moveKey(b2) === moveKey(a2)) return oa;
+    return { ...b2, ev: b2.ev - a2.ev + oa.ev };
+  }, [res, doneFree, refResult, a, oa]);
   const bestKey = best ? moveKey(best) : '';
-  const bestIs: Pick | null = !best ? null : oa && moveKey(oa) === bestKey ? 'a' : ob && moveKey(ob) === bestKey ? 'b' : 'best';
+  const bestIs: Pick | null = !best ? null : best === oa || (oa && moveKey(oa) === bestKey) ? 'a' : ob && moveKey(ob) === bestKey ? 'b' : 'best';
 
   const verdict = (() => {
     if (!oa || !ob) return null;
@@ -224,7 +296,13 @@ export default function CompareView({ setup, onClose, onKeep, canKeep }: Compare
   }, [phase, result]);
 
   const optOf = (p: Pick): DetailedPlacementOption | undefined => (p === 'a' ? oa : p === 'b' ? ob : best);
-  const boardOf = (o: DetailedPlacementOption | undefined) => (o ? (o.resultBoard ?? applyMove(base, o.placements)) : base);
+  const boardOf = (o: DetailedPlacementOption | undefined) => {
+    if (!o) return base;
+    // B visas som du lade den (solverns bräde från tomt bräde har annan ordning)
+    if (o === ob) return mbB.board;
+    if (o === oa && doneFree) return applyMove(base, a.placements);
+    return o.resultBoard ?? applyMove(base, o.placements);
+  };
   // Fantasy Land har ingen foul-procent (allt är känt) — kolla brädet direkt
   const flFouled = (o: DetailedPlacementOption | undefined) => {
     if (!o) return false;
@@ -250,10 +328,11 @@ export default function CompareView({ setup, onClose, onKeep, canKeep }: Compare
   // Dragets kort streckade (inte när hela brädet är nytt: öppning/FL)
   const moveSlots = (o: { placements: { row: RowName; slotIndex: number }[] }) => o.placements.map((p) => ({ row: p.row, slot: p.slotIndex }));
   const fresh = fl || ROWS.every((r) => base[r].cards.every((c) => c === null));
+  const pickMove = phase === 'done' ? (pick === 'a' ? a : pick === 'b' ? (doneFree ? undefined : bMove) : optOf(pick)) : undefined;
   const recent = fresh
     ? undefined
     : phase === 'done'
-      ? optOf(pick) && moveSlots(optOf(pick)!)
+      ? pickMove && moveSlots(pickMove)
       : peekA
         ? moveSlots(a)
         : undefined;
@@ -266,12 +345,12 @@ export default function CompareView({ setup, onClose, onKeep, canKeep }: Compare
     const status =
       phase === 'a'
         ? 'Lägg din uppställning. Kort som blir över kastas.'
-        : flash ?? (same ? 'B är en kopia av A — flytta ett eller flera kort' : 'Klar att jämföra');
+        : flash ?? (same ? 'B är en kopia av A — flytta ett eller flera kort' : !mbB.done ? 'Lägg tillbaka korten' : freeMode ? 'Tidigare kort ändrade — klar' : 'Klar att jämföra');
     dock = (
       <PlayDock
         mb={active}
-        place={place}
-        total={hand.length}
+        place={phase === 'a' ? place : baseCards.length + place}
+        total={phase === 'a' ? hand.length : fullHand.length}
         onDone={phase === 'a' ? toB : run}
         doneLabel={phase === 'a' ? 'Jämför mot… →' : '⇄ Jämför A och B'}
         compact={!fl}
@@ -284,7 +363,7 @@ export default function CompareView({ setup, onClose, onKeep, canKeep }: Compare
       />
     );
   } else if (phase === 'run') {
-    dock = <SolverProgress progress={progress} onCancel={backToB} maxSeconds={fl ? 10 : setup.simulations <= 300 ? 8 : setup.simulations <= 800 ? 20 : 45} />;
+    dock = <SolverProgress progress={refRunId.current ? Math.min(progress ?? 0, ref.progress ?? 0) : progress} onCancel={backToB} maxSeconds={fl ? 10 : setup.simulations <= 300 ? 8 : setup.simulations <= 800 ? 20 : 45} />;
   } else {
     dock = (
       <div className="flex flex-col gap-3">
@@ -320,9 +399,7 @@ export default function CompareView({ setup, onClose, onKeep, canKeep }: Compare
                 <MiniBoard board={boardOf(o)} w={picks.length === 3 ? 17 : 22} />
                 <span className="text-[17px] font-extrabold tabular text-ink">{o ? evFmt.format(o.ev) : '–'}</span>
                 {!fl ? (
-                  <span className="text-[10.5px] font-semibold leading-tight text-ink-3 tabular">
-                    Foul {pct(o?.foulProbability)} · FL {pct(o?.flProbability)}
-                  </span>
+                  <RiskText opt={o ?? null} className="text-[10.5px] leading-tight" />
                 ) : flFouled(o) ? (
                   <span className="text-[10.5px] font-bold text-danger">✕ Foul</span>
                 ) : (
@@ -333,6 +410,7 @@ export default function CompareView({ setup, onClose, onKeep, canKeep }: Compare
           })}
         </div>
         {!canKeep && <p className="text-[11.5px] text-ink-3">Töm ditt bräde (Ny hand) för att kunna lägga ut en uppställning.</p>}
+        {doneFree && <p className="text-[11.5px] text-ink-3">B ändrar kort från tidigare rundor, så den kan inte läggas ut — men jämförelsen gäller.</p>}
         <div className="flex flex-wrap gap-2">
           {picks.map((p) => {
             const o = optOf(p);
@@ -340,11 +418,11 @@ export default function CompareView({ setup, onClose, onKeep, canKeep }: Compare
               <button
                 key={p}
                 type="button"
-                disabled={!o || !canKeep}
+                disabled={!o || !canKeep || (p === 'b' && doneFree)}
                 onClick={() => {
                   if (!o) return;
                   haptic([10, 30, 14]);
-                  onKeep(p === 'a' ? a : p === 'b' ? mbB.move : { placements: o.placements, discards: o.discards });
+                  onKeep(p === 'a' ? a : p === 'b' ? bMove : { placements: o.placements, discards: o.discards });
                 }}
                 className={`${p === pick ? 'btn-primary' : 'btn-ghost'} h-11 flex-1 rounded-full px-3 text-[13px] font-bold`}
               >
@@ -404,7 +482,7 @@ export default function CompareView({ setup, onClose, onKeep, canKeep }: Compare
           canRemove={active.isMine}
           maxCardWidth={84}
         />
-        {phase === 'b' && !peekA && <p className="px-1 text-[11.5px] text-ink-3">Dra ett kort till en annan rad, eller tryck två gånger på det för att ta tillbaka det. ↶ återställer till A.</p>}
+        {phase === 'b' && !peekA && <p className="px-1 text-[11.5px] text-ink-3">Flytta vilka kort du vill — även från tidigare rundor. Dra till en annan rad, eller tryck två gånger för att ta tillbaka. ↶ återställer till A.</p>}
         {setup.opponentBoard && (
           <>
             <div className="px-1 -mb-1 mt-1">

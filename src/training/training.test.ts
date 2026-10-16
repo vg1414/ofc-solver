@@ -5,6 +5,7 @@ import { applyMove, countPlaced, emptyBoard, gradeOf, judge, moveKey, placements
 import { settleHand, turnOrder, newSeat, applyToSeat } from './game';
 import { cardDiffs, explainMove } from './explain';
 import { insertEntry, qualifies, makeEntry, type LeaderboardEntry } from './leaderboard';
+import { scenarioDifficulty } from './scenarios';
 
 const c = (s: string): Card => (s === 'JK' ? { kind: 'joker' } : { kind: 'card', rank: s[0] as never, suit: ({ s: 'spades', h: 'hearts', d: 'diamonds', c: 'clubs' } as const)[s[1] as 's'] });
 
@@ -243,5 +244,28 @@ describe('träning: förklaring av drag', () => {
   it('samma drag som solvern', () => {
     const j = judge(res([opt(1.0, 800, [['Ks', 'bottom']])]), mv([['Ks', 'bottom']]));
     expect(explainMove(mv([['Ks', 'bottom']]), j).verdict).toContain('samma drag');
+  });
+});
+
+describe('svårare scenarion: scenarioDifficulty', () => {
+  const mk = (rows: { ev: number; finalist?: boolean; naive?: boolean }[]) => {
+    const options = rows.map((r) => ({ ev: r.ev, finalist: r.finalist ?? true, naive: r.naive, rank: 0, primaryRow: 'bottom', placements: [], discards: [], simulations: 1 })) as unknown as DetailedSolverResult['options'];
+    return { options, best: options[0], simulations: 1, timedOut: false, method: 'monteCarlo' } as DetailedSolverResult;
+  };
+  it('givet: bara ett rimligt drag, tumregeln hittar det', () => {
+    const d = scenarioDifficulty(mk([{ ev: 1, naive: true }, { ev: -0.5 }, { ev: 0.2, finalist: false }]));
+    expect(d.hard).toBe(false);
+  });
+  it('givet: två nästan lika drag (båda ger Perfekt)', () => {
+    expect(scenarioDifficulty(mk([{ ev: 1, naive: true }, { ev: 0.98 }])).hard).toBe(false);
+  });
+  it('nära val: ett annat drag 0,05–0,6 sämre', () => {
+    const d = scenarioDifficulty(mk([{ ev: 1, naive: true }, { ev: 0.7 }]));
+    expect(d.hard && !d.trap && d.close === 1).toBe(true);
+  });
+  it('fälla: tumregelns drag är fel', () => {
+    expect(scenarioDifficulty(mk([{ ev: 1 }, { ev: -2, naive: true }])).trap).toBe(true);
+    expect(scenarioDifficulty(mk([{ ev: 1 }, { ev: 0.5, finalist: false, naive: true }])).trap).toBe(true);
+    expect(scenarioDifficulty(mk([{ ev: 1 }, { ev: 0.9, naive: true }])).trap).toBe(false);
   });
 });
