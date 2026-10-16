@@ -23,6 +23,7 @@ En webbaserad solver för Open Face Chinese Poker (OFC) med stöd för hemspels-
 - **Jämför läggningar:** lägg ditt drag, tryck "⇄ Jämför mot…", ändra vilka kort du vill — även de från tidigare rundor — och se vilken läggning som är bäst. Båda räknas lika noga på samma kortlekar, och solverns bästa visas som referens. Svaret säger om skillnaden är säker eller bara slump. Fungerar även i Fantasy Land ("Lägg själv och jämför", exakt uträknat)
 - Följer telefonens ljusa/mörka läge. Ark sveps ner för att stängas
 - **Splash vid start:** korten delas ut och vänds till en hand, virvlar runt som solverns simuleringar och slår ihop till appikonen med ett fjädrande klick. Ett tryck hoppar över
+- **Regler i appen:** ?-knappen i sidhuvudet (alla flikar) öppnar husreglerna förklarade för nybörjare, i avsnitt som fälls ut: grunder, varianter, handernas ordning, jokrar, foul, poäng, royalty-tabeller och Fantasy Land
 - **Egen appikon** (grönt kort med vit spader). Appen kan läggas till på hemskärmen och öppnas då i helskärm som "OFC"
 
 ## Träna

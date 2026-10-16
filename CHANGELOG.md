@@ -4,6 +4,7 @@
 
 - **Ny ?-knapp i sidhuvudet** (syns på alla flikar) öppnar ett ark med våra husregler för nybörjare: Så går det till, Vanlig och Pineapple, Handernas ordning, Jokrar, Foul, Poäng, Royalties (full tabell för Botten/Mitten/Toppen) och Fantasy Land (inkl. repeat). Dragspel med ett avsnitt öppet i taget och några små kortexempel. Royalty- och FL-siffrorna läses direkt från `engine/constants.ts` (`components/layout/RulesSheet.tsx`)
 - Sidhuvudet tätare under 400 px så att allt ryms på 360 px
+- README beskriver regelarket
 
 ## 2026-10-16 — Förhandsbild när länken delas
 
