@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-10-16 — Förhandsbild när länken delas
+
+- **Länken visar nu bild, titel och beskrivning** när den delas i WhatsApp, Messenger, iMessage, Slack m.fl. (Open Graph- och Twitter-taggar i `index.html`, bilden `public/og-image.jpg`, 1200×630, 69 kB). Gamla delningar kan visa den gamla förhandsvisningen ett tag eftersom apparna sparar den
+
 ## 2026-10-16 — Scenarion startar direkt (förberäknad bank)
 
 - **Scenarion och ★ Joker startar direkt** utan "Datorn spelar fram…": appen hämtar en bank med scenarion som redan spelats fram och bedömts på Noggrann på datorn (`public/scenarios/`, en fil per variant + läge, 110–195 kB, ≈ 4× mindre packad vid nedladdning). Telefonen behöver inte räkna alls om du inte lägger ett drag som solvern sållade bort — då räknas bara ditt drag om, som förut
