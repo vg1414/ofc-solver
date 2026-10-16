@@ -2,10 +2,10 @@
 
 ## 2026-10-16 — Scenarion startar direkt (förberäknad bank)
 
-- **Scenarion och ★ Joker startar direkt** utan "Datorn spelar fram…": appen hämtar en bank med scenarion som redan spelats fram och bedömts på Noggrann på datorn (`public/scenarios/`, 9–15 kB per läge, en fil per variant + läge, laddas på ≈ 20 ms lokalt). Telefonen behöver inte räkna alls om du inte lägger ett drag som solvern sållade bort — då räknas bara ditt drag om, som förut
+- **Scenarion och ★ Joker startar direkt** utan "Datorn spelar fram…": appen hämtar en bank med scenarion som redan spelats fram och bedömts på Noggrann på datorn (`public/scenarios/`, en fil per variant + läge, 110–195 kB, ≈ 4× mindre packad vid nedladdning). Telefonen behöver inte räkna alls om du inte lägger ett drag som solvern sållade bort — då räknas bara ditt drag om, som förut
 - Du får inte samma scenario igen förrän du spelat igenom det mesta av banken (sedda scenarion sparas i telefonen)
 - Saknas banken (t.ex. offline) spelas scenarion fram live som förut
-- Första banken: ≈ 22 scenarion per läge. Fler byggs med `scripts/buildScenarioBank.ts` (se docs/traning.md)
+- Banken: 300 scenarion per läge (1 200 totalt, byggt på ≈ 2 h med 8 processer). Fler byggs med `scripts/buildScenarioBank.ts` (se docs/traning.md)
 
 ## 2026-10-16 — Fota brädet: upp-och-ner-foton och skämt medan den läser
 
