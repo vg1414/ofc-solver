@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-10-16 — Tydligare valt alternativ i väljarna
+
+- **Det valda alternativet syns nu tydligt** i alla mindre väljare (t.ex. Vanlig/Pineapple och antal scenarion i Träna): ljusgrön ton, grön kant och grön text i stället för en vit puck på nästan vit botten (`ui/Segmented.tsx`, variant "soft")
+
 ## 2026-10-16 — Regler i appen
 
 - **Ny ?-knapp i sidhuvudet** (syns på alla flikar) öppnar ett ark med våra husregler för nybörjare: Så går det till, Vanlig och Pineapple, Handernas ordning, Jokrar, Foul, Poäng, Royalties (full tabell för Botten/Mitten/Toppen) och Fantasy Land (inkl. repeat). Dragspel med ett avsnitt öppet i taget och några små kortexempel. Royalty- och FL-siffrorna läses direkt från `engine/constants.ts` (`components/layout/RulesSheet.tsx`)

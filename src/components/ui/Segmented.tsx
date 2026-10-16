@@ -5,7 +5,7 @@
 // räknas ut från index (translateX i procent av puckens egen bredd),
 // så animationen är ren CSS och kostar nästan ingenting.
 //  - variant "brand": glödande grön gradient-pill (huvudval)
-//  - variant "soft":  vit puck (underval)
+//  - variant "soft":  ljusgrön puck med grön kant (underval)
 // ============================================================
 
 interface Option<T extends string | number> {
@@ -48,8 +48,8 @@ export default function Segmented<T extends string | number>({
           width: `calc((100% - 8px) / ${options.length})`,
           left: 4,
           transform: `translateX(${idx * 100}%)`,
-          background: brand ? 'var(--grad)' : 'var(--surface)',
-          boxShadow: brand ? 'var(--glow)' : 'var(--shadow-soft)',
+          background: brand ? 'var(--grad)' : 'var(--accent-soft)',
+          boxShadow: brand ? 'var(--glow)' : 'inset 0 0 0 1.5px var(--accent), var(--shadow-soft)',
         }}
         aria-hidden="true"
       />
@@ -64,11 +64,11 @@ export default function Segmented<T extends string | number>({
             onClick={() => onChange(o.value)}
             className={`relative z-10 flex-1 flex flex-col items-center justify-center rounded-full font-bold leading-tight transition-[color,transform] duration-300 active:scale-95
               ${size === 'sm' ? 'py-1.5 text-[12.5px]' : 'py-2.5 text-[14px]'}
-              ${active ? (brand ? 'text-white' : 'text-ink') : 'text-ink-2 hover:text-accent-ink'}`}
+              ${active ? (brand ? 'text-white' : 'text-accent-ink') : 'text-ink-2 hover:text-accent-ink'}`}
           >
             <span>{o.label}</span>
             {o.sub && (
-              <span className={`text-[10px] font-semibold ${active ? (brand ? 'text-white/80' : 'text-ink-2') : 'text-ink-3'}`}>{o.sub}</span>
+              <span className={`text-[10px] font-semibold ${active ? (brand ? 'text-white/80' : 'text-accent-ink/75') : 'text-ink-3'}`}>{o.sub}</span>
             )}
           </button>
         );
