@@ -26,6 +26,10 @@ Läs detta innan du ändrar i `src/components/board/`, `cards/`, `dnd/`, `share/
 
 `PlayDock` + `cards/DealIn.tsx`: ett ensamt kort att lägga visas stort mitt på skärmen och flyger ner i handen (Web Animations, key = handen), sedan guldglöd (`.deal-glow` i `index.css`). `useRevealAboveDock` scrollar brädet ovanför panelen vid turstart och varje gång panelen växer.
 
+## Regler-arket
+
+`components/layout/RulesSheet.tsx` öppnas med ?-knappen i sidhuvudet (`App.tsx`, alla flikar). Dragspel (ett avsnitt öppet i taget, höjdanimation med `grid-rows 0fr→1fr`). Royalty- och FL-tabellerna byggs från `engine/constants.ts`, så de följer med om siffrorna ändras — men **brödtexten** (foul-straff, scoop, repeat-FL, jokrar) är skriven för hand: uppdatera den om husreglerna ändras.
+
 ## Jokern och ikonen
 
 - **Jokern:** lila toning i `--joker-bg` (index.css), samma färger i `JOKER_BG` (`cardStyle.ts`) för dela-bilden. Ändra båda samtidigt.

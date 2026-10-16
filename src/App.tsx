@@ -4,6 +4,7 @@ import SolverView from './components/solver/SolverView';
 import TrainingView from './components/training/TrainingView';
 import PlayView from './components/play/PlayView';
 import SettingsSheet from './components/solver/SettingsSheet';
+import RulesSheet from './components/layout/RulesSheet';
 import { simPreset } from './components/solver/simPresets';
 import SuitIcon from './components/cards/SuitIcon';
 import { useGameStore } from './store/gameStore';
@@ -29,6 +30,7 @@ export default function App() {
   // Sparade drag (☆) räknas på Noggrann i bakgrunden, oavsett flik
   useSavedAnalyser();
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [rulesOpen, setRulesOpen] = useState(false);
   const [tab, setTab] = useState<Tab>('solver');
   // Träningen monteras först när fliken besöks (så att den inte räknar i onödan),
   // och ligger sedan kvar dold — då tappar man inte en pågående omgång.
@@ -62,7 +64,7 @@ export default function App() {
 
       {/* ===== Topbar ===== */}
       <header className="topbar pt-[env(safe-area-inset-top)]">
-        <div className="mx-auto flex h-[64px] max-w-6xl items-center gap-3 px-4">
+        <div className="mx-auto flex h-[64px] max-w-6xl items-center gap-3 px-4 max-[399px]:gap-2 max-[399px]:px-3">
           <div className="group flex items-center gap-3 shrink-0">
             <span className="flex h-10 w-10 items-center justify-center rounded-full bg-white text-[#17996b] shadow-[0_4px_14px_rgba(0,0,0,0.2)] ring-2 ring-white/55 transition-transform duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)] group-hover:-rotate-12 group-hover:scale-105">
               <SuitIcon suit="spades" className="h-[22px] w-[22px]" />
@@ -96,8 +98,17 @@ export default function App() {
 
           <button
             type="button"
+            onClick={() => setRulesOpen(true)}
+            className="flex h-9 w-9 max-[399px]:h-8 max-[399px]:w-8 shrink-0 items-center justify-center rounded-full border border-white/30 bg-white/15 text-[16px] font-extrabold text-white backdrop-blur-md transition-[background,transform] duration-200 hover:bg-white/25 active:scale-95"
+            aria-label="Regler"
+          >
+            ?
+          </button>
+
+          <button
+            type="button"
             onClick={() => setSettingsOpen(true)}
-            className="flex shrink-0 items-center gap-1.5 rounded-full border border-white/30 bg-white/15 px-3.5 py-2 text-[12.5px] font-bold text-white backdrop-blur-md transition-[background,transform] duration-200 hover:bg-white/25 active:scale-95"
+            className="flex shrink-0 items-center gap-1.5 rounded-full border border-white/30 bg-white/15 px-3.5 max-[519px]:px-2.5 py-2 text-[12.5px] font-bold text-white backdrop-blur-md transition-[background,transform] duration-200 hover:bg-white/25 active:scale-95"
             aria-label="Inställningar"
           >
             <span className="max-[519px]:hidden">
@@ -140,6 +151,7 @@ export default function App() {
         simulations={simulations}
         onSimulations={setSimulations}
       />
+      <RulesSheet open={rulesOpen} onClose={() => setRulesOpen(false)} />
     </div>
   );
 }
