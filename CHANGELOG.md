@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-10-19 — Motståndarens Fantasy Land räknas in i EV
+
+- **EV drar nu av motståndarens Fantasy Land.** Förut räknades bara värdet av din egen FL, så EV blev för högt när motståndaren också var på väg mot FL (t.ex. KK i toppen = 14 kort). Nu dras motståndarens FL-värde av när hen inte foular, både mot ett känt bräde och mot den okända poolen. Det ändrar bara EV-nivån, aldrig vilket drag som är bäst (motståndarens bräde blir detsamma för alla drag i samma simulering) (`core/sim.ts` `oppFlValue`)
+- **Scenariobanken omräknad** med nya EV (samma 1 200 lägen, `BANK_VERSION` 2). Nytt kommando `reeval` i `scripts/buildScenarioBank.ts` räknar om befintliga lägen utan att spela fram nya
+- **☆ Spara för analys syns direkt** i dragarket (Scenarion, Joker, Hel hand), högt upp under betyget i stället för längst ner under "Varför?" (`CoachReview.tsx`)
+
 ## 2026-10-19 — Lägg öppningen samtidigt som datorn
 
 - **Hel hand mot datorn: du behöver inte vänta på datorns öppning.** Runda 1 läggs nu samtidigt: du kan lägga dina 5 öppningskort medan datorn räknar på sin, oavsett vem som börjar. Datorns öppning är dold tills båda lagt, och runda 2 startar först när båda öppningarna ligger. Inget ändras i spelet: ingen sida räknade ändå med motståndarens öppning, och korten är desamma som förut (`training/game.ts` `seatTurn`/`played`, `HandRun.tsx`)

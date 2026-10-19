@@ -27,7 +27,7 @@ import { ROWS, applyMove, placementsOn } from './moves';
 import type { Scenario } from './scenarios';
 
 /** Formatversion — höj om formatet ändras (gamla filer ignoreras) */
-export const BANK_VERSION = 1;
+export const BANK_VERSION = 2;
 /** Antal alternativ (utöver finalisterna) som sparas per scenario */
 export const BANK_KEEP = 12;
 /** Andel av banken som räknas som "nyligen sedda" */

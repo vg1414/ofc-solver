@@ -164,6 +164,16 @@ export interface EvalInput {
   onProgress?: (p: number) => void;
 }
 
+/**
+ * Motståndarens Fantasy Land kostar oss lika mycket som vår egen ger oss
+ * (nästa hand spelar hen FL). Samma blandning ger samma motståndarbräde för
+ * alla kandidater, så det flyttar bara EV-nivån, inte vilket drag som är bäst.
+ */
+function oppFlValue(opp: Settled): number {
+  const fl = opp.foul ? 0 : flEntryCards(opp.top);
+  return fl ? FL_VALUE[fl] : 0;
+}
+
 /** Antal pool-händer varje färdigt bräde jämförs mot (okänd motståndare) */
 export const SIM = { oppSamples: 64 };
 
@@ -214,12 +224,15 @@ export function evaluateCandidates(input: EvalInput, cands: Candidate[]): Candid
       const ou = makeUnseen(deck.slice(pos));
       playOut(o, deck, pos, ou, variant);
       const opp = o.every((x, k) => x.length === CAP[k]) ? settle(o[0], o[1], o[2]) : FOULED;
-      v = scoreVs(me, opp);
+      v = scoreVs(me, opp) - oppFlValue(opp);
     } else {
       // Okänd motståndare: snitt mot många pool-händer (billigt jämfört med
       // att spela klart brädet) i stället för en → nästan inget motståndarbrus
       const k = Math.min(SIM.oppSamples, pool.length);
-      for (let j = 0; j < k; j++) v += scoreVs(me, pool[(oppIdx[i] + j) % pool.length]);
+      for (let j = 0; j < k; j++) {
+        const opp = pool[(oppIdx[i] + j) % pool.length];
+        v += scoreVs(me, opp) - oppFlValue(opp);
+      }
       v /= k;
     }
     const fl = me.foul ? 0 : flEntryCards(me.top);

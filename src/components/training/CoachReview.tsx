@@ -210,6 +210,8 @@ export function MoveReviewSheet({
             </div>
             {action}
           </div>
+          {/* Högt upp så att den syns utan att skrolla */}
+          {onToggleSave && <SaveButton saved={saved} onToggle={onToggleSave} />}
           {extra}
           <ReviewBoard key={thorough ? 't' : 'n'} board={board} move={move} judgement={j} maxCardWidth={60} opening={opening} />
           <MoveExplain move={move} j={j} fl={fl} />
@@ -239,7 +241,6 @@ export function MoveReviewSheet({
               )
             ))}
           {!thorough && !fl && <p className="-mt-1 px-1 text-[11px] text-ink-3">Coachen räknar på Normal (800 sim). Noggrann ger säkrare EV.</p>}
-          {onToggleSave && <SaveButton saved={saved} onToggle={onToggleSave} />}
           {j.screened && (
             <p className="rounded-[14px] bg-fl-soft px-3 py-2 text-[11.5px] font-semibold leading-snug text-fl">
               ⓘ Solvern sållade bort ditt drag tidigt, så dess EV är osäkrare och kan vara lite för låg.

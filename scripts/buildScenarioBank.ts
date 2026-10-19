@@ -6,12 +6,17 @@
 //   sh scripts/run.sh scripts/buildScenarioBank.ts gen regular vanlig 150 a   → scenarios-tmp/regular-vanlig.a.jsonl
 //   sh scripts/run.sh scripts/buildScenarioBank.ts merge                      → public/scenarios/*.json
 // gen fortsätter där den slutade om filen redan finns (en rad per scenario).
+//
+// Ändras bara solverns EV (inte vilka lägen som är svåra): räkna om de lägen
+// som redan finns i public/scenarios i stället för att spela fram nya:
+//   … reeval <regular|pineapple> <vanlig|joker> <del> <antal delar>   (t.ex. 0 8 … 7 8)
+// och sedan merge. Töm scenarios-tmp först (den gamla bankens rader).
 import { appendFileSync, existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { solveFromBoard } from '../src/solver/solver';
 import type { SolverInput } from '../src/hooks/useSolver';
 import type { GameVariant } from '../src/engine/types';
 import { SCENARIO_EVAL, generateScenario, scenarioInput } from '../src/training/scenarios';
-import { BANK_VERSION, bankKey, encScenario, type BankFile, type BankScenario } from '../src/training/scenarioBank';
+import { BANK_VERSION, bankKey, decScenario, encScenario, type BankFile, type BankScenario } from '../src/training/scenarioBank';
 
 const TMP = 'scenarios-tmp';
 const OUT = 'public/scenarios';
@@ -36,6 +41,22 @@ if (cmd === 'gen') {
     const sec = (Date.now() - t0) / 1000;
     console.log(`${file}: ${have}/${N}  (${sec.toFixed(0)} s)`);
   }
+} else if (cmd === 'reeval') {
+  const variant = variantArg as GameVariant;
+  const jokers = modeArg === 'joker';
+  const part = Number(countArg), parts = Number(shardArg);
+  const key = bankKey(variant, jokers);
+  const src = (JSON.parse(readFileSync(`${OUT}/${key}.json`, 'utf8')) as BankFile).scenarios.filter((_, i) => i % parts === part);
+  mkdirSync(TMP, { recursive: true });
+  const file = `${TMP}/${key}.r${part}.jsonl`;
+  const have = existsSync(file) ? readFileSync(file, 'utf8').split('\n').filter(Boolean).length : 0;
+  const t0 = Date.now();
+  for (let i = have; i < src.length; i++) {
+    const s = decScenario(src[i], variant, jokers);
+    const res = await solve(scenarioInput(s, SCENARIO_EVAL));
+    appendFileSync(file, JSON.stringify(encScenario(s, res, src[i].id)) + '\n');
+    console.log(`${file}: ${i + 1}/${src.length}  (${((Date.now() - t0) / 1000).toFixed(0)} s)`);
+  }
 } else if (cmd === 'merge') {
   mkdirSync(OUT, { recursive: true });
   const groups = new Map<string, BankScenario[]>();
@@ -54,5 +75,5 @@ if (cmd === 'gen') {
     console.log(`${key}: ${scenarios.length} scenarion, ${(text.length / 1024).toFixed(0)} kB, rundor ${JSON.stringify(rounds)}`);
   }
 } else {
-  console.log('Användning: gen <regular|pineapple> <vanlig|joker> <antal> <shard>  |  merge');
+  console.log('Användning: gen <regular|pineapple> <vanlig|joker> <antal> <shard>  |  reeval <variant> <läge> <del> <delar>  |  merge');
 }
