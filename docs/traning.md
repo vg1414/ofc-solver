@@ -20,7 +20,8 @@ Som Scenarion, men `placeJokers` flyttar en joker (ibland två) i leken till pla
 ## Hel hand mot datorn
 
 - `HandRun.tsx` och `game.ts`. Turordningen räknas ut i förväg (`turnOrder`), och den som börjar växlar varje hand.
-- Datorns öppning är dold under runda 1, och ingen av sidorna räknar med motståndarens öppning då.
+- Datorns öppning är dold under runda 1, och ingen av sidorna räknar med motståndarens öppning då. Därför **läggs runda 1 samtidigt**: `seatTurn(h, seat)` ger platsens tur just nu — i runda 1 även turen efter den pågående, med korten som ligger näst i leken (samma kort som om man väntat). Läggs den i förväg uppdateras brädet och `h.ahead` sätts; `played` hoppar sedan över turen när motståndaren lagt sin, så runda 2 börjar först när båda ligger. Gäller även FL-händer (dolda till handens slut). Spela-fliken (`match.ts`) använder fortfarande strikt turordning (`validateMove`).
+- I HandRun har din tur (`mine`, nyckel `h.no-mine.idx`) och datorns (`cpuT`) var sin effekt, så båda kan pågå samtidigt; coachens förberäkning och foul/FL-mätaren följer `mine`.
 - Datorn spelar med solvern på vald styrka (`CPU_LEVELS` i `session.ts`: Snabb 300/3 s, Normal 800/3 s, Noggrann 2000/10 s). Appens nivåval (Solver) påverkar inte datorn.
 - Poäng via `engine/scoring.ts`, FL och repeat-FL till nästa hand.
 - **Coach-läge:** en tredje worker bedömer varje drag (800 sim, max 10 s). Bedömningen förberäknas när din tur börjar (`precomputed` i HandRun); sållades ditt drag bort räknas bara ditt och bästa draget om (`options.pinnedOnly` + `pinned`, samma blandningar → samma siffror). I coach-arket kan ett drag räknas om på Noggrann (2000 sim).

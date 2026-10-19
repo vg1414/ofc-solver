@@ -28,8 +28,10 @@
 //  - Den som börjar växlar varje hand. Fantasy Land-brädet syns inte
 //    för motståndaren förrän handen är slut (som vid ett riktigt bord).
 //  - Husregel: öppningarna är dolda under runda 1. Datorns öppning syns
-//    först när du lagt din, och datorn (och coachen) räknar inte med en
-//    öppning som spelaren inte får se.
+//    först när båda lagt, och datorn (och coachen) räknar inte med en
+//    öppning som spelaren inte får se. Därför läggs runda 1 samtidigt
+//    (seatTurn i game.ts): du lägger din öppning medan datorn räknar på
+//    sin, och runda 2 börjar först när båda ligger.
 //  - Sessionen (session.ts): antal händer, minuter eller fritt spel.
 //    Efter varje hand avgör sessionOver() om det var den sista. Står
 //    någon på FL och regeln är "spelas ut" fortsätter det med extra
@@ -44,7 +46,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { GameVariant } from '../../engine/types';
 import type { DetailedSolverResult, SolverOptions } from '../../solver/solver';
-import { played, solverInput, startHand, type HandState } from '../../training/game';
+import { played, seatTurn, solverInput, startHand, type HandState } from '../../training/game';
 import { countPlaced, judge, type Move } from '../../training/moves';
 import { pinnedOptions } from '../../training/pinned';
 import { CANCELLED, useSolverJobs } from '../../training/useSolverJobs';
@@ -116,19 +118,28 @@ export default function HandRun({ variant, settings, active = true, onExit, onRe
   const elapsed = usePlayClock(active && !summary);
 
   const turn = h.outcome ? null : h.turns[h.idx];
+  /** Din tur och datorns — i runda 1 kan båda pågå samtidigt */
+  const mine = seatTurn(h, 0);
+  const cpuT = seatTurn(h, 1);
+  const myIdx = mine?.idx ?? -1;
+  // Samma kort hela turen (dina öppningskort finns i leken innan datorn lagt)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const myCards = useMemo(() => mine?.cards ?? [], [h.no, myIdx]);
   const {
     recent: [myRecent, cpuRecent],
     opening: [myOpening, cpuOpening],
     openings,
   } = useRecentSlots(h.no, [h.seats[0].board, h.seats[1].board]);
-  const myTurn = turn?.seat === 0;
-  const mb = useMoveBuilder(h.seats[0].board, myTurn ? h.dealt : [], turn?.place ?? 0);
+  const myTurn = !!mine;
+  const mb = useMoveBuilder(h.seats[0].board, myCards, mine?.turn.place ?? 0);
   const { reset: mbReset } = mb;
 
   // ---------- Datorns tur ----------
   const { solve: cpuSolve, cancel: cpuCancel } = cpu;
+  const cpuIdx = cpuT?.idx ?? -1;
   useEffect(() => {
-    if (!turn || turn.seat !== 1) return;
+    if (!cpuT) return;
+    const { turn, cards } = cpuT;
     let alive = true;
     let finished = false;
     setCpuError(null);
@@ -136,7 +147,7 @@ export default function HandRun({ variant, settings, active = true, onExit, onRe
     cpuSolve(
       solverInput({
         seat: h.seats[1],
-        cards: h.dealt,
+        cards,
         variant,
         opponent: h.seats[0].fl > 0 || turn.round === 1 ? undefined : h.seats[0].board,
         fl: turn.fl,
@@ -151,7 +162,7 @@ export default function HandRun({ variant, settings, active = true, onExit, onRe
         if (!alive) return;
         // Datorns risk efter draget (inte i FL eller när brädet är fullt)
         if (!turn.fl && !lastMove) setCpuRisk({ hand: h.no, foul: b.foulProbability ?? null, fl: b.flProbability ?? null });
-        setH((prev) => (prev.no === h.no && prev.idx === h.idx ? played(prev, 1, move) : prev));
+        setH((prev) => (prev.no === h.no && seatTurn(prev, 1)?.idx === cpuIdx ? played(prev, 1, move) : prev));
       })
       .catch((e: Error) => {
         finished = true;
@@ -161,9 +172,9 @@ export default function HandRun({ variant, settings, active = true, onExit, onRe
       alive = false;
       if (!finished) cpuCancel();
     };
-    // Kör en gång per tur (h.no + h.idx identifierar turen)
+    // Kör en gång per tur (h.no + cpuIdx identifierar turen)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [h.no, h.idx, retry]);
+  }, [h.no, cpuIdx, retry]);
 
   // ---------- Din tur ----------
   const { solve: coachSolve } = coachJobs;
@@ -172,10 +183,10 @@ export default function HandRun({ variant, settings, active = true, onExit, onRe
   const turnInput = () =>
     solverInput({
       seat: h.seats[0],
-      cards: h.dealt,
+      cards: myCards,
       variant,
-      opponent: h.seats[1].fl > 0 || turn!.round === 1 ? undefined : h.seats[1].board,
-      fl: turn!.fl,
+      opponent: h.seats[1].fl > 0 || mine!.turn.round === 1 ? undefined : h.seats[1].board,
+      fl: mine!.turn.fl,
       options: {},
     });
 
@@ -184,8 +195,9 @@ export default function HandRun({ variant, settings, active = true, onExit, onRe
   // du trycker Klar. Läget ändras inte under din tur, så input blir densamma.
   const precomputed = useRef<{ key: string; promise: Promise<DetailedSolverResult> } | null>(null);
   useEffect(() => {
-    if (!turn || turn.seat !== 0) return;
-    const key = `${h.no}-${h.idx}`;
+    if (!mine) return;
+    const { turn } = mine;
+    const key = `${h.no}-${mine.idx}`;
     if (precomputed.current?.key === key) return; // StrictMode kör effekten två gånger
     const last = countPlaced(h.seats[0].board) + turn.place >= 13;
     if (!coach && (turn.fl || last)) return; // inget att visa → ingen räkning
@@ -195,14 +207,15 @@ export default function HandRun({ variant, settings, active = true, onExit, onRe
     });
     promise.catch(() => {}); // fel hanteras när draget bedöms
     precomputed.current = { key, promise };
-    // Kör en gång per tur (h.no + h.idx identifierar turen)
+    // Kör en gång per tur (h.no + myIdx identifierar turen)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [h.no, h.idx]);
+  }, [h.no, myIdx]);
 
   const confirm = () => {
-    if (!turn || !myTurn || !mb.done) return;
+    if (!mine || !mb.done) return;
+    const { turn } = mine;
     const move = mb.move;
-    const key = `${h.no}-${h.idx}`;
+    const key = `${h.no}-${mine.idx}`;
     // Sista draget fyller brädet — då finns ingen risk kvar att räkna på
     const last = countPlaced(h.seats[0].board) + move.placements.length >= 13;
     // Draget bedöms alltid när det finns något att visa: coachen och/eller
@@ -319,12 +332,12 @@ export default function HandRun({ variant, settings, active = true, onExit, onRe
 
   // Din tur eller handen klar: se till att ditt bräde syns ovanför panelen
   const myBoardRef = useRef<HTMLDivElement>(null);
-  useRevealAboveDock(myBoardRef, h.outcome ? `o${h.no}` : myTurn ? `t${h.no}-${h.idx}` : null);
+  useRevealAboveDock(myBoardRef, h.outcome ? `o${h.no}` : mine ? `t${h.no}-${mine.idx}` : null);
   // Båda brädena på skärmen samtidigt (telefon). Panelen mäts bara på vanliga
   // drag efter öppningen — öppning och FL har en högre panel.
   const fitRef = useRef<HTMLDivElement>(null);
   const cpuBoardRef = useRef<HTMLDivElement>(null);
-  const fit = useFitBoards(fitRef, myBoardRef, cpuBoardRef, myTurn && !!turn && !turn.fl && turn.round > 1);
+  const fit = useFitBoards(fitRef, myBoardRef, cpuBoardRef, !!mine && !mine.turn.fl && mine.turn.round > 1);
 
   const total = records.reduce((n, r) => n + r.net, 0);
   const shownTotal = useCountUp(total);
@@ -348,7 +361,7 @@ export default function HandRun({ variant, settings, active = true, onExit, onRe
 
   // Datorns bräde döljs: FL-brädet till handens slut, öppningen under runda 1
   const hidden = !h.outcome && (h.seats[1].fl > 0 || turn?.round === 1);
-  const cpuThinking = turn?.seat === 1;
+  const cpuThinking = !!cpuT;
 
   const coachPill = toast?.j && <CoachPill key={toast.key} entry={toast} onOpen={setReview} />;
 
@@ -407,18 +420,19 @@ export default function HandRun({ variant, settings, active = true, onExit, onRe
         top={coachPill}
       />
     );
-  } else if (myTurn && turn) {
+  } else if (mine) {
+    const turn = mine.turn;
     dock = (
       <PlayDock
         mb={mb}
         place={turn.place}
-        total={h.dealt.length}
+        total={myCards.length}
         onDone={confirm}
         doneLabel="✓ Klar"
         compact
         top={
           <div className="flex flex-wrap items-center gap-2">
-            <span className="eyebrow">{turn.fl ? `Fantasy Land · ${h.dealt.length} kort` : turn.round === 1 ? 'Öppningshand' : `Runda ${turn.round}`}</span>
+            <span className="eyebrow">{turn.fl ? `Fantasy Land · ${myCards.length} kort` : turn.round === 1 ? 'Öppningshand' : `Runda ${turn.round}`}</span>
             {coachPill}
           </div>
         }
@@ -436,7 +450,10 @@ export default function HandRun({ variant, settings, active = true, onExit, onRe
             <div className="title-serif text-[19px]">
               Datorn tänker <span className="think text-accent"><span /><span /><span /></span>
             </div>
-            <div className="text-[12px] font-medium text-ink-3">{turn?.fl ? 'Lägger sin Fantasy Land-hand' : `Runda ${turn?.round} · ${h.dealt.length} kort`}</div>
+            <div className="text-[12px] font-medium text-ink-3">
+              {cpuT?.turn.fl ? 'Lägger sin Fantasy Land-hand' : `Runda ${cpuT?.turn.round} · ${cpuT?.cards.length} kort`}
+              {cpuT?.turn.round === 1 && countPlaced(h.seats[0].board) > 0 && ' · din öppning ligger'}
+            </div>
           </div>
         </div>
         {cpuError && (
@@ -486,7 +503,7 @@ export default function HandRun({ variant, settings, active = true, onExit, onRe
               : countPlaced(h.seats[1].board) > 0
                 ? 'Datorns öppning är dold — den visas när du lagt din'
                 : myTurn
-                  ? 'Datorn lägger sin öppning efter dig — dold tills båda lagt'
+                  ? 'Datorn lägger sin öppning samtidigt — dold tills båda lagt'
                   : 'Datorn lägger sin öppning — dold tills båda lagt'}
           </div>
         ) : (

@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 import type { Card } from '../engine/types';
 import type { DetailedPlacementOption, DetailedSolverResult } from '../solver/solver';
 import { applyMove, countPlaced, emptyBoard, gradeOf, judge, moveKey, placementsOn, pointsFor, wasScreenedEarly } from './moves';
-import { settleHand, turnOrder, newSeat, applyToSeat } from './game';
+import { settleHand, turnOrder, newSeat, applyToSeat, startHand, played, seatTurn } from './game';
+import { buildDeck } from '../engine/deck';
 import { cardDiffs, explainMove } from './explain';
 import { insertEntry, qualifies, makeEntry, type LeaderboardEntry } from './leaderboard';
 import { scenarioDifficulty } from './scenarios';
@@ -267,5 +268,49 @@ describe('svårare scenarion: scenarioDifficulty', () => {
     expect(scenarioDifficulty(mk([{ ev: 1 }, { ev: -2, naive: true }])).trap).toBe(true);
     expect(scenarioDifficulty(mk([{ ev: 1 }, { ev: 0.5, finalist: false, naive: true }])).trap).toBe(true);
     expect(scenarioDifficulty(mk([{ ev: 1 }, { ev: 0.9, naive: true }])).trap).toBe(false);
+  });
+});
+
+describe('hel hand: öppningarna läggs samtidigt', () => {
+  const open = (cards: Card[]) => ({ placements: cards.map((card, i) => ({ card, row: 'bottom' as const, slotIndex: i })), discards: [] });
+
+  it('du kan lägga din öppning medan datorn räknar, och runda 2 väntar på båda', () => {
+    const deck = buildDeck();
+    const h0 = startHand(1, 1, [0, 0], 'regular', deck);
+    const cpu = seatTurn(h0, 1)!;
+    const me = seatTurn(h0, 0)!;
+    expect(cpu.idx).toBe(0);
+    expect(me.idx).toBe(1);
+    // Dina kort är de som annars delats ut efter datorns
+    expect(me.cards).toEqual(deck.slice(5, 10));
+
+    const h1 = played(h0, 0, open(me.cards));
+    expect(h1.idx).toBe(0);
+    expect(countPlaced(h1.seats[0].board)).toBe(5);
+    expect(seatTurn(h1, 0)).toBeNull(); // väntar på datorn
+    expect(played(h1, 0, open(me.cards))).toBe(h1); // kan inte lägga två gånger
+
+    const h2 = played(h1, 1, open(cpu.cards));
+    expect(h2.idx).toBe(2);
+    expect(h2.turns[h2.idx].round).toBe(2);
+    expect(h2.dealt).toEqual(deck.slice(10, 11));
+    expect(h2.ahead).toBe(false);
+  });
+
+  it('i vanlig ordning blir det som förut', () => {
+    const deck = buildDeck();
+    const h0 = startHand(1, 0, [0, 0], 'pineapple', deck);
+    const h1 = played(h0, 0, open(seatTurn(h0, 0)!.cards));
+    expect(h1.idx).toBe(1);
+    const h2 = played(h1, 1, open(seatTurn(h1, 1)!.cards));
+    expect(h2.idx).toBe(2);
+    expect(h2.dealt).toEqual(deck.slice(10, 13));
+  });
+
+  it('runda 2 läggs inte i förväg', () => {
+    const h0 = startHand(1, 1, [0, 0], 'regular', buildDeck());
+    const h1 = played(played(h0, 1, open(h0.dealt)), 0, open(seatTurn(h0, 0)!.cards));
+    expect(h1.turns[h1.idx]).toMatchObject({ seat: 1, round: 2 });
+    expect(seatTurn(h1, 0)).toBeNull();
   });
 });

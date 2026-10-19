@@ -10,6 +10,7 @@
 //
 // turnOrder() räknar ut hela turordningen i förväg som en lista, så
 // både helhandsläget och scenariogeneratorn kan stega igenom samma lista.
+// Runda 1 får läggas samtidigt (seatTurn): öppningarna är dolda tills båda lagt.
 // ============================================================
 
 import type { Board, Card, GameVariant } from '../engine/types';
@@ -173,6 +174,8 @@ export interface HandState {
   /** Korten som är utdelade till turen som pågår */
   dealt: Card[];
   outcome: HandOutcome | null;
+  /** Turen efter den som pågår är redan lagd (öppningarna i runda 1 läggs samtidigt) */
+  ahead?: boolean;
 }
 
 /** Dela ut korten till nästa tur — eller räkna poäng när alla turer är klara */
@@ -196,9 +199,40 @@ export function startHand(no: number, first: SeatId, fl: [number, number], varia
   });
 }
 
+export interface SeatTurn {
+  idx: number;
+  turn: Turn;
+  cards: Card[];
+}
+
+/**
+ * Turen som platsen kan lägga just nu, eller null.
+ * Runda 1 läggs samtidigt: öppningarna (och FL-händerna) är dolda tills
+ * båda lagt och ingen räknar med den andras, så den som står näst på tur i
+ * runda 1 kan lägga direkt. Korten är dess egna i leken (nästa `count` kort),
+ * så det blir samma kort som om man väntat.
+ */
+export function seatTurn(h: HandState, seat: SeatId): SeatTurn | null {
+  if (h.outcome) return null;
+  const t = h.turns[h.idx];
+  if (!t) return null;
+  if (t.seat === seat) return { idx: h.idx, turn: t, cards: h.dealt };
+  const n = h.turns[h.idx + 1];
+  if (t.round === 1 && n?.round === 1 && n.seat === seat && !h.ahead) {
+    return { idx: h.idx + 1, turn: n, cards: h.deck.slice(h.pos, h.pos + n.count) };
+  }
+  return null;
+}
+
 /** Platsen har lagt sitt drag: uppdatera brädet och gå till nästa tur */
 export function played(h: HandState, seat: SeatId, move: Move): HandState {
+  const st = seatTurn(h, seat);
+  if (!st) return h;
   const seats: [Seat, Seat] = [...h.seats];
   seats[seat] = applyToSeat(seats[seat], move);
-  return nextTurn({ ...h, seats, idx: h.idx + 1 });
+  // Öppningen lagd i förväg: brädet uppdateras, men turen räknas när motståndaren lagt sin
+  if (st.idx !== h.idx) return { ...h, seats, ahead: true };
+  const next = nextTurn({ ...h, seats, idx: h.idx + 1, ahead: false });
+  // Nästa tur var redan lagd: hoppa över den (korten delas ut ur leken i samma ordning)
+  return h.ahead ? nextTurn({ ...next, idx: next.idx + 1 }) : next;
 }

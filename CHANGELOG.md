@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-10-19 — Lägg öppningen samtidigt som datorn
+
+- **Hel hand mot datorn: du behöver inte vänta på datorns öppning.** Runda 1 läggs nu samtidigt: du kan lägga dina 5 öppningskort medan datorn räknar på sin, oavsett vem som börjar. Datorns öppning är dold tills båda lagt, och runda 2 startar först när båda öppningarna ligger. Inget ändras i spelet: ingen sida räknade ändå med motståndarens öppning, och korten är desamma som förut (`training/game.ts` `seatTurn`/`played`, `HandRun.tsx`)
+
 ## 2026-10-16 — Tydligare valt alternativ i väljarna
 
 - **Det valda alternativet syns nu tydligt** i alla mindre väljare (t.ex. Vanlig/Pineapple och antal scenarion i Träna): ljusgrön ton, grön kant och grön text i stället för en vit puck på nästan vit botten (`ui/Segmented.tsx`, variant "soft")
