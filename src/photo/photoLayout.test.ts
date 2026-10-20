@@ -21,6 +21,12 @@ describe('guessRows', () => {
     expect(rows[0].target).toBe('hand');
     expect(rows[0].cards).toHaveLength(5);
   });
+  it('högst 5 kort med ett löst kort = också öppningshand', () => {
+    const rows = guessRows(ans([['8s', '5c', '7d', 'JK']], ['4d']));
+    expect(rows).toHaveLength(1);
+    expect(rows[0].target).toBe('hand');
+    expect(rows[0].cards).toHaveLength(5);
+  });
   it('5 lagda kort + ett löst = mitt i handen, inte öppning', () => {
     expect(targets(ans([['8s', '5c'], ['7d', 'JK', '4d']], ['Qh']))).toEqual(['top', 'middle', 'hand']);
   });

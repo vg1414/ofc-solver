@@ -58,7 +58,7 @@ import DockLayout from '../training/DockLayout';
 import PlayDock from '../training/PlayDock';
 import HandOver from '../training/HandOver';
 import SessionHeader, { type Dot } from '../training/SessionHeader';
-import { HandStrip, ScoreSheet } from '../training/Scoreboard';
+import { cpuTone, HandStrip, ScoreSheet, signed } from '../training/Scoreboard';
 import DuelSummary from './DuelSummary';
 import { cpuMove, DUEL_CPU_LEVELS } from '../../match/cpu';
 import { CANCELLED, useSolverJobs } from '../../training/useSolverJobs';
@@ -225,7 +225,11 @@ export default function DuelRun({ initial, initialElapsed, active = true, onExit
   };
 
   const [t1] = totals(state);
-  const dots = useMemo(() => state.records.map((r): Dot => (r.net > 0 ? 'p1' : r.net < 0 ? 'p2' : null)), [state.records]);
+  // Mot datorn: blå prick = du vann handen, röd = datorn vann
+  const dots = useMemo(
+    () => state.records.map((r): Dot => (r.net > 0 ? (cpu ? 'p2' : 'p1') : r.net < 0 ? (cpu ? 'miss' : 'p2') : null)),
+    [state.records, cpu],
+  );
 
   /** Handen klar: bara intjänade royalties på brädena (husregel: radens vinnare) */
   const earnedFor = (seat: SeatId) => (h.outcome ? (seat === 0 ? h.outcome.score.p1Royalties : h.outcome.score.p2Royalties) : undefined);
@@ -389,7 +393,13 @@ export default function DuelRun({ initial, initialElapsed, active = true, onExit
           dots={dots}
           elapsed={elapsed}
           extra={extra}
-          score={<span className={t1 > 0 ? 'text-p1-ink' : t1 < 0 ? 'text-p2-ink' : 'text-ink-2'}>{t1 === 0 ? '±0' : `+${Math.abs(t1)}`}</span>}
+          score={
+            cpu ? (
+              <span className={cpuTone(t1)}>{signed(t1)}</span>
+            ) : (
+              <span className={t1 > 0 ? 'text-p1-ink' : t1 < 0 ? 'text-p2-ink' : 'text-ink-2'}>{t1 === 0 ? '±0' : `+${Math.abs(t1)}`}</span>
+            )
+          }
           onExit={askExit}
           onScore={() => setScoreOpen(true)}
         />
@@ -418,7 +428,7 @@ export default function DuelRun({ initial, initialElapsed, active = true, onExit
         )}
 
         <div className="hidden wide:block">
-          <HandStrip records={state.records} onOpen={() => setScoreOpen(true)} names={names} />
+          <HandStrip records={state.records} onOpen={() => setScoreOpen(true)} names={names} cpu={!!cpu} />
         </div>
 
         <div ref={fitRef} className="flex flex-col gap-3">
@@ -483,7 +493,7 @@ export default function DuelRun({ initial, initialElapsed, active = true, onExit
         </div>
       </DockLayout>
 
-      <ScoreSheet open={scoreOpen} onClose={() => setScoreOpen(false)} records={state.records} current={h.no} names={names} openings={openings} />
+      <ScoreSheet open={scoreOpen} onClose={() => setScoreOpen(false)} records={state.records} current={h.no} names={names} openings={openings} cpu={!!cpu} />
 
       <BottomSheet open={exitOpen} onClose={() => setExitOpen(false)} title="Avsluta partiet?">
         <div className="flex flex-col gap-2.5">
@@ -492,7 +502,7 @@ export default function DuelRun({ initial, initialElapsed, active = true, onExit
             {t1 !== 0 && (
               <>
                 {' '}
-                <b className={t1 > 0 ? 'text-p1-ink' : 'text-p2-ink'}>
+                <b className={cpu ? cpuTone(t1) : t1 > 0 ? 'text-p1-ink' : 'text-p2-ink'}>
                   {t1 > 0 ? names[0] : names[1]} leder med {Math.abs(t1)} p
                 </b>
                 .

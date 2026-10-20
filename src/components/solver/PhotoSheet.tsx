@@ -8,7 +8,8 @@
 //   confirm  – raderna visas. Osäkra kort har en gul ring. Tryck ett kort
 //              för att byta/ta bort det, "+" lägger till. Varje rad kan
 //              flyttas till Toppen/Mitten/Botten/Att lägga.
-//   error    – något gick fel: försök igen eller fyll i för hand
+//   error    – något gick fel: "Försök igen" skickar samma foto en gång till
+//              (korten är ofta redan blandade), eller fyll i för hand
 // Motståndarens bräde fotas från andra sidan bordet, så den bilden vänds 180°
 // innan den skickas. "↻ Vänd och läs igen" läser samma bild åt andra hållet.
 // Arket lägger inget själv: onDone får raderna och SolverView lägger ut dem.
@@ -170,6 +171,13 @@ export default function PhotoSheet({ open, onClose, who, takenElsewhere, onDone 
   const c = collect(rows);
   const opening = mine && c.top.length + c.middle.length + c.bottom.length === 0 && c.hand.length > 0;
   const ok = issues.length === 0;
+  // Högst 5 kort men utlagda som ett bräde → erbjud att göra dem till en starthand
+  const canOpen = mine && !opening && allCards.length > 0 && allCards.length <= 5;
+  const makeOpening = () => {
+    haptic(6);
+    setEdit(null);
+    setRows([{ target: 'hand', cards: allCards }]);
+  };
   const unsure = answer ? allCards.filter((c) => isUncertain(c, answer)).length : 0;
 
   const finish = (choice: PhotoChoice) => {
@@ -223,8 +231,15 @@ export default function PhotoSheet({ open, onClose, who, takenElsewhere, onDone 
       {phase === 'error' && (
         <div className="flex flex-col gap-3">
           <div className="rounded-2xl bg-danger-soft px-3.5 py-3 text-[13px] font-semibold text-danger">{error}</div>
-          <button type="button" onClick={() => setPhase('pick')} className="btn-primary h-12 rounded-full text-[15px] font-bold">
+          <button
+            type="button"
+            onClick={() => (fileRef.current ? onFile(fileRef.current, upsideDown) : setPhase('pick'))}
+            className="btn-primary h-12 rounded-full text-[15px] font-bold"
+          >
             Försök igen
+          </button>
+          <button type="button" onClick={() => setPhase('pick')} className="btn-ghost h-11 rounded-full text-[14px] font-bold">
+            Ta ett nytt foto
           </button>
           <button type="button" onClick={close} className="btn-ghost h-11 rounded-full text-[14px] font-bold">
             Fyll i för hand
@@ -318,6 +333,12 @@ export default function PhotoSheet({ open, onClose, who, takenElsewhere, onDone 
           {rows.length < (mine ? 4 : 3) && (
             <button type="button" onClick={addRow} className="self-start text-[12.5px] font-bold text-accent-ink">
               + Lägg till en rad
+            </button>
+          )}
+
+          {canOpen && (
+            <button type="button" onClick={makeOpening} className="btn-ghost h-10 rounded-full text-[13px] font-bold">
+              Det är en starthand ({allCards.length} kort)
             </button>
           )}
 

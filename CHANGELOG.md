@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-10-20 — Starthand från foto, försök igen, poäng mot datorn
+
+- **Foto med 5 kort blir alltid en starthand**, även om ett kort ligger lite för sig självt (förut blev det då ett bräde + kort att lägga). Har läget högst 5 kort men ser ut som ett bräde finns också knappen "Det är en starthand" (`photoLayout.guessRows`, `PhotoSheet.tsx`)
+- **"Försök igen" skickar samma foto igen** när läsningen misslyckas, i stället för att be om ett nytt foto (korten är ofta redan inblandade). "Ta ett nytt foto" finns kvar som eget val
+- **Spela mot datorn: poängen visas från ditt håll.** Leder datorn står det t.ex. −4 i rött, leder du +4 i blått. Gäller poängen överst, brickorna, ställningen, prickarna och slutresultatets handlista (`Scoreboard.tsx`, `DuelRun.tsx`, `DuelSummary.tsx`)
+
 ## 2026-10-19 — Motståndarens Fantasy Land räknas in i EV
 
 - **EV drar nu av motståndarens Fantasy Land.** Förut räknades bara värdet av din egen FL, så EV blev för högt när motståndaren också var på väg mot FL (t.ex. KK i toppen = 14 kort). Nu dras motståndarens FL-värde av när hen inte foular, både mot ett känt bräde och mot den okända poolen. Det ändrar bara EV-nivån, aldrig vilket drag som är bäst (motståndarens bräde blir detsamma för alla drag i samma simulering) (`core/sim.ts` `oppFlValue`)
