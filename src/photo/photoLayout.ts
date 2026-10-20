@@ -4,9 +4,9 @@
 // Fotokonventionen (Davids): raderna på bordet = brädet, uppifrån och ner.
 // Ett kort som ligger för sig självt = kortet som ska läggas härnäst.
 // Alla kort i en enda rad utan bräde = en öppningshand.
-// Fler än 13 kort = Fantasy Land-hand (alla kort till FL-lösaren, antalet räknas
+// 13 kort eller fler = Fantasy Land-hand (alla kort till FL-lösaren, antalet räknas
 // ut av sig självt). Enda undantaget: sista rundan i Pineapple, 11 lagda + 3 lösa = 14.
-// 13 kort = FL bara om inget kort ligger löst (12 lagda + 1 = sista kortet i Vanlig).
+// (12 lagda + 1 i Vanlig har bara en ledig plats, så det fotar ingen. Pineapple ger aldrig 13.)
 //
 // Här finns bara rena funktioner (inga anrop), så att de kan testas.
 // ============================================================
@@ -52,8 +52,8 @@ function toCards(list: string[]): Card[] {
 
 /**
  * Gissar vilken rad på brädet varje fotad rad är.
- * Högst 5 kort totalt (även lösa) → öppningshand. Fler än 13 kort (utom
- * Pineapples 11 + 3), eller 13 utan löst kort → Fantasy Land (alla i en rad "Att lägga"). 3 rader → topp/mitten/botten
+ * Högst 5 kort totalt (även lösa) → öppningshand. 13–16 kort (utom
+ * Pineapples 11 + 3) → Fantasy Land (alla i en rad "Att lägga"). 3 rader → topp/mitten/botten
  * (omvänt om bara den sista raden ryms i toppen).
  * 2 rader → topp+mitten om första raden får plats i toppen (≤ 3 kort), annars
  * mitten+botten. Användaren kan alltid ändra i arket.
@@ -82,13 +82,12 @@ export function guessRows(answer: PhotoAnswer, allowHand = true): PhotoRow[] {
 /** Ser fotot ut som en Fantasy Land-hand? Avgörs av antalet kort (se överst i filen). */
 function isFlCount(rows: Card[][], loose: number): boolean {
   const total = rows.reduce((n, r) => n + r.length, 0) + loose;
-  if (total === 13) return loose === 0;
   if (total === 14 && loose === 3) {
     // Pineapple, sista rundan: 11 kort som ryms på brädet (3/5/5) + 3 att välja bland
     const fitsBoard = rows.length === 3 && rows[0].length <= 3 && rows[1].length <= 5 && rows[2].length <= 5;
     return !fitsBoard;
   }
-  return total >= 14 && total <= 16;
+  return total >= 13 && total <= 16;
 }
 
 export function cardId(c: Card): string {

@@ -75,10 +75,9 @@ describe('flHand', () => {
     const rows = guessRows(ans([['Kd', 'Kh', 'Ac'], ['6s', '6h', '7s', '7d', '4d'], ['Js', 'Jh', 'Td', 'Th', '8c']]));
     expect(flHand(rows)?.length).toBe(13);
   });
-  it('12 lagda + 1 löst = sista kortet i en vanlig hand, inte FL', () => {
+  it('12 lagda + 1 löst = också FL (sista kortet i Vanlig har bara en plats)', () => {
     const rows = guessRows(ans([['Kd', 'Kh', 'Ac'], ['6s', '6h', '7s', '7d', '4d'], ['Js', 'Jh', 'Td', 'Th']], ['8c']));
-    expect(flHand(rows)).toBeNull();
-    expect(collect(rows).hand.length).toBe(1);
+    expect(flHand(rows)?.length).toBe(13);
   });
   it('Pineapple sista rundan: 11 lagda + 3 lösa = vanlig hand, inte FL', () => {
     const rows = guessRows(ans([['Kd', 'Kh', 'Ac'], ['6s', '6h', '7s', '7d'], ['Js', 'Jh', 'Td', 'Th']], ['8c', '2d', '3s']));

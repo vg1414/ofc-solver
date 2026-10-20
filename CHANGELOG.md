@@ -2,8 +2,8 @@
 
 ## 2026-10-20 — Fantasy Land från foto känns igen själv
 
-- **Fotar du en Fantasy Land-hand räknar appen ut antalet kort själv.** Fler än 13 kort, eller 13 kort utan något löst kort, blir en FL-hand hur de än ligger (en lång rad, två rader eller ett fullt bräde + lösa kort). FL-läget får rätt antal (13/14/15/16) utan att du väljer. Förut gick det bara med ett fullt bräde + 1–3 lösa kort, och 13 kort gick inte alls (`photoLayout.guessRows`/`flHand`/`problems`)
-- **Knappen "★ Det är Fantasy Land"** dyker upp om 13–16 kort ändå gissades som ett vanligt bräde (12 lagda + 1 löst i Vanlig, eller 11 lagda + 3 lösa i Pineapple – båda kan vara sista rundan i en vanlig hand) (`PhotoSheet.tsx`)
+- **Fotar du en Fantasy Land-hand räknar appen ut antalet kort själv.** 13–16 kort blir en FL-hand (utom Pineapples sista runda, 11 lagda + 3 lösa) hur de än ligger (en lång rad, två rader eller ett fullt bräde + lösa kort). FL-läget får rätt antal (13/14/15/16) utan att du väljer. Förut gick det bara med ett fullt bräde + 1–3 lösa kort, och 13 kort gick inte alls (`photoLayout.guessRows`/`flHand`/`problems`)
+- **Knappen "★ Det är Fantasy Land"** dyker upp om 13–16 kort ändå gissades som ett vanligt bräde (11 lagda + 3 lösa ser ut som Pineapples sista runda) (`PhotoSheet.tsx`)
 - **Fotoworkern godtar långa rader för 13–16 kort**, så en utspridd FL-hand inte räknas som regelbrott och skickas till de långsamma reservmodellerna (`worker/photo-worker.js`)
 
 ## 2026-10-20 — Starthand från foto, försök igen, poäng mot datorn
