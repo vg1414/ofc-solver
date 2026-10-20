@@ -37,6 +37,7 @@ Cards within a row overlap; read each card from its corner index (rank + suit). 
 The deck has 2 jokers: a joker shows a black star in the corner (and a jester picture).
 A single card lying apart from the rows (e.g. far to the right or left) is NOT part of the board - list it under "loose".
 If all cards lie in one single row, that row is a hand still to be placed: list it as one row.
+It can also be a Fantasy Land hand: 13-16 cards laid out freely, often in one or two long rows. Then rows may hold more than 5 cards - list every card in the row where it lies.
 
 Return JSON only:
 {"rows": [[...cards in the first row from the top of the photo, left to right...], [...next row...], ...],
@@ -78,9 +79,14 @@ export function check(answer) {
   const uncertain = clean(answer?.uncertain);
   const all = [...rows.flat(), ...loose];
   if (!all.length) problems.push('inga kort');
-  if (rows.length > 3) problems.push('fler än 3 rader');
-  if (rows.some((r) => r.length > 5)) problems.push('mer än 5 kort i en rad');
-  if (rows.length === 3 && rows[0].length > 3) problems.push('mer än 3 kort i toppen');
+  // 13–16 kort = en Fantasy Land-hand som kan ligga hur som helst, så bara brädesformen kollas annars
+  const fantasyLand = all.length >= 13 && all.length <= 16;
+  if (all.length > 16) problems.push('fler än 16 kort');
+  if (!fantasyLand) {
+    if (rows.length > 3) problems.push('fler än 3 rader');
+    if (rows.some((r) => r.length > 5)) problems.push('mer än 5 kort i en rad');
+    if (rows.length === 3 && rows[0].length > 3) problems.push('mer än 3 kort i toppen');
+  }
   if (all.filter((c) => c === 'JK').length > 2) problems.push('fler än 2 jokrar');
   const seen = new Set();
   for (const c of all) {

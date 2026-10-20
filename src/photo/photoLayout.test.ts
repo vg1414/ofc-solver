@@ -63,6 +63,23 @@ describe('flHand', () => {
     expect(flHand(guessRows(full))?.length).toBe(14);
     expect(problems(guessRows(full))).toEqual([]);
   });
+  it('13–16 kort i långa rader = Fantasy Land, antalet räknas ut själv', () => {
+    const cards = ['Ah', 'Kh', 'Qh', 'Jh', 'Th', '9h', '8h', '7h', '6h', '5h', '4h', '3h', '2h', 'As', 'Ks', 'Qs'];
+    for (const n of [13, 14, 15, 16]) {
+      const rows = guessRows(ans([cards.slice(0, 8), cards.slice(8, n)]));
+      expect(flHand(rows)?.length).toBe(n);
+      expect(problems(rows)).toEqual([]);
+    }
+  });
+  it('fullt bräde utan lösa kort = 13 korts Fantasy Land', () => {
+    const rows = guessRows(ans([['Kd', 'Kh', 'Ac'], ['6s', '6h', '7s', '7d', '4d'], ['Js', 'Jh', 'Td', 'Th', '8c']]));
+    expect(flHand(rows)?.length).toBe(13);
+  });
+  it('12 lagda + 1 löst = sista kortet i en vanlig hand, inte FL', () => {
+    const rows = guessRows(ans([['Kd', 'Kh', 'Ac'], ['6s', '6h', '7s', '7d', '4d'], ['Js', 'Jh', 'Td', 'Th']], ['8c']));
+    expect(flHand(rows)).toBeNull();
+    expect(collect(rows).hand.length).toBe(1);
+  });
   it('inte när brädet inte är fullt', () => {
     expect(flHand(guessRows(ans([['Jh'], ['8d']], ['7c'])))).toBeNull();
   });

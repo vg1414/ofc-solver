@@ -4,7 +4,9 @@
 // Fotokonventionen (Davids): raderna på bordet = brädet, uppifrån och ner.
 // Ett kort som ligger för sig självt = kortet som ska läggas härnäst.
 // Alla kort i en enda rad utan bräde = en öppningshand.
-// Fullt bräde (13) + lösa kort = Fantasy Land-hand (alla kort till FL-lösaren).
+// 14–16 kort, eller 13 kort utan något löst kort = Fantasy Land-hand (alla kort
+// till FL-lösaren, antalet räknas ut av sig självt). Mitt i en vanlig hand finns
+// som mest 13 kort (12 lagda + 1, eller 10 + 3 i Pineapple).
 //
 // Här finns bara rena funktioner (inga anrop), så att de kan testas.
 // ============================================================
@@ -50,7 +52,8 @@ function toCards(list: string[]): Card[] {
 
 /**
  * Gissar vilken rad på brädet varje fotad rad är.
- * Högst 5 kort totalt (även lösa) → öppningshand. 3 rader → topp/mitten/botten
+ * Högst 5 kort totalt (även lösa) → öppningshand. 14–16 kort, eller 13 utan
+ * löst kort → Fantasy Land (alla i en rad "Att lägga"). 3 rader → topp/mitten/botten
  * (omvänt om bara den sista raden ryms i toppen).
  * 2 rader → topp+mitten om första raden får plats i toppen (≤ 3 kort), annars
  * mitten+botten. Användaren kan alltid ändra i arket.
@@ -65,6 +68,7 @@ export function guessRows(answer: PhotoAnswer, allowHand = true): PhotoRow[] {
   // 5 kort + kortet som ska läggas, alltså minst 6)
   const total = rows.reduce((n, r) => n + r.length, 0) + loose.length;
   if (allowHand && total > 0 && total <= 5) return [{ target: 'hand', cards: [...rows.flat(), ...loose] }];
+  if (allowHand && isFlCount(total, loose.length)) return [{ target: 'hand', cards: [...rows.flat(), ...loose] }];
   let targets: RowName[];
   if (rows.length >= 3) targets = ['top', 'middle', 'bottom'];
   else if (rows.length === 2) targets = rows[0].length <= 3 ? ['top', 'middle'] : ['middle', 'bottom'];
@@ -73,6 +77,11 @@ export function guessRows(answer: PhotoAnswer, allowHand = true): PhotoRow[] {
   const out: PhotoRow[] = rows.slice(0, 3).map((cards, i) => ({ target: targets[i], cards }));
   if (loose.length) out.push({ target: allowHand ? 'hand' : 'bottom', cards: loose });
   return out;
+}
+
+/** Ser antalet kort ut som en Fantasy Land-hand? (13 bara om inget kort ligger löst) */
+function isFlCount(total: number, loose: number): boolean {
+  return (total >= 14 && total <= 16) || (total === 13 && loose === 0);
 }
 
 export function cardId(c: Card): string {
@@ -104,9 +113,9 @@ export function problems(rows: PhotoRow[], takenElsewhere: Card[] = [], allowHan
   const placed = c.top.length + c.middle.length + c.bottom.length;
   if (!allowHand && c.hand.length) out.push('Motståndarens bräde kan inte ha kort att lägga');
   if (placed === 0 && c.hand.length === 0) out.push('Inga kort');
-  if (placed === 0 && c.hand.length > 5) out.push('En öppningshand har högst 5 kort');
+  if (placed === 0 && c.hand.length > 5 && c.hand.length < 13) out.push('En öppningshand har högst 5 kort (Fantasy Land 13–16)');
   if (placed > 0 && placed < 13 && c.hand.length > 3) out.push('Högst 3 kort att lägga');
-  if (placed === 13 && c.hand.length > 3) out.push('Fantasy Land har högst 16 kort');
+  if (placed + c.hand.length > 16) out.push('Fantasy Land har högst 16 kort');
 
   const all = [...rows.flatMap((r) => r.cards), ...takenElsewhere];
   if (all.filter((x) => x.kind === 'joker').length > 2) out.push('Fler än 2 jokrar');
@@ -122,10 +131,15 @@ export function problems(rows: PhotoRow[], takenElsewhere: Card[] = [], allowHan
   return out;
 }
 
-/** Fullt bräde + lösa kort = en Fantasy Land-hand med alla korten (14–16) */
+/**
+ * En Fantasy Land-hand med alla korten (13–16): antingen bara kort "att lägga",
+ * eller ett fullt bräde (13) med 0–3 kort till.
+ */
 export function flHand(rows: PhotoRow[]): Card[] | null {
   const c = collect(rows);
   const placed = c.top.length + c.middle.length + c.bottom.length;
-  if (placed !== 13 || c.hand.length < 1 || c.hand.length > 3) return null;
+  const total = placed + c.hand.length;
+  if (total < 13 || total > 16) return null;
+  if (placed !== 0 && placed !== 13) return null;
   return [...c.top, ...c.middle, ...c.bottom, ...c.hand];
 }

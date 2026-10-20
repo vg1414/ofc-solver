@@ -178,6 +178,8 @@ export default function PhotoSheet({ open, onClose, who, takenElsewhere, onDone 
     setEdit(null);
     setRows([{ target: 'hand', cards: allCards }]);
   };
+  // 13–16 kort som inte gissades som FL (t.ex. 12 lagda + 1 löst) → erbjud Fantasy Land ändå
+  const canFl = mine && !fl && allCards.length >= 13 && allCards.length <= 16;
   const unsure = answer ? allCards.filter((c) => isUncertain(c, answer)).length : 0;
 
   const finish = (choice: PhotoChoice) => {
@@ -339,6 +341,12 @@ export default function PhotoSheet({ open, onClose, who, takenElsewhere, onDone 
           {canOpen && (
             <button type="button" onClick={makeOpening} className="btn-ghost h-10 rounded-full text-[13px] font-bold">
               Det är en starthand ({allCards.length} kort)
+            </button>
+          )}
+
+          {canFl && (
+            <button type="button" onClick={makeOpening} className="btn-ghost h-10 rounded-full text-[13px] font-bold">
+              ★ Det är Fantasy Land ({allCards.length} kort)
             </button>
           )}
 
