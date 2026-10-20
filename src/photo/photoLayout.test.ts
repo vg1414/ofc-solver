@@ -80,6 +80,11 @@ describe('flHand', () => {
     expect(flHand(rows)).toBeNull();
     expect(collect(rows).hand.length).toBe(1);
   });
+  it('Pineapple sista rundan: 11 lagda + 3 lösa = vanlig hand, inte FL', () => {
+    const rows = guessRows(ans([['Kd', 'Kh', 'Ac'], ['6s', '6h', '7s', '7d'], ['Js', 'Jh', 'Td', 'Th']], ['8c', '2d', '3s']));
+    expect(flHand(rows)).toBeNull();
+    expect(collect(rows).hand.length).toBe(3);
+  });
   it('inte när brädet inte är fullt', () => {
     expect(flHand(guessRows(ans([['Jh'], ['8d']], ['7c'])))).toBeNull();
   });
