@@ -9,8 +9,8 @@
 //  - HandStrip: små brickor med varje hands poäng, under poängraden.
 // 2 spelare: alla tar `names` ([spelare 1, spelare 2]). Då visas poängen
 // för den som vann handen i dennes färg i stället för +/− från ditt håll.
-// Spela mot datorn (`cpu`): +/− från ditt håll, blått när du är plus och
-// rött när datorn är plus.
+// Mot datorn (Träna och Spela): +/− från ditt håll, i din färg (blå) när
+// du är plus och i datorns (orange) när datorn är plus. Rött = bara foul.
 // ============================================================
 
 import { useState } from 'react';
@@ -32,15 +32,15 @@ export interface HandRecord {
 }
 
 export const sign = (n: number) => `${n > 0 ? '+' : ''}${n}`;
-const tone = (n: number) => (n > 0 ? 'text-accent-ink' : n < 0 ? 'text-danger' : 'text-ink-3');
 
 type Names = [string, string];
 const CPU_NAMES: Names = ['Du', 'Datorn'];
-/** 2 spelare: den som är plus får sin färg (grön/blå), annars dämpat */
+/** 2 spelare: den som är plus får sin färg (blå/orange), annars dämpat */
 const duelTone = (n: number, seat: 0 | 1) => (n > 0 ? (seat === 0 ? 'text-p1-ink' : 'text-p2-ink') : 'text-ink-3');
-/** Spela mot datorn: blått = du är plus, rött = datorn är plus */
-export const cpuTone = (n: number) => (n > 0 ? 'text-p2-ink' : n < 0 ? 'text-danger' : 'text-ink-3');
-const cpuChip = (n: number) => (n > 0 ? 'bg-p2-soft text-p2-ink' : n < 0 ? 'bg-danger-soft text-danger' : 'bg-sunken text-ink-3');
+/** Mot datorn: färgen på den som leder — blå = du, orange = datorn */
+export const cpuTone = (n: number) => (n > 0 ? 'text-p1-ink' : n < 0 ? 'text-p2-ink' : 'text-ink-3');
+const tone = cpuTone;
+const cpuChip = (n: number) => (n > 0 ? 'bg-p1-soft text-p1-ink' : n < 0 ? 'bg-p2-soft text-p2-ink' : 'bg-sunken text-ink-3');
 /** Poäng från ditt håll: "+3", "−2", "±0" */
 export const signed = (n: number) => (n === 0 ? '±0' : n > 0 ? `+${n}` : `−${-n}`);
 
@@ -79,7 +79,7 @@ export function HandList({ records, names, openings, cpu }: { records: HandRecor
             >
               <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-sunken text-[12px] font-extrabold text-ink-2 tabular">{r.no}</span>
               <div className="min-w-0 flex-1 text-[12.5px] text-ink-2">
-                <span className={s.p1Foul ? 'font-bold text-danger' : s.p1Scoop ? 'font-bold text-accent-ink' : ''}>{resultText(r, nm)}</span>
+                <span className={s.p1Foul ? 'font-bold text-danger' : s.p1Scoop ? 'font-bold text-p1-ink' : ''}>{resultText(r, nm)}</span>
                 {duel ? (
                   <>
                     {(s.p1Royalties.total > 0 || s.p2Royalties.total > 0) && (
@@ -155,7 +155,7 @@ export function HandStrip({ records, onOpen, names, cpu }: { records: HandRecord
               ? cpuChip(r.net)
               : duel
               ? r.net > 0 ? 'bg-p1-soft text-p1-ink' : r.net < 0 ? 'bg-p2-soft text-p2-ink' : 'bg-sunken text-ink-3'
-              : r.net > 0 ? 'bg-accent-soft text-accent-ink' : r.net < 0 ? 'bg-danger-soft text-danger' : 'bg-sunken text-ink-3'
+              : cpuChip(r.net)
           }`}
           title={duel ? `Hand ${r.no}: ${r.net > 0 ? names![0] : r.net < 0 ? names![1] : 'oavgjort'}` : `Hand ${r.no}`}
         >
@@ -205,7 +205,7 @@ export function ScoreSheet({
           </div>
           <div>
             <div className="truncate text-[11px] font-extrabold uppercase tracking-[0.08em] text-ink-3">{nm[1]}</div>
-            <div className={`font-serif text-[34px] font-extrabold leading-none tabular ${cpu ? cpuTone(total) : names ? duelTone(-total, 1) : tone(-total)}`}>{cpu ? signed(-total) : sign(-total)}</div>
+            <div className={`font-serif text-[34px] font-extrabold leading-none tabular ${cpu ? cpuTone(total) : names ? duelTone(-total, 1) : tone(total)}`}>{cpu ? signed(-total) : sign(-total)}</div>
           </div>
         </div>
         {records.length ? (

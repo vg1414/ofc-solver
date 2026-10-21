@@ -217,7 +217,7 @@ function Setup({
                     aria-label={`Namn på spelare ${i + 1}`}
                     className="min-w-0 flex-1 bg-transparent text-[16px] font-bold text-ink outline-none placeholder:font-semibold placeholder:text-ink-3"
                   />
-                  <span className={`text-[11px] font-bold ${i === 0 ? 'text-p1-ink' : 'text-p2-ink'}`}>{i === 0 ? 'grön' : 'blå'}</span>
+                  <span className={`text-[11px] font-bold ${i === 0 ? 'text-p1-ink' : 'text-p2-ink'}`}>{i === 0 ? 'blå' : 'orange'}</span>
                 </label>
               ))}
             </div>

@@ -10,7 +10,7 @@
 //  - Den som har turen ("viewer") ser sitt bräde nederst, stort och
 //    klickbart, och motståndarens litet överst. Brädena byter plats vid
 //    varje överlämning. När handen är klar står den som lade sist kvar.
-//  - Vems tur: en stor banner i spelarens färg (grön/blå) som glider in
+//  - Vems tur: en stor banner i spelarens färg (blå/orange) som glider in
 //    från spelarens håll, skärmkanten lyser i samma färg, och Klar-knappen
 //    har färgen + texten "ge till Anna" när telefonen ska lämnas över.
 //  - Fantasy Land: korten döljs bakom en "Visa mina kort"-skärm tills
@@ -87,7 +87,7 @@ interface DuelEntry {
   move: Move;
   input: SolverInput;
 }
-/** CSS-variabler för en spelares färg (grön = 1, blå = 2) */
+/** CSS-variabler för en spelares färg (blå = 1, orange = 2) */
 const seatVars = (s: SeatId) => ({ '--grad': `var(--grad-p${s + 1})`, '--glow': `var(--glow-p${s + 1})` }) as React.CSSProperties;
 
 export default function DuelRun({ initial, initialElapsed, active = true, onExit, onRestart }: Props) {
@@ -225,11 +225,8 @@ export default function DuelRun({ initial, initialElapsed, active = true, onExit
   };
 
   const [t1] = totals(state);
-  // Mot datorn: blå prick = du vann handen, röd = datorn vann
-  const dots = useMemo(
-    () => state.records.map((r): Dot => (r.net > 0 ? (cpu ? 'p2' : 'p1') : r.net < 0 ? (cpu ? 'miss' : 'p2') : null)),
-    [state.records, cpu],
-  );
+  // Prickar i vinnarens färg (blå = du / spelare 1, orange = datorn / spelare 2)
+  const dots = useMemo(() => state.records.map((r): Dot => (r.net > 0 ? 'p1' : r.net < 0 ? 'p2' : null)), [state.records]);
 
   /** Handen klar: bara intjänade royalties på brädena (husregel: radens vinnare) */
   const earnedFor = (seat: SeatId) => (h.outcome ? (seat === 0 ? h.outcome.score.p1Royalties : h.outcome.score.p2Royalties) : undefined);

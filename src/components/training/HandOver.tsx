@@ -8,7 +8,8 @@
 // I slutet av en session: "FL spelas ut" (en hand till) eller en notis om
 // att FL inte spelas ut. Fritt spel får en "Avsluta här"-knapp.
 // 2 spelare (`names`): texterna får spelarnas namn, och poängen visas för
-// den som vann handen i dennes färg (grön = spelare 1, blå = spelare 2).
+// den som vann handen. Färgerna är alltid spelarens: blå = du / spelare 1,
+// orange = datorn / spelare 2 (rött = bara foul).
 // ============================================================
 
 import type { HandOutcome } from '../../training/game';
@@ -49,9 +50,9 @@ export default function HandOver({ outcome, last, playOutFl, flSkipped, coachLog
   // Mot datorn: poängen från ditt håll (+/−). 2 spelare: vinnarens poäng i vinnarens färg.
   const shown = useCountUp(duel ? Math.abs(net) : net, 800, 0);
   const title = net > 0 ? `${n1} vann handen` : net < 0 ? `${n2} vann handen` : 'Oavgjort';
-  const netTone = duel ? (net > 0 ? 'text-p1-ink' : net < 0 ? 'text-p2-ink' : 'text-ink-2') : net > 0 ? 'text-accent-ink' : net < 0 ? 'text-danger' : 'text-ink-2';
-  const p2Win = duel ? 'font-bold text-p2-ink' : 'font-bold text-danger';
-  const p1Win = duel ? 'font-bold text-p1-ink' : 'font-bold text-accent-ink';
+  const netTone = net > 0 ? 'text-p1-ink' : net < 0 ? 'text-p2-ink' : 'text-ink-2';
+  const p2Win = 'font-bold text-p2-ink';
+  const p1Win = 'font-bold text-p1-ink';
   const judged = coachLog.filter((c) => c.j);
   const coachLoss = judged.reduce((n, c) => n + (c.j?.diff ?? 0), 0);
 
@@ -98,10 +99,10 @@ export default function HandOver({ outcome, last, playOutFl, flSkipped, coachLog
       )}
 
       <div className="flex flex-wrap gap-1.5 text-[11.5px] font-bold">
-        <span className={`rounded-full px-2.5 py-0.5 ${duel ? 'bg-p1-soft text-p1-ink' : 'bg-gold-soft text-gold'}`}>
+        <span className={`rounded-full px-2.5 py-0.5 bg-p1-soft text-p1-ink`}>
           {duel ? `${genitive(n1)} royalties` : 'Dina royalties'} +{s.p1Royalties.total}
         </span>
-        <span className={`rounded-full px-2.5 py-0.5 ${duel ? 'bg-p2-soft text-p2-ink' : 'bg-sunken text-ink-2'}`}>
+        <span className={`rounded-full px-2.5 py-0.5 bg-p2-soft text-p2-ink`}>
           {genitive(n2)} +{s.p2Royalties.total}
         </span>
         {judged.length > 0 && (

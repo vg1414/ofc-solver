@@ -76,7 +76,7 @@ export default function DuelSummary({ state, elapsed, onRestart, onExit, opening
           </div>
           <HandList records={state.records} names={state.config.names} openings={openings} cpu={!!state.config.cpu} />
           <p className="pb-3 text-center text-[11px] text-ink-3">
-            {state.config.cpu ? 'Poäng från ditt håll: blått = du vann, rött = datorn vann.' : `Grön = ${n1} vann, blå = ${n2} vann.`} Tryck på en hand för slutbrädena.
+            {state.config.cpu ? 'Poäng från ditt håll: blått = du vann, orange = datorn vann.' : `Blå = ${n1} vann, orange = ${n2} vann.`} Tryck på en hand för slutbrädena.
           </p>
         </div>
       )}

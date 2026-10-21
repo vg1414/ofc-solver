@@ -42,16 +42,17 @@
   --fl: #7a4fd0;
   --fl-soft: #f3ecfd;
   /* 2 spelare: spelare 1 = smaragd (som appen), spelare 2 = blå */
-  --p1: #15936a;
-  --p1-ink: #0e6a4b;
-  --p1-soft: #e3f4ea;
-  --grad-p1: linear-gradient(135deg, #3cc48f 0%, #17996b 55%, #0f7653 100%);
-  --glow-p1: 0 8px 24px -6px rgba(23, 153, 107, 0.5);
-  --p2: #2f6fdc;
-  --p2-ink: #1d4fa3;
-  --p2-soft: #e4edfc;
-  --grad-p2: linear-gradient(135deg, #6fa9ff 0%, #2f74e0 55%, #1f52ae 100%);
-  --glow-p2: 0 8px 24px -6px rgba(47, 116, 224, 0.5);
+  /* Spelarfärger: 1 / du = blå, 2 / datorn = orange (lätta att skilja åt, även vid färgblindhet) */
+  --p1: #2f6fdc;
+  --p1-ink: #1d4fa3;
+  --p1-soft: #e4edfc;
+  --grad-p1: linear-gradient(135deg, #6fa9ff 0%, #2f74e0 55%, #1f52ae 100%);
+  --glow-p1: 0 8px 24px -6px rgba(47, 116, 224, 0.5);
+  --p2: #e8700f;
+  --p2-ink: #b4520a;
+  --p2-soft: #fdecdc;
+  --grad-p2: linear-gradient(135deg, #ffb066 0%, #f07a1e 55%, #c2560c 100%);
+  --glow-p2: 0 8px 24px -6px rgba(240, 122, 30, 0.5);
 
   --grad: linear-gradient(135deg, #3cc48f 0%, #17996b 55%, #0f7653 100%);
   --grad-hot: linear-gradient(135deg, #ffb37a 0%, #f5b83d 50%, #3cc48f 100%);
@@ -116,12 +117,12 @@
     --danger-soft: #3a161a;
     --fl: #c3a2ff;
     --fl-soft: #2a1e45;
-    --p1: #2bc08a;
-    --p1-ink: #7fe0b7;
-    --p1-soft: #113428;
-    --p2: #6ea6ff;
-    --p2-ink: #a3c6ff;
-    --p2-soft: #142443;
+    --p1: #6ea6ff;
+    --p1-ink: #a3c6ff;
+    --p1-soft: #142443;
+    --p2: #ff9a4d;
+    --p2-ink: #ffbd85;
+    --p2-soft: #3a2412;
     --grad-ink: linear-gradient(120deg, #efe9e2 0%, #7fe0b7 60%, #2bc08a 100%);
     --felt: radial-gradient(130% 100% at 50% 0%, #1b3a2e 0%, #142c23 55%, #10231c 100%);
     --felt-line: rgba(127, 224, 183, 0.18);

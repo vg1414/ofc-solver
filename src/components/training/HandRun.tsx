@@ -341,7 +341,7 @@ export default function HandRun({ variant, settings, active = true, onExit, onRe
 
   const total = records.reduce((n, r) => n + r.net, 0);
   const shownTotal = useCountUp(total);
-  const dots = useMemo(() => records.map((r): Dot => (r.net > 0 ? 'good' : r.net < 0 ? 'miss' : null)), [records]);
+  const dots = useMemo(() => records.map((r): Dot => (r.net > 0 ? 'p1' : r.net < 0 ? 'p2' : null)), [records]);
 
   if (summary) {
     return (
@@ -448,7 +448,7 @@ export default function HandRun({ variant, settings, active = true, onExit, onRe
           </span>
           <div className="flex-1">
             <div className="title-serif text-[19px]">
-              Datorn tänker <span className="think text-accent"><span /><span /><span /></span>
+              Datorn tänker <span className="think text-p2"><span /><span /><span /></span>
             </div>
             <div className="text-[12px] font-medium text-ink-3">
               {cpuT?.turn.fl ? 'Lägger sin Fantasy Land-hand' : `Runda ${cpuT?.turn.round} · ${cpuT?.cards.length} kort`}
@@ -491,7 +491,7 @@ export default function HandRun({ variant, settings, active = true, onExit, onRe
           <span className="eyebrow">Datorn</span>
           {h.seats[1].fl > 0 && <FlChip n={h.seats[1].fl} />}
           {cpuRisk && cpuRisk.hand === h.no && !h.outcome && !hidden && cpuRisk.foul !== null && <RiskMeter foul={cpuRisk.foul} fl={cpuRisk.fl} />}
-          {cpuThinking && <span className="think text-accent-ink" aria-label="Datorn tänker"><span /><span /><span /></span>}
+          {cpuThinking && <span className="think text-p2-ink" aria-label="Datorn tänker"><span /><span /><span /></span>}
           {h.first === 1 && <span className="ml-auto text-[10.5px] font-bold text-ink-3">börjar</span>}
         </div>
         <div ref={cpuBoardRef} style={fit ? ({ '--card-h-cap': `${fit.opp}px` } as React.CSSProperties) : undefined}>
@@ -558,7 +558,7 @@ export default function HandRun({ variant, settings, active = true, onExit, onRe
         <div className="flex flex-col gap-2.5">
           <p className="text-[13px] text-ink-2">
             Du har spelat {records.length} {records.length === 1 ? 'hand' : 'händer'} och står på{' '}
-            <b className={total > 0 ? 'text-accent-ink' : total < 0 ? 'text-danger' : 'text-ink'}>
+            <b className={total > 0 ? 'text-p1-ink' : total < 0 ? 'text-p2-ink' : 'text-ink'}>
               {total > 0 ? '+' : ''}
               {total} p
             </b>

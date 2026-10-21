@@ -2,7 +2,7 @@
 // SessionHeader.tsx — Rad överst under en session mot datorn
 // ============================================================
 // Ser olika ut beroende på sessionens längd:
-//  - Händer:  "Hand 3 / 10" + en prick per hand (grön vinst, röd förlust).
+//  - Händer:  "Hand 3 / 10" + en prick per hand (i vinnarens färg: blå = du / spelare 1, orange = datorn / spelare 2).
 //             FL-händer som spelas ut efter sista handen blir lila prickar.
 //  - Minuter: "Hand 4" + nedräkning och en mätare som töms. Sista minuten
 //             pulserar den, och när tiden är ute står det "Sista handen".
@@ -12,7 +12,7 @@
 import type { SessionLength } from '../../training/session';
 import { clockText } from '../../training/session';
 
-/** good = grön, miss = röd. 2 spelare: p1 = spelare 1 vann (grön), p2 = spelare 2 vann (blå) */
+/** good = grön, miss = röd. Mot datorn / 2 spelare: p1 = du / spelare 1 vann (blå), p2 = datorn / spelare 2 vann (orange) */
 export type Dot = 'good' | 'miss' | 'p1' | 'p2' | null;
 
 interface Props {
@@ -81,7 +81,7 @@ function HandsProgress({ n, handNo, dots, extra }: { n: number; handNo: number; 
         {Array.from({ length: shown }, (_, i) => {
           const g = dots[i] ?? null;
           const over = i >= n; // FL-hand efter sista handen
-          const bg = g === 'good' || g === 'p1' ? 'var(--grad-p1)' : g === 'p2' ? 'var(--grad-p2)' : g === 'miss' ? 'var(--danger)' : i < index ? 'var(--ink-3)' : i === index ? (over ? 'var(--fl)' : 'var(--accent)') : 'var(--line-strong)';
+          const bg = g === 'good' ? 'var(--grad)' : g === 'p1' ? 'var(--grad-p1)' : g === 'p2' ? 'var(--grad-p2)' : g === 'miss' ? 'var(--danger)' : i < index ? 'var(--ink-3)' : i === index ? (over ? 'var(--fl)' : 'var(--accent)') : 'var(--line-strong)';
           return (
             <span
               key={i}

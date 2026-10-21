@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-10-21 — Samma spelarfärger överallt: blå och orange
+
+- **Du / spelare 1 är alltid blå, datorn / spelare 2 alltid orange.** Förut var du grön och spelare 2 blå (svåra att skilja åt), och mot datorn betydde blått ibland "du" (poäng, prickar) och ibland "Datorn" (namnbricka, "Datorns tur"). I Träna → Hel hand var datorns poäng röd. Nu gäller samma regel i Spela, Hel hand, ställningen, handresultatet, prickarna och slutresultatet. Rött betyder bara foul (`index.css` `--p1*`/`--p2*`, `Scoreboard`, `HandOver`, `HandRun`, `DuelRun`, `DuelSummary`, `PlayView`, `SessionHeader`)
+
 ## 2026-10-21 — Inget flimmer på mobilen när datorn tänker
 
 - **Brädena flimrade på iPhone medan datorn tänkte.** Kortstorleken räknades från `window.innerHeight`, som ändras varje gång Safaris adressfält åker in eller ut. Då bytte korten storlek, sidan blev kortare/längre, scrollen hoppade, adressfältet åkte igen … en loop. Nu mäts skärmhöjden med `100svh` (höjden med adressfältet synligt), som står still (`useFitBoards.ts`). Gäller Hel hand och Spela
