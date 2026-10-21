@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-10-21 — Inget flimmer på mobilen när datorn tänker
+
+- **Brädena flimrade på iPhone medan datorn tänkte.** Kortstorleken räknades från `window.innerHeight`, som ändras varje gång Safaris adressfält åker in eller ut. Då bytte korten storlek, sidan blev kortare/längre, scrollen hoppade, adressfältet åkte igen … en loop. Nu mäts skärmhöjden med `100svh` (höjden med adressfältet synligt), som står still (`useFitBoards.ts`). Gäller Hel hand och Spela
+
 ## 2026-10-20 — Fantasy Land från foto känns igen själv
 
 - **Fotar du en Fantasy Land-hand räknar appen ut antalet kort själv.** 13–16 kort blir en FL-hand (utom Pineapples sista runda, 11 lagda + 3 lösa) hur de än ligger (en lång rad, två rader eller ett fullt bräde + lösa kort). FL-läget får rätt antal (13/14/15/16) utan att du väljer. Förut gick det bara med ett fullt bräde + 1–3 lösa kort, och 13 kort gick inte alls (`photoLayout.guessRows`/`flHand`/`problems`)

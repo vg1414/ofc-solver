@@ -9,7 +9,7 @@
 // Så räknas det:
 //  - Ett brädes höjd är linjär i kortbredden w: 3 rader à (1,4w + 8 px),
 //    två mellanrum à 0,12w och 24 px kant → h(w) = 4,44w + 48.
-//  - Tillgänglig höjd = skärmens höjd − ytans överkant (räknat från sidans
+//  - Tillgänglig höjd = skärmens höjd (100svh, stabil på iPhone) − ytans överkant (räknat från sidans
 //    topp, alltså som om sidan inte är scrollad) − panelens höjd − luft.
 //  - "Övrigt" i ytan (etiketter, mellanrum) mäts: ytans höjd minus de två
 //    brädenas höjd. Det beror inte på w, så det räknas om varje gång.
@@ -52,6 +52,16 @@ export function useFitBoards(
     const wide = window.matchMedia('(min-width: 1024px), (orientation: landscape) and (max-height: 540px)');
     const dock = dockFor(area);
 
+    // Skärmhöjden mäts med 100svh (höjden när webbläsarens adressfält syns),
+    // inte window.innerHeight. På iPhone ändras innerHeight när adressfältet
+    // åker in/ut vid scroll → korten byter storlek → sidan blir kortare/längre
+    // → scrollen hoppar → adressfältet åker igen … Det flimrade i en loop,
+    // mest när datorn tänker (då är panelen liten och sidan kortare).
+    const probe = document.createElement('div');
+    probe.style.cssText = 'position:fixed;top:0;left:0;width:0;height:100svh;visibility:hidden;pointer-events:none';
+    document.body.appendChild(probe);
+    const viewH = () => probe.offsetHeight || window.innerHeight;
+
     const calc = () => {
       if (wide.matches) return setCaps(null);
       if (measureDock && dock) {
@@ -60,7 +70,7 @@ export function useFitBoards(
       }
       const reserve = dockReserve.current ?? 170;
       const top = area.getBoundingClientRect().top + window.scrollY;
-      const avail = window.innerHeight - top - reserve - 8;
+      const avail = viewH() - top - reserve - 8;
       const boards = (meRef.current?.offsetHeight ?? 0) + (oppRef.current?.offsetHeight ?? 0);
       const other = area.offsetHeight - boards;
       const w = (avail - other - 2 * H_FIXED) / (H_PER_W * (1 + RATIO));
@@ -79,6 +89,7 @@ export function useFitBoards(
     wide.addEventListener('change', calc);
     return () => {
       ro.disconnect();
+      probe.remove();
       window.removeEventListener('resize', calc);
       wide.removeEventListener('change', calc);
     };
